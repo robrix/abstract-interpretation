@@ -1,0 +1,3 @@
+[submodule "vendor/effects"]
+	path = vendor/effects
+	url = https://github.com/joshvera/effects.git

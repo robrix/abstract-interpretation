@@ -1,0 +1,20 @@
+name:                abstract-interpretation
+version:             0.0.0.1
+synopsis:            Experiments in abstracting definitional interpreters
+description:         Experiments in abstracting definitional interpreters à la https://plum-umd.github.io/abstracting-definitional-interpreters/
+homepage:            https://github.com/robrix/abstract-interpretation
+license:             BSD3
+license-file:        LICENSE
+author:              Rob Rix
+maintainer:          rob.rix@me.com
+copyright:           2017 Rob Rix
+category:            Development
+build-type:          Simple
+extra-source-files:  ChangeLog.md
+cabal-version:       >=1.10
+
+library
+  exposed-modules:     Abs.Syntax
+  build-depends:       base >=4.10 && <4.11
+  hs-source-dirs:      src
+  default-language:    Haskell2010

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds, FlexibleContexts, TypeOperators #-}
 module Abs.Syntax where
 
 import Data.Functor.Foldable
@@ -32,3 +33,5 @@ delta o = (return .) . case o of
   Minus -> (-)
   Times -> (*)
   DividedBy -> div
+
+type Interpreter = Eff '[State Store, Reader Environment, Failure]

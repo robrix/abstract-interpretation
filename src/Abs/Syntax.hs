@@ -10,10 +10,12 @@ data Syntax n a
   | Lam n a
   | Rec n a
   | If0 a a a
+  deriving (Eq, Show)
 
 type Term = Fix (Syntax String)
 
 data Op2 = Plus | Minus | Times | DividedBy
+  deriving (Eq, Show)
 
 data Ref a = Ref
 

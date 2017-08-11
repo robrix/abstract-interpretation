@@ -14,3 +14,10 @@ data Syntax n a
 type Term = Fix (Syntax String)
 
 data Op2 = Plus | Minus | Times | DividedBy
+
+delta :: Monad m => Op2 -> Int -> Int -> m Int
+delta o = (return .) . case o of
+  Plus -> (+)
+  Minus -> (-)
+  Times -> (*)
+  DividedBy -> div

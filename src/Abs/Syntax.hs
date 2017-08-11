@@ -15,6 +15,8 @@ type Term = Fix (Syntax String)
 
 data Op2 = Plus | Minus | Times | DividedBy
 
+data Ref a = Ref
+
 delta :: Monad m => Op2 -> Int -> Int -> m Int
 delta o = (return .) . case o of
   Plus -> (+)

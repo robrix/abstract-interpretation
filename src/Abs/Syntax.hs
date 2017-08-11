@@ -4,6 +4,6 @@ data Syntax n a
   = Var n
   | Num Int
   | App a a
-  | Lam x a
-  | Rec x a
+  | Lam n a
+  | Rec n a
   | If0 a a a

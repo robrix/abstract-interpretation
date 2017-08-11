@@ -22,12 +22,14 @@ data Op2 = Plus | Minus | Times | DividedBy
 
 data Ref a = Ref
 
-delta :: Monad m => Op2 -> Int -> Int -> m Int
 
 type Environment = Map.Map String Loc
 type Loc = Int
 type Val = Int
 type Store = IntMap.IntMap Loc
+
+
+delta :: Monad m => Op2 -> Val -> Val -> m Val
 delta o = (return .) . case o of
   Plus -> (+)
   Minus -> (-)

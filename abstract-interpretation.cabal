@@ -10,7 +10,6 @@ maintainer:          rob.rix@me.com
 copyright:           2017 Rob Rix
 category:            Development
 build-type:          Simple
-extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
 library

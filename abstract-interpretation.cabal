@@ -15,6 +15,7 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Abs.Syntax
   build-depends:       base >=4.10 && <4.11
+                     , containers
                      , effects
                      , recursion-schemes
   hs-source-dirs:      src

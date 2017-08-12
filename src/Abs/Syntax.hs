@@ -95,7 +95,7 @@ type Interpreter = '[State, Reader, Failure]
 type State = State.State Store
 type Reader = Reader.Reader Environment
 type Writer = Writer.Writer Trace
-type Trace = [(Environment, Store)]
+type Trace = [(Term, Environment, Store)]
 type TracingInterpreter = Writer ': Interpreter
 
 run :: Eff Interpreter a -> Either String a

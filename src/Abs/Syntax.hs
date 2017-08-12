@@ -182,6 +182,7 @@ type Interpreter i = '[Failure, State (Store i), Reader (Environment i)]
 type Trace i f = f (TraceEntry i)
 type TraceEntry i = (Term i, Environment i, Store i)
 type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
+type TraceInterpreter i = Writer (Trace i []) ': Interpreter i
 type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
 type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
 

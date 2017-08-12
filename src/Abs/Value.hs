@@ -2,6 +2,7 @@
 module Abs.Value where
 
 import Control.Applicative
+import Control.Monad hiding (fail)
 import Control.Monad.Fail
 import Prelude hiding (fail)
 
@@ -36,10 +37,9 @@ instance MonadFail m => AbstractValue Int m where
     Plus -> return $ a + b
     Minus -> return $ a - b
     Times -> return $ a * b
-    DividedBy -> if b == 0 then
-        divisionByZero
-      else
-        return $ a `div` b
+    DividedBy -> do
+      when (b == 0) divisionByZero
+      return $ a `div` b
 
   isZero a = pure (a == 0)
 

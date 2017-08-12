@@ -65,22 +65,22 @@ subexps = para $ \ s -> case s of
   If0 c t e -> foldMap (Set.singleton . fst) [c, t, e] <> foldMap snd [c, t, e]
   _ -> Set.empty
 
-find :: (State (Store (Val i)) :< fs) => Loc i -> Eff fs (Val i)
+find :: (State (Store (Val i)) :< fs) => Loc (Val i) -> Eff fs (Val i)
 find = gets . flip (IntMap.!) . unLoc
 
 gets :: (State a :< fs) => (a -> b) -> Eff fs b
 gets = flip fmap get
 
-alloc :: forall i fs . (State (Store (Val i)) :< fs) => String -> Eff fs (Loc i)
+alloc :: forall i fs . (State (Store (Val i)) :< fs) => String -> Eff fs (Loc (Val i))
 alloc _ = do
   s <- get
   return (Loc (length (s :: Store (Val i))))
 
-ext :: (State (Store (Val i)) :< fs) => Loc i -> Val i -> Eff fs ()
+ext :: (State (Store (Val i)) :< fs) => Loc (Val i) -> (Val i) -> Eff fs ()
 ext (Loc loc) val = modify (IntMap.insert loc val)
 
 
-type Environment i = Map.Map String (Loc i)
+type Environment i = Map.Map String (Loc (Val i))
 data Val i = I i | L (Term i, Environment i)
   deriving (Eq, Ord, Show)
 

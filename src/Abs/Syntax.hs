@@ -23,7 +23,6 @@ type Term = Fix (Syntax String)
 data Op2 = Plus | Minus | Times | DividedBy
   deriving (Eq, Show)
 
-data Ref a = Ref
 
 
 type Environment = Map.Map String Loc

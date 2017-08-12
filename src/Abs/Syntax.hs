@@ -90,7 +90,10 @@ data Val = I Int | L (Term, Environment)
   deriving (Eq, Ord, Show)
 type Store = IntMap.IntMap Val
 
-ev :: Interpreter :<: fs => (Term -> Eff fs Val) -> Term -> Eff fs Val
+ev :: Interpreter :<: fs
+   => (Term -> Eff fs Val)
+   -> Term
+   -> Eff fs Val
 ev ev term = case unfix term of
   Num n -> return (I n)
   Var x -> do
@@ -132,7 +135,12 @@ evalTrace = run . Writer.runWriter . fix (evTell (undefined :: proxy []) ev)
 evalReach :: Term -> Either String (Val, Trace Set.Set)
 evalReach = run . Writer.runWriter . fix (evTell (undefined :: proxy Set.Set) ev)
 
-evTell :: forall proxy f fs . (TracingInterpreter f :<: fs, IsList (Trace f), Item (Trace f) ~ TraceEntry) => proxy f -> ((Term -> Eff fs Val) -> Term -> Eff fs Val) -> (Term -> Eff fs Val) -> Term -> Eff fs Val
+evTell :: forall proxy f fs . (TracingInterpreter f :<: fs, IsList (Trace f), Item (Trace f) ~ TraceEntry)
+       => proxy f
+       -> ((Term -> Eff fs Val) -> Term -> Eff fs Val)
+       -> (Term -> Eff fs Val)
+       -> Term
+       -> Eff fs Val
 evTell _ ev0 ev e = do
   env <- ask
   store <- get
@@ -148,7 +156,11 @@ evalDead = run . flip State.runState Set.empty . evalDead' (fix (evDead ev))
           put (subexps e0)
           eval e0
 
-evDead :: DeadCodeInterpreter :<: fs => ((Term -> Eff fs Val) -> Term -> Eff fs Val) -> (Term -> Eff fs Val) -> Term -> Eff fs Val
+evDead :: DeadCodeInterpreter :<: fs
+       => ((Term -> Eff fs Val) -> Term -> Eff fs Val)
+       -> (Term -> Eff fs Val)
+       -> Term
+       -> Eff fs Val
 evDead ev0 ev e = do
   modify (Set.delete e)
   ev0 ev e

@@ -1,5 +1,4 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
 module Abstract.Eval where
 
 import Abstract.Store
@@ -105,29 +104,3 @@ type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
 type TraceInterpreter i = Writer (Trace i []) ': Interpreter i
 type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
 type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
-
-
--- Instances
-
-instance (Real i, AbstractValue i (Eff (Interpreter i))) => Real (Term i) where
-  toRational term = case fst (eval term) of
-    Right (I a) -> toRational a
-    Right _ -> error "toRational applied to non-numeric Term"
-    Left s -> error s
-
-instance (Enum i, Num i, AbstractValue i (Eff (Interpreter i))) => Enum (Term i) where
-  toEnum = fromIntegral
-  fromEnum term = case fst (eval term) of
-    Right (I a) -> fromEnum a
-    Right _ -> error "fromEnum applied to non-numeric Term"
-    Left s -> error s
-
-instance (Integral i, AbstractValue i (Eff (Interpreter i))) => Integral (Term i) where
-  a `quot` b = Fix (Op2 Quotient a b)
-  a `rem` b = Fix (Op2 Remainder a b)
-  a `quotRem` b = (a `quot` b, a `rem` b)
-
-  toInteger term = case fst (eval term) of
-    Right (I a) -> toInteger a
-    Right _ -> error "toInteger applied to non-numeric Term"
-    Left s -> error s

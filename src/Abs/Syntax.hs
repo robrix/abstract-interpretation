@@ -16,7 +16,7 @@ import qualified Data.Map as Map
 
 data Syntax n a
   = Var n
-  | Num Val
+  | Num Int
   | Op2 Op2 a a
   | App a a
   | Lam n a
@@ -43,17 +43,18 @@ ext loc val = modify (IntMap.insert loc val)
 
 type Environment = Map.Map String Loc
 type Loc = Int
-type Val = Int
-type Store = IntMap.IntMap Loc
+data Val = I Int | L (Term, Environment)
+  deriving (Eq, Show)
+type Store = IntMap.IntMap Val
 
 ev :: (Reader :< fs, State :< fs) => (Term -> Eff fs Val) -> Term -> Eff fs Val
 ev ev term = case unfix term of
-  Num n -> return n
+  Num n -> return (I n)
   Var x -> do
     p <- ask
     find (p Map.! x)
   If0 c t e -> do
-    z <- ev c
+    I z <- ev c
     ev (if z == 0 then t else e)
   Op2 o a b -> do
     va <- ev a
@@ -68,9 +69,9 @@ ev ev term = case unfix term of
     return v
   Lam x e0 -> do
     p <- ask
-    return (Fix (Lam x e0), p)
+    return (L (Fix (Lam x e0), p))
   App e0 e1 -> do
-    (Fix (Lam x e2), p) <- ev e0
+    (L (Fix (Lam x e2), p)) <- ev e0
     v1 <- ev e1
     a <- alloc x
     ext a v1
@@ -78,11 +79,11 @@ ev ev term = case unfix term of
 
 
 delta :: Monad m => Op2 -> Val -> Val -> m Val
-delta o = (return .) . case o of
-  Plus -> (+)
-  Minus -> (-)
-  Times -> (*)
-  DividedBy -> div
+delta o = \ (I a) (I b) -> return . I $ case o of
+  Plus -> a + b
+  Minus -> a - b
+  Times -> a * b
+  DividedBy -> a `div` b
 
 type Interpreter = Eff '[State, Reader, Failure]
 type State = State.State Store

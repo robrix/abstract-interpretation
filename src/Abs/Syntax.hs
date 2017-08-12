@@ -94,6 +94,7 @@ type State = State.State Store
 type Reader = Reader.Reader Environment
 type Writer = Writer.Writer Trace
 type Trace = [(Environment, Store)]
+type TracingInterpreter = Writer ': Interpreter
 
 run :: Eff Interpreter a -> Either String a
 run f = State.runState f IntMap.empty

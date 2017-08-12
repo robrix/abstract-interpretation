@@ -68,25 +68,25 @@ data Op1 = Negate | Abs | Signum
 data Op2 = Plus | Minus | Times | DividedBy
   deriving (Eq, Ord, Show)
 
-find :: (State (Store i) :< fs) => Loc -> Eff fs (Val i)
+find :: (State (Store i) :< fs) => Loc i -> Eff fs (Val i)
 find = gets . flip (IntMap.!) . unLoc
 
 gets :: (State a :< fs) => (a -> b) -> Eff fs b
 gets = flip fmap get
 
-alloc :: forall i fs proxy . (State (Store i) :< fs) => proxy i -> String -> Eff fs Loc
-alloc _ _ = do
+alloc :: forall i fs . (State (Store i) :< fs) => String -> Eff fs (Loc i)
+alloc _ = do
   s <- get
   return (Loc (length (s :: Store i)))
 
-ext :: (State (Store i) :< fs) => Loc -> Val i -> Eff fs ()
+ext :: (State (Store i) :< fs) => Loc i -> Val i -> Eff fs ()
 ext (Loc loc) val = modify (IntMap.insert loc val)
 
 
-type Environment = Map.Map String Loc
-newtype Loc = Loc { unLoc :: Int }
+type Environment i = Map.Map String (Loc i)
+newtype Loc i = Loc { unLoc :: Int }
   deriving (Eq, Ord, Show)
-data Val i = I i | L (Term i, Environment)
+data Val i = I i | L (Term i, Environment i)
   deriving (Eq, Ord, Show)
 type Store i = IntMap.IntMap (Val i)
 
@@ -112,7 +112,7 @@ ev ev term = case unfix term of
     delta2 o va vb
   Rec f e -> do
     p <- ask
-    a <- alloc ([] :: [i]) f
+    a <- alloc f
     let p' = Map.insert f a p
     v <- local (const p') (ev e)
     ext a v
@@ -123,7 +123,7 @@ ev ev term = case unfix term of
   App e0 e1 -> do
     (L (Fix (Lam x e2), p)) <- ev e0
     v1 <- ev e1
-    a <- alloc ([] :: [i]) x
+    a <- alloc x
     ext a v1
     local (const (Map.insert x a p)) (ev e2)
 
@@ -183,10 +183,10 @@ delta2 o ia ib = let { I a = ia ; I b = ib } in case o of
     else
       return . I $ a `div` b
 
-type Interpreter i = '[State (Store i), Reader Environment, Failure]
+type Interpreter i = '[State (Store i), Reader (Environment i), Failure]
 type Writer = Writer.Writer
 type Trace i f = f (TraceEntry i)
-type TraceEntry i = (Term i, Environment, Store i)
+type TraceEntry i = (Term i, Environment i, Store i)
 type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
 type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
 type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i

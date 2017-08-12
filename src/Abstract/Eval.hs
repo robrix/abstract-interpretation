@@ -19,6 +19,10 @@ type Environment i = Map.Map String (Loc (Val i))
 data Val i = I i | L (Term i, Environment i)
   deriving (Eq, Ord, Show)
 
+
+type Interpreter i = '[Failure, State (Store (Val i)), Reader (Environment i)]
+
+
 -- Evaluation
 
 eval :: forall i . AbstractValue i (Eff (Interpreter i)) => Term i -> (Either String (Val i), Store (Val i))
@@ -74,5 +78,3 @@ instance (MonadFail m, AbstractValue i m) => AbstractValue (Val i) m where
 
   isZero (I a) = isZero a
   isZero _ = fail "non-numeric value"
-
-type Interpreter i = '[Failure, State (Store (Val i)), Reader (Environment i)]

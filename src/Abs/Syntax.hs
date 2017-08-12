@@ -198,6 +198,9 @@ run _ f = State.runState f IntMap.empty
 runStore :: Eff (State (Store i) ': e) b -> Eff e (b, Store i)
 runStore = flip State.runState IntMap.empty
 
+runEnv :: Eff (Reader (Environment i) ': e) a -> Eff e a
+runEnv = flip runReader Map.empty
+
 instance Bifunctor (Syntax i) where
   bimap f g s = case s of
     Var n -> Var (f n)

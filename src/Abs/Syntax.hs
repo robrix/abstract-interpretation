@@ -2,6 +2,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Abs.Syntax where
 
+import Abs.Store
 import Abs.Value
 import Control.Monad.Fail
 import Control.Monad.Effect as Effect hiding (run)
@@ -80,8 +81,6 @@ ext (Loc loc) val = modify (IntMap.insert loc val)
 
 
 type Environment i = Map.Map String (Loc i)
-newtype Loc i = Loc { unLoc :: Int }
-  deriving (Eq, Ord, Show)
 data Val i = I i | L (Term i, Environment i)
   deriving (Eq, Ord, Show)
 type Store i = IntMap.IntMap (Val i)

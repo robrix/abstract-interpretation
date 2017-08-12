@@ -15,7 +15,9 @@ import Data.Functor.Foldable
 import qualified Data.Map as Map
 import Prelude hiding (fail)
 
+
 type Environment i = Map.Map String (Loc (Val i))
+
 data Val i = I i | L (Term i, Environment i)
   deriving (Eq, Ord, Show)
 

@@ -69,18 +69,18 @@ data Op1 = Negate | Abs | Signum
 data Op2 = Plus | Minus | Times | DividedBy
   deriving (Eq, Ord, Show)
 
-find :: State Store :< fs => Loc -> Eff fs Val
+find :: (State Store :< fs) => Loc -> Eff fs Val
 find = gets . flip (IntMap.!)
 
-gets :: State a :< fs => (a -> b) -> Eff fs b
+gets :: (State a :< fs) => (a -> b) -> Eff fs b
 gets = flip fmap get
 
-alloc :: State Store :< fs => String -> Eff fs Loc
+alloc :: (State Store :< fs) => String -> Eff fs Loc
 alloc _ = do
   s <- get
   return (length (s :: Store))
 
-ext :: State Store :< fs => Loc -> Val -> Eff fs ()
+ext :: (State Store :< fs) => Loc -> Val -> Eff fs ()
 ext loc val = modify (IntMap.insert loc val)
 
 
@@ -90,7 +90,7 @@ data Val = I Int | L (Term, Environment)
   deriving (Eq, Ord, Show)
 type Store = IntMap.IntMap Val
 
-ev :: Interpreter :<: fs
+ev :: (Interpreter :<: fs)
    => (Term -> Eff fs Val)
    -> Term
    -> Eff fs Val
@@ -156,7 +156,7 @@ evalDead = run . flip State.runState Set.empty . evalDead' (fix (evDead ev))
           put (subexps e0)
           eval e0
 
-evDead :: DeadCodeInterpreter :<: fs
+evDead :: (DeadCodeInterpreter :<: fs)
        => ((Term -> Eff fs Val) -> Term -> Eff fs Val)
        -> (Term -> Eff fs Val)
        -> Term
@@ -212,7 +212,7 @@ instance Bifunctor Syntax where
 instance Functor (Syntax n) where
   fmap = second
 
-instance Reader :< fs => MonadReader Environment (Eff fs) where
+instance (Reader :< fs) => MonadReader Environment (Eff fs) where
   ask = Reader.ask
   local = Reader.local
 

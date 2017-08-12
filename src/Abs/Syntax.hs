@@ -191,8 +191,8 @@ run :: proxy i
 run _ f = runStore f
         & runEnv
         & runFailure
+        & fmap (fmap fst)
         & Effect.run
-        & fmap fst
 
 runStore :: Eff (State (Store i) ': e) b -> Eff e (b, Store i)
 runStore = flip State.runState IntMap.empty

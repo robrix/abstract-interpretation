@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeOperators, UndecidableInstances #-}
 module Abs.Syntax where
 
+import Control.Monad.Effect
 import Control.Monad.Effect.State hiding (get, modify, put)
 import qualified Control.Monad.Effect.State as State
 import Control.Monad.State.Class
@@ -23,6 +24,16 @@ type Term = Fix (Syntax String)
 data Op2 = Plus | Minus | Times | DividedBy
   deriving (Eq, Show)
 
+find :: State Store :< fs => Loc -> Eff fs Val
+find = gets IntMap.lookup
+
+alloc :: State Store :< fs => String -> Eff fs Loc
+alloc _ = do
+  s <- get
+  return (length (s :: Store))
+
+ext :: State Store :< fs => Loc -> Val -> Eff fs ()
+ext loc val = modify (IntMap.insert loc val)
 
 
 type Environment = Map.Map String Loc

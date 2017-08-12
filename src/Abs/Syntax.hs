@@ -163,10 +163,12 @@ evTell _ ev0 ev e = do
 -- Dead code analysis
 
 evalDead :: (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store i)
-evalDead = run' (undefined :: f (DeadCodeInterpreter i)) . evalDead' (fix (evDead ev))
-  where evalDead' eval e0 = do
-          put (subexps e0)
-          eval e0
+evalDead = run' (undefined :: f (DeadCodeInterpreter i)) . runDead
+
+runDead :: (Ord i, DeadCodeInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
+runDead e0 = do
+  put (subexps e0)
+  fix (evDead ev) e0
 
 evDead :: (Ord i, DeadCodeInterpreter i :<: fs)
        => ((Term i -> Eff fs (Val i)) -> Term i -> Eff fs (Val i))

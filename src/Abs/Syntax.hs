@@ -118,9 +118,9 @@ delta2 o = \ (I a) (I b) -> case o of
 type Interpreter = '[State Store, Reader, Failure]
 type State = State.State
 type Reader = Reader.Reader Environment
-type Writer = Writer.Writer Trace
+type Writer = Writer.Writer
 type Trace = [(Term, Environment, Store)]
-type TracingInterpreter = Writer ': Interpreter
+type TracingInterpreter = Writer Trace ': Interpreter
 
 run :: Eff Interpreter a -> Either String a
 run f = State.runState f IntMap.empty

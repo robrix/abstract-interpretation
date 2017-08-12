@@ -16,7 +16,6 @@ import Data.Function (fix)
 import Data.Functor.Foldable
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import GHC.Exts (IsList(..))
 import Prelude hiding (fail)
 
 type Environment i = Map.Map String (Loc (Val i))
@@ -67,33 +66,6 @@ ev ev term = case unfix term of
     a <- alloc x
     ext a v1
     local (const (Map.insert x a p)) (ev e2)
-
-
--- Tracing and reachable state analyses
-
-evalTrace :: forall i. AbstractValue i (Eff (TraceInterpreter i)) => Term i -> (Either String (Val i, Trace i []), Store (Val i))
-evalTrace = run @(TraceInterpreter i) . runTrace
-
-runTrace :: (TraceInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
-runTrace = fix (evTell [] ev)
-
-evalReach :: forall i. (Ord i, AbstractValue i (Eff (ReachableStateInterpreter i))) => Term i -> (Either String (Val i, Trace i Set.Set), Store (Val i))
-evalReach = run @(ReachableStateInterpreter i) . runReach
-
-runReach :: (Ord i, ReachableStateInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
-runReach = fix (evTell Set.empty ev)
-
-evTell :: forall i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i f), Item (Trace i f) ~ TraceEntry i)
-       => f ()
-       -> ((Term i -> Eff fs (Val i)) -> Term i -> Eff fs (Val i))
-       -> (Term i -> Eff fs (Val i))
-       -> Term i
-       -> Eff fs (Val i)
-evTell _ ev0 ev e = do
-  env <- ask
-  store <- get
-  tell (fromList [(e, env, store)] :: Trace i f)
-  ev0 ev e
 
 
 -- Dead code analysis

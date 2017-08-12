@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeOperators, UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Abs.Syntax where
 
 import Control.Monad.Effect as Effect

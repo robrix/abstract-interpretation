@@ -10,6 +10,10 @@ data Op2 = Plus | Minus | Times | DividedBy
   deriving (Eq, Ord, Show)
 
 
+data AbstractNum i = C i | N
+  deriving (Eq, Ord, Show)
+
+
 class AbstractValue i where
   delta1 :: MonadFail m => Op1 -> i -> m i
   delta2 :: MonadFail m => Op2 -> i -> i -> m i

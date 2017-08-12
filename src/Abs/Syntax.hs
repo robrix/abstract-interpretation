@@ -170,9 +170,6 @@ instance AbstractValue i => AbstractValue (Val i) where
   isZero (I a) = isZero a
   isZero _ = fail "non-numeric value"
 
-data AbstractNum i = C i | N
-  deriving (Eq, Ord, Show)
-
 type Interpreter i = '[State (Store i), Reader (Environment i), Failure]
 type Writer = Writer.Writer
 type Trace i f = f (TraceEntry i)

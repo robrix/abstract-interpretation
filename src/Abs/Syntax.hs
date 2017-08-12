@@ -2,6 +2,8 @@
 module Abs.Syntax where
 
 import Control.Monad.Effect
+import Control.Monad.Effect.Failure
+import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State hiding (get, modify, put)
 import qualified Control.Monad.Effect.State as State
 import Control.Monad.State.Class

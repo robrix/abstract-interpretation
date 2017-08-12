@@ -88,7 +88,7 @@ ev ev term = case unfix term of
     ext a v1
     local (const (Map.insert x a p)) (ev e2)
 
-evalTell :: Term -> Either String (Val, Trace)
+evalTell :: Term -> Either String (Val, Trace [])
 evalTell = run . Writer.runWriter . fix (evTell ev)
 
 evTell :: TracingInterpreter :<: fs => ((Term -> Eff fs Val) -> Term -> Eff fs Val) -> (Term -> Eff fs Val) -> Term -> Eff fs Val
@@ -119,8 +119,8 @@ type Interpreter = '[State Store, Reader, Failure]
 type State = State.State
 type Reader = Reader.Reader Environment
 type Writer = Writer.Writer
-type Trace = [(Term, Environment, Store)]
-type TracingInterpreter = Writer Trace ': Interpreter
+type Trace f = f (Term, Environment, Store)
+type TracingInterpreter = Writer (Trace []) ': Interpreter
 
 run :: Eff Interpreter a -> Either String a
 run f = State.runState f IntMap.empty

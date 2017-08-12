@@ -312,3 +312,7 @@ instance Effect (Reader (Environment i)) where
 instance Effect Failure where
   type Result Failure a = Either String a
   runEffect = runFailure
+
+instance Effect (State (Set.Set (Term i))) where
+  type Result (State (Set.Set (Term i))) a = (a, Set.Set (Term i))
+  runEffect = flip runState Set.empty

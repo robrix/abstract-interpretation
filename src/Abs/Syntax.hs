@@ -11,6 +11,7 @@ import qualified Control.Monad.Effect.State as State
 import qualified Control.Monad.Effect.Writer as Writer
 import Control.Monad.Reader.Class
 import Control.Monad.State.Class
+import Data.Bifunctor
 import Data.Function ((&), fix)
 import Data.Functor.Classes
 import Data.Functor.Foldable
@@ -128,6 +129,17 @@ run f = State.runState f IntMap.empty
       & runFailure
       & Effect.run
       & fmap fst
+
+instance Bifunctor Syntax where
+  bimap f g s = case s of
+    Var n -> Var (f n)
+    Num v -> Num v
+    Op1 o a -> Op1 o (g a)
+    Op2 o a b -> Op2 o (g a) (g b)
+    App a b -> App (g a) (g b)
+    Lam n a -> Lam (f n) (g a)
+    Rec n a -> Rec (f n) (g a)
+    If0 c t e -> If0 (g c) (g t) (g e)
 
 instance State Store :< fs => MonadState Store (Eff fs) where
   get = State.get

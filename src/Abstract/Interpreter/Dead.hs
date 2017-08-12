@@ -21,7 +21,7 @@ evalDead = run @(DeadCodeInterpreter i) . runDead
 
 runDead :: (Ord i, DeadCodeInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
 runDead e0 = do
-  put (subexps e0)
+  put (subterms e0)
   fix (evDead ev) e0
 
 evDead :: (Ord i, DeadCodeInterpreter i :<: fs)

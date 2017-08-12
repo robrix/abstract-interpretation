@@ -42,8 +42,8 @@ rec = (Fix .) . Rec
 if0 :: Term i -> Term i -> Term i -> Term i
 if0 c t e = Fix (If0 c t e)
 
-subexps :: Ord i => Term i -> Set.Set (Term i)
-subexps = para (foldMap (uncurry (mappend . Set.singleton)))
+subterms :: Ord i => Term i -> Set.Set (Term i)
+subterms = para (foldMap (uncurry (mappend . Set.singleton)))
 
 
 -- Instances

@@ -11,7 +11,7 @@ import Control.Monad.Effect.Reader as Reader
 import Control.Monad.Effect.State as State
 import Control.Monad.Effect.Writer as Writer
 import Data.Bifunctor
-import Data.Function ((&), fix)
+import Data.Function (fix)
 import Data.Functor.Classes
 import Data.Functor.Foldable
 import qualified Data.IntMap as IntMap
@@ -187,10 +187,7 @@ type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
 
 run :: Eff (Interpreter i) a
     -> (Either String a, Store i)
-run f = runFailure f
-      & runStore
-      & runEnv
-      & Effect.run
+run = Effect.run . runInterpreter
 
 runInterpreter :: Eff (Failure ': State (Store i) ': Reader (Environment i) ': fs) a -> Eff fs (Either String a, Store i)
 runInterpreter = runEnv . runStore . runFailure

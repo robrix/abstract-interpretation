@@ -3,6 +3,7 @@
 module Abstract.Syntax where
 
 import Abstract.Value
+import Data.Bifoldable
 import Data.Bifunctor
 import Data.Functor.Classes
 import Data.Functor.Foldable
@@ -53,6 +54,17 @@ subexps = para $ \ s -> case s of
 
 
 -- Instances
+
+instance Bifoldable (Syntax i) where
+  bifoldMap f g s = case s of
+    Var n -> f n
+    Num _ -> mempty
+    Op1 _ a -> g a
+    Op2 _ a b -> g a `mappend` g b
+    App a b -> g a `mappend` g b
+    Lam n a -> f n `mappend` g a
+    Rec n a -> f n `mappend` g a
+    If0 c t e -> g c `mappend` g t `mappend` g e
 
 instance Bifunctor (Syntax i) where
   bimap f g s = case s of

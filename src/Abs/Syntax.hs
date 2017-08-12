@@ -27,7 +27,7 @@ data Op2 = Plus | Minus | Times | DividedBy
   deriving (Eq, Show)
 
 find :: State Store :< fs => Loc -> Eff fs Val
-find = gets IntMap.lookup
+find = gets . flip (IntMap.!)
 
 alloc :: State Store :< fs => String -> Eff fs Loc
 alloc _ = do

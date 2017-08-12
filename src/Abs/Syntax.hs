@@ -178,7 +178,7 @@ instance (MonadFail m, AbstractValue i m) => AbstractValue (Val i) m where
   isZero (I a) = isZero a
   isZero _ = fail "non-numeric value"
 
-type Interpreter i = '[State (Store i), Reader (Environment i), Failure]
+type Interpreter i = '[Failure, State (Store i), Reader (Environment i)]
 type Trace i f = f (TraceEntry i)
 type TraceEntry i = (Term i, Environment i, Store i)
 type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
@@ -187,10 +187,10 @@ type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
 
 run :: Eff (Interpreter i) a
     -> Either String a
-run f = runStore f
+run f = runFailure f
+      & runStore
       & runEnv
-      & runFailure
-      & fmap (fmap fst)
+      & fmap fst
       & Effect.run
 
 runStore :: Eff (State (Store i) ': e) b -> Eff e (b, Store i)

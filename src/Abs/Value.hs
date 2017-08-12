@@ -59,3 +59,23 @@ instance (Alternative m, MonadFail m, AbstractValue i m) => AbstractValue (Abstr
 
   isZero (C a) = isZero a
   isZero N = pure True <|> pure False
+
+instance Num i => Num (AbstractNum i) where
+  negate (C i) = C (negate i)
+  negate N = N
+
+  signum (C i) = C (signum i)
+  signum N = N
+
+  abs (C i) = C (abs i)
+  abs N = N
+
+  N + _ = N
+  _ + N = N
+  C a + C b = C (a + b)
+
+  N * _ = N
+  _ * N = N
+  C a * C b = C (a + b)
+
+  fromInteger = C . fromInteger

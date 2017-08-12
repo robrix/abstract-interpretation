@@ -2,6 +2,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Abs.Syntax where
 
+import Abs.Value
 import Control.Monad.Fail
 import Control.Monad.Effect as Effect hiding (run)
 import qualified Control.Monad.Effect as Effect
@@ -61,12 +62,6 @@ subexps = para $ \ s -> case s of
   Rec _ a -> Set.singleton (fst a) <> snd a
   If0 c t e -> foldMap (Set.singleton . fst) [c, t, e] <> foldMap snd [c, t, e]
   _ -> Set.empty
-
-data Op1 = Negate | Abs | Signum
-  deriving (Eq, Ord, Show)
-
-data Op2 = Plus | Minus | Times | DividedBy
-  deriving (Eq, Ord, Show)
 
 find :: (State (Store i) :< fs) => Loc i -> Eff fs (Val i)
 find = gets . flip (IntMap.!) . unLoc
@@ -166,28 +161,6 @@ evDead ev0 ev e = do
   modify (Set.delete e)
   ev0 ev e
 
-
-class AbstractValue i where
-  delta1 :: MonadFail m => Op1 -> i -> m i
-  delta2 :: MonadFail m => Op2 -> i -> i -> m i
-  isZero :: MonadFail m => i -> m Bool
-
-instance AbstractValue Int where
-  delta1 o a = pure $ case o of
-    Negate -> negate a
-    Abs -> abs a
-    Signum -> signum a
-
-  delta2 o a b = case o of
-    Plus -> return $ a + b
-    Minus -> return $ a - b
-    Times -> return $ a * b
-    DividedBy -> if b == 0 then
-        fail "division by zero"
-      else
-        return $ a `div` b
-
-  isZero a = pure (a == 0)
 
 instance AbstractValue i => AbstractValue (Val i) where
   delta1 o (I a) = fmap I (delta1 o a)

@@ -44,6 +44,36 @@ type Loc = Int
 type Val = Int
 type Store = IntMap.IntMap Loc
 
+ev :: (Reader :< fs, State :< fs) => (Term -> Eff fs Val) -> Term -> Eff fs Val
+ev ev term = case unfix term of
+  Num n -> return n
+  Var x -> do
+    p <- ask
+    find (p Map.! x)
+  If0 c t e -> do
+    z <- ev c
+    ev (if z == 0 then t else e)
+  Op2 o a b -> do
+    va <- ev a
+    vb <- ev b
+    delta o va vb
+  Rec f e -> do
+    p <- ask
+    a <- alloc f
+    let p' = Map.insert f a p
+    v <- local (const p') (ev e)
+    ext a v
+    return v
+  Lam x e0 -> do
+    p <- ask
+    return (Fix (Lam x e0), p)
+  App e0 e1 -> do
+    (Fix (Lam x e2), p) <- ev e0
+    v1 <- ev e1
+    a <- alloc x
+    ext a v1
+    local (const (Map.insert x a p)) (ev e2)
+
 
 delta :: Monad m => Op2 -> Val -> Val -> m Val
 delta o = (return .) . case o of

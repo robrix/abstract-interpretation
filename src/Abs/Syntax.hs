@@ -90,8 +90,8 @@ ev ev term = case unfix term of
     ext a v1
     local (const (Map.insert x a p)) (ev e2)
 
-evalTell :: Term -> Either String (Val, Trace [])
-evalTell = run . Writer.runWriter . fix (evTell ev)
+evalTrace :: Term -> Either String (Val, Trace [])
+evalTrace = run . Writer.runWriter . fix (evTell ev)
 
 evTell :: TracingInterpreter :<: fs => ((Term -> Eff fs Val) -> Term -> Eff fs Val) -> (Term -> Eff fs Val) -> Term -> Eff fs Val
 evTell ev0 ev e = do

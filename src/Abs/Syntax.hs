@@ -95,6 +95,9 @@ ev ev term = case unfix term of
 evalTrace :: Term -> Either String (Val, Trace [])
 evalTrace = run . Writer.runWriter . fix (evTell (undefined :: proxy []) ev)
 
+evalReach :: Term -> Either String (Val, Trace Set.Set)
+evalReach = run . Writer.runWriter . fix (evTell (undefined :: proxy Set.Set) ev)
+
 evTell :: forall proxy f fs . (TracingInterpreter f :<: fs, IsList (Trace f), Item (Trace f) ~ TraceEntry) => proxy f -> ((Term -> Eff fs Val) -> Term -> Eff fs Val) -> (Term -> Eff fs Val) -> Term -> Eff fs Val
 evTell _ ev0 ev e = do
   env <- ask

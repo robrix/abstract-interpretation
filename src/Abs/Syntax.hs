@@ -7,10 +7,9 @@ import Control.Monad.Effect as Effect hiding (run)
 import qualified Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
 import qualified Control.Monad.Effect.Reader as Reader
-import qualified Control.Monad.Effect.State as State
+import Control.Monad.Effect.State as State
 import qualified Control.Monad.Effect.Writer as Writer
 import Control.Monad.Reader.Class
-import Control.Monad.State.Class
 import Data.Bifunctor
 import Data.Function ((&), fix)
 import Data.Functor.Classes
@@ -43,6 +42,9 @@ data Op2 = Plus | Minus | Times | DividedBy
 
 find :: State Store :< fs => Loc -> Eff fs Val
 find = gets . flip (IntMap.!)
+
+gets :: State a :< fs => (a -> b) -> Eff fs b
+gets = flip fmap get
 
 alloc :: State Store :< fs => String -> Eff fs Loc
 alloc _ = do
@@ -126,7 +128,6 @@ delta2 o = \ (I a) (I b) -> case o of
       return . I $ a `div` b
 
 type Interpreter = '[State Store, Reader, Failure]
-type State = State.State
 type Reader = Reader.Reader Environment
 type Writer = Writer.Writer
 type Trace f = f TraceEntry
@@ -151,10 +152,6 @@ instance Bifunctor Syntax where
     Lam n a -> Lam (f n) (g a)
     Rec n a -> Rec (f n) (g a)
     If0 c t e -> If0 (g c) (g t) (g e)
-
-instance State Store :< fs => MonadState Store (Eff fs) where
-  get = State.get
-  put = State.put
 
 instance Reader :< fs => MonadReader Environment (Eff fs) where
   ask = Reader.ask

@@ -21,9 +21,9 @@ import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 import Prelude hiding (fail)
 
-data Syntax n a
+data Syntax i n a
   = Var n
-  | Num Int
+  | Num i
   | Op1 Op1 a
   | Op2 Op2 a a
   | App a a
@@ -32,28 +32,28 @@ data Syntax n a
   | If0 a a a
   deriving (Eq, Ord, Show)
 
-type Term = Fix (Syntax String)
+type Term i = Fix (Syntax i String)
 
-var :: String -> Term
+var :: String -> Term i
 var = Fix . Var
 
 infixl 0 #
-(#) :: Term -> Term -> Term
+(#) :: Term i -> Term i -> Term i
 (#) = (Fix .) . App
 
-lam :: String -> (Term -> Term) -> Term
+lam :: String -> (Term i -> Term i) -> Term i
 lam s f = makeLam s (f (var s))
 
-makeLam :: String -> Term -> Term
+makeLam :: String -> Term i -> Term i
 makeLam = (Fix .) . Lam
 
-rec :: String -> Term -> Term
+rec :: String -> Term i -> Term i
 rec = (Fix .) . Rec
 
-if0 :: Term -> Term -> Term -> Term
+if0 :: Term i -> Term i -> Term i -> Term i
 if0 c t e = Fix (If0 c t e)
 
-subexps :: Term -> Set.Set Term
+subexps :: Ord i => Term i -> Set.Set (Term i)
 subexps = para $ \ s -> case s of
   Op1 _ a -> Set.singleton (fst a) <> snd a
   Op2 _ a b -> Set.singleton (fst a) <> snd a <> Set.singleton (fst b) <> snd b
@@ -69,32 +69,33 @@ data Op1 = Negate | Abs | Signum
 data Op2 = Plus | Minus | Times | DividedBy
   deriving (Eq, Ord, Show)
 
-find :: (State Store :< fs) => Loc -> Eff fs Val
+find :: (State (Store i) :< fs) => Loc -> Eff fs (Val i)
 find = gets . flip (IntMap.!) . unLoc
 
 gets :: (State a :< fs) => (a -> b) -> Eff fs b
 gets = flip fmap get
 
-alloc :: (State Store :< fs) => String -> Eff fs Loc
-alloc _ = do
+alloc :: forall i fs proxy . (State (Store i) :< fs) => proxy i -> String -> Eff fs Loc
+alloc _ _ = do
   s <- get
-  return (Loc (length (s :: Store)))
+  return (Loc (length (s :: Store i)))
 
-ext :: (State Store :< fs) => Loc -> Val -> Eff fs ()
+ext :: (State (Store i) :< fs) => Loc -> Val i -> Eff fs ()
 ext (Loc loc) val = modify (IntMap.insert loc val)
 
 
 type Environment = Map.Map String Loc
 newtype Loc = Loc { unLoc :: Int }
   deriving (Eq, Ord, Show)
-data Val = I Int | L (Term, Environment)
+data Val i = I i | L (Term i, Environment)
   deriving (Eq, Ord, Show)
-type Store = IntMap.IntMap Val
+type Store i = IntMap.IntMap (Val i)
 
-ev :: (Interpreter :<: fs)
-   => (Term -> Eff fs Val)
-   -> Term
-   -> Eff fs Val
+ev :: forall i fs
+   .  (Integral i, Interpreter i :<: fs)
+   => (Term i -> Eff fs (Val i))
+   -> Term i
+   -> Eff fs (Val i)
 ev ev term = case unfix term of
   Num n -> return (I n)
   Var x -> do
@@ -112,7 +113,7 @@ ev ev term = case unfix term of
     delta2 o va vb
   Rec f e -> do
     p <- ask
-    a <- alloc f
+    a <- alloc ([] :: [i]) f
     let p' = Map.insert f a p
     v <- local (const p') (ev e)
     ext a v
@@ -123,57 +124,57 @@ ev ev term = case unfix term of
   App e0 e1 -> do
     (L (Fix (Lam x e2), p)) <- ev e0
     v1 <- ev e1
-    a <- alloc x
+    a <- alloc ([] :: [i]) x
     ext a v1
     local (const (Map.insert x a p)) (ev e2)
 
 
 -- Tracing and reachable state analyses
 
-evalTrace :: Term -> Either String (Val, Trace [])
-evalTrace = run . Writer.runWriter . fix (evTell (undefined :: proxy []) ev)
+evalTrace :: forall i. Integral i => Term i -> Either String (Val i, Trace i [])
+evalTrace = run (undefined :: proxy' i) . Writer.runWriter . fix (evTell (undefined :: proxy []) ev)
 
-evalReach :: Term -> Either String (Val, Trace Set.Set)
-evalReach = run . Writer.runWriter . fix (evTell (undefined :: proxy Set.Set) ev)
+evalReach :: forall i. Integral i => Term i -> Either String (Val i, Trace i Set.Set)
+evalReach = run (undefined :: proxy' i) . Writer.runWriter . fix (evTell (undefined :: proxy Set.Set) ev)
 
-evTell :: forall proxy f fs . (TracingInterpreter f :<: fs, IsList (Trace f), Item (Trace f) ~ TraceEntry)
+evTell :: forall proxy i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i f), Item (Trace i f) ~ TraceEntry i)
        => proxy f
-       -> ((Term -> Eff fs Val) -> Term -> Eff fs Val)
-       -> (Term -> Eff fs Val)
-       -> Term
-       -> Eff fs Val
+       -> ((Term i -> Eff fs (Val i)) -> Term i -> Eff fs (Val i))
+       -> (Term i -> Eff fs (Val i))
+       -> Term i
+       -> Eff fs (Val i)
 evTell _ ev0 ev e = do
   env <- ask
   store <- get
-  Writer.tell (fromList [(e, env, store)] :: Trace f)
+  Writer.tell (fromList [(e, env, store)] :: Trace i f)
   ev0 ev e
 
 
 -- Dead code analysis
 
-evalDead :: Term -> Either String (Val, Set.Set Term)
-evalDead = run . flip State.runState Set.empty . evalDead' (fix (evDead ev))
+evalDead :: forall i. Integral i => Term i -> Either String (Val i, Set.Set (Term i))
+evalDead = run (undefined :: proxy i) . flip State.runState Set.empty . evalDead' (fix (evDead ev))
   where evalDead' eval e0 = do
           put (subexps e0)
           eval e0
 
-evDead :: (DeadCodeInterpreter :<: fs)
-       => ((Term -> Eff fs Val) -> Term -> Eff fs Val)
-       -> (Term -> Eff fs Val)
-       -> Term
-       -> Eff fs Val
+evDead :: (Ord i, DeadCodeInterpreter i :<: fs)
+       => ((Term i -> Eff fs (Val i)) -> Term i -> Eff fs (Val i))
+       -> (Term i -> Eff fs (Val i))
+       -> Term i
+       -> Eff fs (Val i)
 evDead ev0 ev e = do
   modify (Set.delete e)
   ev0 ev e
 
 
-delta1 :: Monad m => Op1 -> Val -> m Val
+delta1 :: (Integral i, Monad m) => Op1 -> Val i -> m (Val i)
 delta1 o i = let I a = i in return . I $ case o of
   Negate -> negate a
   Abs -> abs a
   Signum -> signum a
 
-delta2 :: MonadFail m => Op2 -> Val -> Val -> m Val
+delta2 :: (Integral i, MonadFail m) => Op2 -> Val i -> Val i -> m (Val i)
 delta2 o ia ib = let { I a = ia ; I b = ib } in case o of
   Plus -> return . I $ a + b
   Minus -> return . I $ a - b
@@ -183,23 +184,25 @@ delta2 o ia ib = let { I a = ia ; I b = ib } in case o of
     else
       return . I $ a `div` b
 
-type Interpreter = '[State Store, Reader, Failure]
+type Interpreter i = '[State (Store i), Reader, Failure]
 type Reader = Reader.Reader Environment
 type Writer = Writer.Writer
-type Trace f = f TraceEntry
-type TraceEntry = (Term, Environment, Store)
-type TracingInterpreter f = Writer (Trace f) ': Interpreter
-type ReachableStateInterpreter = Writer (Trace Set.Set) ': Interpreter
-type DeadCodeInterpreter = State (Set.Set Term) ': Interpreter
+type Trace i f = f (TraceEntry i)
+type TraceEntry i = (Term i, Environment, Store i)
+type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
+type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
+type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
 
-run :: Eff Interpreter a -> Either String a
-run f = State.runState f IntMap.empty
-      & flip Reader.runReader Map.empty
-      & runFailure
-      & Effect.run
-      & fmap fst
+run :: proxy i
+    -> Eff (Interpreter i) a
+    -> Either String a
+run _ f = State.runState f IntMap.empty
+        & flip Reader.runReader Map.empty
+        & runFailure
+        & Effect.run
+        & fmap fst
 
-instance Bifunctor Syntax where
+instance Bifunctor (Syntax i) where
   bimap f g s = case s of
     Var n -> Var (f n)
     Num v -> Num v
@@ -210,14 +213,14 @@ instance Bifunctor Syntax where
     Rec n a -> Rec (f n) (g a)
     If0 c t e -> If0 (g c) (g t) (g e)
 
-instance Functor (Syntax n) where
+instance Functor (Syntax i n) where
   fmap = second
 
 instance (Reader :< fs) => MonadReader Environment (Eff fs) where
   ask = Reader.ask
   local = Reader.local
 
-instance Eq2 Syntax where
+instance Eq i => Eq2 (Syntax i) where
   liftEq2 eqN eqA s1 s2 = case (s1, s2) of
     (Var n1, Var n2) -> eqN n1 n2
     (Num v1, Num v2) -> v1 == v2
@@ -229,10 +232,10 @@ instance Eq2 Syntax where
     (If0 c1 t1 e1, If0 c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
     _ -> False
 
-instance Eq n => Eq1 (Syntax n) where
+instance (Eq i, Eq n) => Eq1 (Syntax i n) where
   liftEq = liftEq2 (==)
 
-instance Ord2 Syntax where
+instance Ord i => Ord2 (Syntax i) where
   liftCompare2 compareN compareA s1 s2
     | ordering <- compare (bimap (const ()) (const ()) s1) (bimap (const ()) (const ()) s2), ordering /= EQ = ordering
     | otherwise = case (s1, s2) of
@@ -245,11 +248,11 @@ instance Ord2 Syntax where
       (If0 c1 t1 e1, If0 c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
       _ -> EQ
 
-instance Ord n => Ord1 (Syntax n) where
+instance (Ord i, Ord n) => Ord1 (Syntax i n) where
   liftCompare = liftCompare2 compare
 
 
-instance Show2 Syntax where
+instance Show i => Show2 (Syntax i) where
   liftShowsPrec2 spN _ spA _ d s = case s of
     Var n -> showsUnaryWith spN "Var" d n
     Num v -> showsUnaryWith showsPrec "Num" d v
@@ -262,10 +265,10 @@ instance Show2 Syntax where
     where showsTernaryWith :: (Int -> a -> ShowS) -> (Int -> b -> ShowS) -> (Int -> c -> ShowS) -> String -> Int -> a -> b -> c -> ShowS
           showsTernaryWith sp1 sp2 sp3 name d x y z = showParen (d > 10) $ showString name . showChar ' ' . sp1 11 x . showChar ' ' . sp2 11 y . showChar ' ' . sp3 11 z
 
-instance Show n => Show1 (Syntax n) where
+instance (Show i, Show n) => Show1 (Syntax i n) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
 
-instance Num Term where
+instance Num i => Num (Term i) where
   fromInteger = Fix . Num . fromInteger
 
   signum = Fix . Op1 Signum

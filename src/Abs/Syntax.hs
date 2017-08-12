@@ -89,7 +89,7 @@ type Store i = IntMap.IntMap (Val i)
 -- Evaluation
 
 eval :: forall i. AbstractValue i (Eff (Interpreter i)) => Term i -> Either String (Val i)
-eval = run (undefined :: proxy i) . fix ev
+eval = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i)) . fix ev
 
 ev :: (AbstractValue i (Eff fs), Interpreter i :<: fs)
    => (Term i -> Eff fs (Val i))
@@ -132,10 +132,10 @@ ev ev term = case unfix term of
 -- Tracing and reachable state analyses
 
 evalTrace :: forall i. (AbstractValue i (Eff (TracingInterpreter i []))) => Term i -> Either String (Val i, Trace i [])
-evalTrace = run (undefined :: proxy1 i) . runWriter . fix (evTell (undefined :: proxy2 []) ev)
+evalTrace = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i, Trace i [])) . runWriter . fix (evTell (undefined :: proxy2 []) ev)
 
 evalReach :: forall i. (Ord i, AbstractValue i (Eff (TracingInterpreter i Set.Set))) => Term i -> Either String (Val i, Trace i Set.Set)
-evalReach = run (undefined :: proxy1 i) . runWriter . fix (evTell (undefined :: proxy2 Set.Set) ev)
+evalReach = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i, Trace i Set.Set)) . runWriter . fix (evTell (undefined :: proxy2 Set.Set) ev)
 
 evTell :: forall proxy i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i f), Item (Trace i f) ~ TraceEntry i)
        => proxy f
@@ -153,7 +153,7 @@ evTell _ ev0 ev e = do
 -- Dead code analysis
 
 evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> Either String (Val i, Set.Set (Term i))
-evalDead = run (undefined :: proxy1 i) . runDead . evalDead' (fix (evDead ev))
+evalDead = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i, Set.Set (Term i))) . runDead . evalDead' (fix (evDead ev))
   where evalDead' eval e0 = do
           put (subexps e0)
           eval e0
@@ -185,14 +185,13 @@ type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
 type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
 type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
 
-run :: proxy i
-    -> Eff (Interpreter i) a
+run :: Eff (Interpreter i) a
     -> Either String a
-run _ f = runStore f
-        & runEnv
-        & runFailure
-        & fmap (fmap fst)
-        & Effect.run
+run f = runStore f
+      & runEnv
+      & runFailure
+      & fmap (fmap fst)
+      & Effect.run
 
 runStore :: Eff (State (Store i) ': e) b -> Eff e (b, Store i)
 runStore = flip State.runState IntMap.empty

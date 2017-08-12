@@ -3,14 +3,15 @@
 module Abs.Syntax where
 
 import Control.Monad.Fail
-import Control.Monad.Effect as Effect
+import Control.Monad.Effect as Effect hiding (run)
+import qualified Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
 import qualified Control.Monad.Effect.Reader as Reader
 import qualified Control.Monad.Effect.State as State
 import qualified Control.Monad.Effect.Writer as Writer
 import Control.Monad.Reader.Class
 import Control.Monad.State.Class
-import Data.Function ((&))
+import Data.Function ((&), fix)
 import Data.Functor.Classes
 import Data.Functor.Foldable
 import qualified Data.IntMap as IntMap
@@ -80,6 +81,8 @@ ev ev term = case unfix term of
     ext a v1
     local (const (Map.insert x a p)) (ev e2)
 
+eval :: Term -> Either String (Val, Trace)
+eval = run . Writer.runWriter . fix (evTell ev)
 
 evTell :: TracingInterpreter :<: fs => ((Term -> Eff fs Val) -> Term -> Eff fs Val) -> (Term -> Eff fs Val) -> Term -> Eff fs Val
 evTell ev0 ev e = do

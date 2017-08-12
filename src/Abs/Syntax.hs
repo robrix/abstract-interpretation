@@ -189,8 +189,8 @@ type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
 run :: proxy i
     -> Eff (Interpreter i) a
     -> Either String a
-run _ f = State.runState f IntMap.empty
-        & flip runReader Map.empty
+run _ f = runStore f
+        & runEnv
         & runFailure
         & Effect.run
         & fmap fst

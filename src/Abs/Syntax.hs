@@ -1,6 +1,9 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, TypeOperators #-}
+{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeOperators, UndecidableInstances #-}
 module Abs.Syntax where
 
+import Control.Monad.Effect.State hiding (get, modify, put)
+import qualified Control.Monad.Effect.State as State
+import Control.Monad.State.Class
 import Data.Functor.Foldable
 import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
@@ -37,3 +40,7 @@ delta o = (return .) . case o of
   DividedBy -> div
 
 type Interpreter = Eff '[State Store, Reader Environment, Failure]
+
+instance State Store :< fs => MonadState Store (Eff fs) where
+  get = State.get
+  put = State.put

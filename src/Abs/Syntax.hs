@@ -90,8 +90,7 @@ data Val i = I i | L (Term i, Environment i)
   deriving (Eq, Ord, Show)
 type Store i = IntMap.IntMap (Val i)
 
-ev :: forall i fs
-   .  (AbstractValue i, Interpreter i :<: fs)
+ev :: (AbstractValue i, Interpreter i :<: fs)
    => (Term i -> Eff fs (Val i))
    -> Term i
    -> Eff fs (Val i)

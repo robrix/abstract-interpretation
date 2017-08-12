@@ -271,3 +271,10 @@ instance (Real i, AbstractValue i (Eff (Interpreter i))) => Real (Term i) where
     Right (I a) -> toRational a
     Right _ -> error "toRational applied to non-numeric Term"
     Left s -> error s
+
+instance (Enum i, Num i, AbstractValue i (Eff (Interpreter i))) => Enum (Term i) where
+  toEnum = fromIntegral
+  fromEnum term = case run (undefined :: proxy i) (fix ev term) of
+    Right (I a) -> fromEnum a
+    Right _ -> error "fromEnum applied to non-numeric Term"
+    Left s -> error s

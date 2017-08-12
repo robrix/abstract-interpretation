@@ -9,7 +9,7 @@ import qualified Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Reader as Reader
 import Control.Monad.Effect.State as State
-import qualified Control.Monad.Effect.Writer as Writer
+import Control.Monad.Effect.Writer as Writer
 import Data.Bifunctor
 import Data.Function ((&), fix)
 import Data.Functor.Classes
@@ -132,10 +132,10 @@ ev ev term = case unfix term of
 -- Tracing and reachable state analyses
 
 evalTrace :: forall i. (AbstractValue i (Eff (TracingInterpreter i []))) => Term i -> Either String (Val i, Trace i [])
-evalTrace = run (undefined :: proxy1 i) . Writer.runWriter . fix (evTell (undefined :: proxy2 []) ev)
+evalTrace = run (undefined :: proxy1 i) . runWriter . fix (evTell (undefined :: proxy2 []) ev)
 
 evalReach :: forall i fs proxy0. (Ord i, AbstractValue i (Eff (TracingInterpreter i Set.Set))) => proxy0 fs -> Term i -> Either String (Val i, Trace i Set.Set)
-evalReach _ = run (undefined :: proxy1 i) . Writer.runWriter . fix (evTell (undefined :: proxy2 Set.Set) ev)
+evalReach _ = run (undefined :: proxy1 i) . runWriter . fix (evTell (undefined :: proxy2 Set.Set) ev)
 
 evTell :: forall proxy i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i f), Item (Trace i f) ~ TraceEntry i)
        => proxy f
@@ -146,7 +146,7 @@ evTell :: forall proxy i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i 
 evTell _ ev0 ev e = do
   env <- ask
   store <- get
-  Writer.tell (fromList [(e, env, store)] :: Trace i f)
+  tell (fromList [(e, env, store)] :: Trace i f)
   ev0 ev e
 
 
@@ -179,7 +179,6 @@ instance (MonadFail m, AbstractValue i m) => AbstractValue (Val i) m where
   isZero _ = fail "non-numeric value"
 
 type Interpreter i = '[State (Store i), Reader (Environment i), Failure]
-type Writer = Writer.Writer
 type Trace i f = f (TraceEntry i)
 type TraceEntry i = (Term i, Environment i, Store i)
 type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i

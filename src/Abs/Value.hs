@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 module Abs.Value where
 
+import Control.Applicative
 import Control.Monad.Fail
 import Prelude hiding (fail)
 
@@ -41,3 +42,14 @@ instance MonadFail m => AbstractValue Int m where
         return $ a `div` b
 
   isZero a = pure (a == 0)
+
+instance (Alternative m, MonadFail m, AbstractValue i m) => AbstractValue (AbstractNum i) m where
+  delta1 o (C a) = fmap C (delta1 o a)
+  delta1 _ N = pure N
+
+  delta2 o (C a) (C b) = fmap C (delta2 o a b)
+  delta2 DividedBy _ N = pure N <|> divisionByZero
+  delta2 _ _ _ = pure N
+
+  isZero (C a) = isZero a
+  isZero N = pure True <|> pure False

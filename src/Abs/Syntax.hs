@@ -2,6 +2,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Abs.Syntax where
 
+import Control.Monad.Fail
 import Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
 import qualified Control.Monad.Effect.Reader as Reader
@@ -14,6 +15,7 @@ import Data.Functor.Classes
 import Data.Functor.Foldable
 import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
+import Prelude hiding (fail)
 
 data Syntax n a
   = Var n
@@ -48,7 +50,7 @@ data Val = I Int | L (Term, Environment)
   deriving (Eq, Show)
 type Store = IntMap.IntMap Val
 
-ev :: (Reader :< fs, State :< fs) => (Term -> Eff fs Val) -> Term -> Eff fs Val
+ev :: Interpreter :<: fs => (Term -> Eff fs Val) -> Term -> Eff fs Val
 ev ev term = case unfix term of
   Num n -> return (I n)
   Var x -> do
@@ -79,7 +81,7 @@ ev ev term = case unfix term of
     local (const (Map.insert x a p)) (ev e2)
 
 
-delta :: Monad m => Op2 -> Val -> Val -> m Val
+delta :: MonadFail m => Op2 -> Val -> Val -> m Val
 delta o = \ (I a) (I b) -> case o of
   Plus -> return . I $ a + b
   Minus -> return . I $ a - b

@@ -286,14 +286,17 @@ instance (Integral i, AbstractValue i (Eff (Interpreter i))) => Integral (Term i
 class Effects fs where
   type Final fs a
   run :: Eff fs a -> Final fs a
+  runEffects :: Eff fs a -> Eff '[] (Final fs a)
 
 instance (Effect f1, Effects (f2 ': fs)) => Effects (f1 ': f2 ': fs) where
   type Final (f1 ': f2 ': fs) a = Final (f2 ': fs) (Result f1 a)
   run = run . runEffect
+  runEffects = runEffects . runEffect
 
 instance Effect f => Effects '[f] where
   type Final '[f] a = Result f a
   run = Effect.run . runEffect
+  runEffects = runEffect
 
 class Effect f where
   type Result f a

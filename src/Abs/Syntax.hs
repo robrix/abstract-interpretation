@@ -63,7 +63,7 @@ ev ev term = case unfix term of
   Op2 o a b -> do
     va <- ev a
     vb <- ev b
-    delta o va vb
+    delta2 o va vb
   Rec f e -> do
     p <- ask
     a <- alloc f
@@ -92,8 +92,8 @@ evTell ev0 ev e = do
   ev0 ev e
 
 
-delta :: MonadFail m => Op2 -> Val -> Val -> m Val
-delta o = \ (I a) (I b) -> case o of
+delta2 :: MonadFail m => Op2 -> Val -> Val -> m Val
+delta2 o = \ (I a) (I b) -> case o of
   Plus -> return . I $ a + b
   Minus -> return . I $ a - b
   Times -> return . I $ a * b

@@ -14,6 +14,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Abs.Syntax
+                     , Abs.Value
                      , Control.Monad.Effect.Failure
   build-depends:       base >=4.10 && <4.11
                      , containers

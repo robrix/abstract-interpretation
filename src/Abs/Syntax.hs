@@ -89,7 +89,7 @@ type Store i = IntMap.IntMap (Val i)
 -- Evaluation
 
 eval :: forall i. AbstractValue i (Eff (Interpreter i)) => Term i -> (Either String (Val i), Store i)
-eval = runEffects . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i)) . fix ev
+eval = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i)) . fix ev
 
 ev :: (AbstractValue i (Eff fs), Interpreter i :<: fs)
    => (Term i -> Eff fs (Val i))
@@ -132,10 +132,10 @@ ev ev term = case unfix term of
 -- Tracing and reachable state analyses
 
 evalTrace :: forall i. (AbstractValue i (Eff (TraceInterpreter i))) => Term i -> (Either String (Val i, Trace i []), Store i)
-evalTrace = runEffects . flip asTypeOf (undefined :: Eff (TraceInterpreter i) (Val i)) . fix (evTell [] ev)
+evalTrace = run . flip asTypeOf (undefined :: Eff (TraceInterpreter i) (Val i)) . fix (evTell [] ev)
 
 evalReach :: forall i. (Ord i, AbstractValue i (Eff (ReachableStateInterpreter i))) => Term i -> (Either String (Val i, Trace i Set.Set), Store i)
-evalReach = runEffects . flip asTypeOf (undefined :: Eff (ReachableStateInterpreter i) (Val i)) . fix (evTell Set.empty ev)
+evalReach = run . flip asTypeOf (undefined :: Eff (ReachableStateInterpreter i) (Val i)) . fix (evTell Set.empty ev)
 
 evTell :: forall i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i f), Item (Trace i f) ~ TraceEntry i)
        => f ()
@@ -153,7 +153,7 @@ evTell _ ev0 ev e = do
 -- Dead code analysis
 
 evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store i)
-evalDead = runEffects . flip asTypeOf (undefined :: Eff (DeadCodeInterpreter i) (Val i)) . evalDead' (fix (evDead ev))
+evalDead = run . flip asTypeOf (undefined :: Eff (DeadCodeInterpreter i) (Val i)) . evalDead' (fix (evDead ev))
   where evalDead' eval e0 = do
           put (subexps e0)
           eval e0
@@ -285,15 +285,15 @@ instance (Integral i, AbstractValue i (Eff (Interpreter i))) => Integral (Term i
 
 class Effects fs where
   type Final fs a
-  runEffects :: Eff fs a -> Final fs a
+  run :: Eff fs a -> Final fs a
 
 instance (Effect f1, Effects (f2 ': fs)) => Effects (f1 ': f2 ': fs) where
   type Final (f1 ': f2 ': fs) a = Final (f2 ': fs) (Result f1 a)
-  runEffects = runEffects . runEffect
+  run = run . runEffect
 
 instance Effect f => Effects '[f] where
   type Final '[f] a = Result f a
-  runEffects = Effect.run . runEffect
+  run = Effect.run . runEffect
 
 class Effect f where
   type Result f a

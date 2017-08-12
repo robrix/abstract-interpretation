@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeOperators #-}
-module Abstract.Eval where
+module Abstract.Interpreter where
 
 import Abstract.Store
 import Abstract.Syntax

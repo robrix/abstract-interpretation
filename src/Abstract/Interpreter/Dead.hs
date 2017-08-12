@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeOperators #-}
-module Abstract.Eval.Dead where
+module Abstract.Interpreter.Dead where
 
-import Abstract.Eval
+import Abstract.Interpreter
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value

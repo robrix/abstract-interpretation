@@ -13,9 +13,9 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Abstract.Eval
-                     , Abstract.Eval.Dead
-                     , Abstract.Eval.Trace
+  exposed-modules:     Abstract.Interpreter
+                     , Abstract.Interpreter.Dead
+                     , Abstract.Interpreter.Trace
                      , Abstract.Store
                      , Abstract.Syntax
                      , Abstract.Value

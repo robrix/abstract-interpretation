@@ -111,6 +111,14 @@ evTell _ ev0 ev e = do
   ev0 ev e
 
 
+-- Dead code analysis
+
+evDead :: DeadCodeInterpreter :<: fs => ((Term -> Eff fs Val) -> Term -> Eff fs Val) -> (Term -> Eff fs Val) -> Term -> Eff fs Val
+evDead ev0 ev e = do
+  modify (Set.delete e)
+  ev0 ev e
+
+
 delta1 :: Monad m => Op1 -> Val -> m Val
 delta1 o = \ (I a) -> return . I $ case o of
   Negate -> negate a

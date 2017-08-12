@@ -14,6 +14,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Abstract.Eval
+                     , Abstract.Eval.Trace
                      , Abstract.Store
                      , Abstract.Syntax
                      , Abstract.Value

@@ -123,6 +123,12 @@ evTell _ ev0 ev e = do
 
 -- Dead code analysis
 
+evalDead :: Term -> Either String (Val, Set.Set Term)
+evalDead = run . flip State.runState Set.empty . evalDead' (fix (evDead ev))
+  where evalDead' eval e0 = do
+          put (subexps e0)
+          eval e0
+
 evDead :: DeadCodeInterpreter :<: fs => ((Term -> Eff fs Val) -> Term -> Eff fs Val) -> (Term -> Eff fs Val) -> Term -> Eff fs Val
 evDead ev0 ev e = do
   modify (Set.delete e)

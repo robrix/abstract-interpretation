@@ -167,12 +167,12 @@ evDead ev0 ev e = do
 
 
 class Real i => AbstractValue i where
-  delta1 :: Monad m => Op1 -> Val i -> m (Val i)
+  delta1 :: Applicative m => Op1 -> Val i -> m (Val i)
   delta2 :: MonadFail m => Op2 -> Val i -> Val i -> m (Val i)
   isZero :: Applicative m => Val i -> m Bool
 
 instance AbstractValue Int where
-  delta1 o i = let I a = i in return . I $ case o of
+  delta1 o i = let I a = i in pure . I $ case o of
     Negate -> negate a
     Abs -> abs a
     Signum -> signum a

@@ -43,14 +43,7 @@ if0 :: Term i -> Term i -> Term i -> Term i
 if0 c t e = Fix (If0 c t e)
 
 subexps :: Ord i => Term i -> Set.Set (Term i)
-subexps = para $ \ s -> case s of
-  Op1 _ a -> Set.singleton (fst a) <> snd a
-  Op2 _ a b -> Set.singleton (fst a) <> snd a <> Set.singleton (fst b) <> snd b
-  App a b -> Set.singleton (fst a) <> snd a <> Set.singleton (fst b) <> snd b
-  Lam _ a -> Set.singleton (fst a) <> snd a
-  Rec _ a -> Set.singleton (fst a) <> snd a
-  If0 c t e -> foldMap (Set.singleton . fst) [c, t, e] <> foldMap snd [c, t, e]
-  _ -> Set.empty
+subexps = para (foldMap (uncurry (mappend . Set.singleton)))
 
 
 -- Instances

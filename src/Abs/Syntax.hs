@@ -4,11 +4,10 @@ module Abs.Syntax where
 
 import Abs.Store
 import Abs.Value
+import Control.Effect
 import Control.Monad.Fail
 import Control.Monad.Effect as Effect hiding (run)
-import qualified Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
-import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader as Reader
 import Control.Monad.Effect.State as State
 import Control.Monad.Effect.Writer as Writer
@@ -16,7 +15,6 @@ import Data.Bifunctor
 import Data.Function (fix)
 import Data.Functor.Classes
 import Data.Functor.Foldable
-import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import Data.Semigroup
 import qualified Data.Set as Set
@@ -278,46 +276,3 @@ instance (Integral i, AbstractValue i (Eff (Interpreter i))) => Integral (Term i
     Right (I a) -> toInteger a
     Right _ -> error "toInteger applied to non-numeric Term"
     Left s -> error s
-
-run :: Effects fs => Eff fs a -> Final fs a
-run = Effect.run . runEffects
-
-class Effects fs where
-  type Final fs a
-  runEffects :: Eff fs a -> Eff '[] (Final fs a)
-
-instance (Effect f1, Effects (f2 ': fs)) => Effects (f1 ': f2 ': fs) where
-  type Final (f1 ': f2 ': fs) a = Final (f2 ': fs) (Result f1 a)
-  runEffects = runEffects . runEffect
-
-instance Effect f => Effects '[f] where
-  type Final '[f] a = Result f a
-  runEffects = runEffect
-
-class Effect f where
-  type Result f a
-  type instance Result f a = a
-  runEffect :: Eff (f ': fs) a -> Eff fs (Result f a)
-
-instance Effect (State (Store (Val i))) where
-  type Result (State (Store (Val i))) a = (a, Store (Val i))
-  runEffect = flip runState IntMap.empty
-
-instance Effect (Reader (Environment i)) where
-  runEffect = flip runReader Map.empty
-
-instance Effect Failure where
-  type Result Failure a = Either String a
-  runEffect = runFailure
-
-instance Effect (State (Set.Set (Term i))) where
-  type Result (State (Set.Set (Term i))) a = (a, Set.Set (Term i))
-  runEffect = flip runState Set.empty
-
-instance Monoid w => Effect (Writer w) where
-  type Result (Writer w) a = (a, w)
-  runEffect = runWriter
-
-instance Effect NonDetEff where
-  type Result NonDetEff a = [a]
-  runEffect = makeChoiceA

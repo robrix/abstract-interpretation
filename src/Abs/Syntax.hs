@@ -10,7 +10,7 @@ import qualified Data.Map as Map
 
 data Syntax n a
   = Var n
-  | Num Int
+  | Num Val
   | Op2 Op2 a a
   | App a a
   | Lam n a

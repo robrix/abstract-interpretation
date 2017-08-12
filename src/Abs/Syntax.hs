@@ -308,3 +308,7 @@ instance Effect (State (Store i)) where
 
 instance Effect (Reader (Environment i)) where
   runEffect = flip runReader Map.empty
+
+instance Effect Failure where
+  type Result Failure a = Either String a
+  runEffect = runFailure

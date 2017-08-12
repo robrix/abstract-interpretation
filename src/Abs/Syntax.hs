@@ -6,6 +6,7 @@ import Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
 import qualified Control.Monad.Effect.Reader as Reader
 import qualified Control.Monad.Effect.State as State
+import qualified Control.Monad.Effect.Writer as Writer
 import Control.Monad.Reader.Class
 import Control.Monad.State.Class
 import Data.Function ((&))
@@ -91,6 +92,8 @@ delta o = \ (I a) (I b) -> case o of
 type Interpreter = Eff '[State, Reader, Failure]
 type State = State.State Store
 type Reader = Reader.Reader Environment
+type Writer = Writer.Writer Trace
+type Trace = [(Environment, Store)]
 
 run :: Interpreter a -> Either String a
 run f = State.runState f IntMap.empty

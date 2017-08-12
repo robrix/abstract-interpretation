@@ -17,6 +17,7 @@ import Data.Functor.Classes
 import Data.Functor.Foldable
 import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
+import Data.Semigroup
 import Prelude hiding (fail)
 
 data Syntax n a
@@ -28,15 +29,15 @@ data Syntax n a
   | Lam n a
   | Rec n a
   | If0 a a a
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 type Term = Fix (Syntax String)
 
 data Op1 = Negate | Abs | Signum
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 data Op2 = Plus | Minus | Times | DividedBy
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 find :: State Store :< fs => Loc -> Eff fs Val
 find = gets . flip (IntMap.!)
@@ -53,7 +54,7 @@ ext loc val = modify (IntMap.insert loc val)
 type Environment = Map.Map String Loc
 type Loc = Int
 data Val = I Int | L (Term, Environment)
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 type Store = IntMap.IntMap Val
 
 ev :: Interpreter :<: fs => (Term -> Eff fs Val) -> Term -> Eff fs Val
@@ -163,6 +164,23 @@ instance Eq2 Syntax where
 
 instance Eq n => Eq1 (Syntax n) where
   liftEq = liftEq2 (==)
+
+instance Ord2 Syntax where
+  liftCompare2 compareN compareA s1 s2
+    | ordering <- (compare (bimap (const ()) (const ()) s1) (bimap (const ()) (const ()) s2)), ordering /= EQ = ordering
+    | otherwise = case (s1, s2) of
+      (Var n1, Var n2) -> compareN n1 n2
+      (Num v1, Num v2) -> v1 `compare` v2
+      (Op2 o1 a1 b1, Op2 o2 a2 b2) -> compare o1 o2 <> compareA a1 a2 <> compareA b1 b2
+      (App a1 b1, App a2 b2) -> compareA a1 a2 <> compareA b1 b2
+      (Lam n1 a1, Lam n2 a2) -> compareN n1 n2 <> compareA a1 a2
+      (Rec n1 a1, Rec n2 a2) -> compareN n1 n2 <> compareA a1 a2
+      (If0 c1 t1 e1, If0 c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
+      _ -> EQ
+
+instance Ord n => Ord1 (Syntax n) where
+  liftCompare = liftCompare2 compare
+
 
 instance Show2 Syntax where
   liftShowsPrec2 spN _ spA _ d s = case s of

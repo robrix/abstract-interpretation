@@ -10,11 +10,9 @@ import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
-import Control.Monad.Effect.Writer
 import Data.Function (fix)
 import Data.Functor.Foldable
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import Prelude hiding (fail)
 
 type Environment i = Map.Map String (Loc (Val i))
@@ -67,26 +65,6 @@ ev ev term = case unfix term of
     local (const (Map.insert x a p)) (ev e2)
 
 
--- Dead code analysis
-
-evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store (Val i))
-evalDead = run @(DeadCodeInterpreter i) . runDead
-
-runDead :: (Ord i, DeadCodeInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
-runDead e0 = do
-  put (subexps e0)
-  fix (evDead ev) e0
-
-evDead :: (Ord i, DeadCodeInterpreter i :<: fs)
-       => ((Term i -> Eff fs (Val i)) -> Term i -> Eff fs (Val i))
-       -> (Term i -> Eff fs (Val i))
-       -> Term i
-       -> Eff fs (Val i)
-evDead ev0 ev e = do
-  modify (Set.delete e)
-  ev0 ev e
-
-
 instance (MonadFail m, AbstractValue i m) => AbstractValue (Val i) m where
   delta1 o (I a) = fmap I (delta1 o a)
   delta1 _ _ = fail "non-numeric value"
@@ -98,4 +76,3 @@ instance (MonadFail m, AbstractValue i m) => AbstractValue (Val i) m where
   isZero _ = fail "non-numeric value"
 
 type Interpreter i = '[Failure, State (Store (Val i)), Reader (Environment i)]
-type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i

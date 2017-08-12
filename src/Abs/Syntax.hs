@@ -133,7 +133,7 @@ ev ev term = case unfix term of
 evalTrace :: forall i. AbstractValue i => Term i -> Either String (Val i, Trace i [])
 evalTrace = run (undefined :: proxy' i) . Writer.runWriter . fix (evTell (undefined :: proxy []) ev)
 
-evalReach :: forall i. AbstractValue i => Term i -> Either String (Val i, Trace i Set.Set)
+evalReach :: forall i. (Ord i, AbstractValue i) => Term i -> Either String (Val i, Trace i Set.Set)
 evalReach = run (undefined :: proxy' i) . Writer.runWriter . fix (evTell (undefined :: proxy Set.Set) ev)
 
 evTell :: forall proxy i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i f), Item (Trace i f) ~ TraceEntry i)
@@ -151,7 +151,7 @@ evTell _ ev0 ev e = do
 
 -- Dead code analysis
 
-evalDead :: forall i. AbstractValue i => Term i -> Either String (Val i, Set.Set (Term i))
+evalDead :: forall i. (Ord i, AbstractValue i) => Term i -> Either String (Val i, Set.Set (Term i))
 evalDead = run (undefined :: proxy i) . flip State.runState Set.empty . evalDead' (fix (evDead ev))
   where evalDead' eval e0 = do
           put (subexps e0)
@@ -167,7 +167,7 @@ evDead ev0 ev e = do
   ev0 ev e
 
 
-class Real i => AbstractValue i where
+class AbstractValue i where
   delta1 :: Applicative m => Op1 -> Val i -> m (Val i)
   delta2 :: MonadFail m => Op2 -> Val i -> Val i -> m (Val i)
   isZero :: Applicative m => Val i -> m Bool

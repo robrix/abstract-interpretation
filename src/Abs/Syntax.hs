@@ -162,6 +162,9 @@ instance Bifunctor Syntax where
     Rec n a -> Rec (f n) (g a)
     If0 c t e -> If0 (g c) (g t) (g e)
 
+instance Functor (Syntax n) where
+  fmap = second
+
 instance Reader :< fs => MonadReader Environment (Eff fs) where
   ask = Reader.ask
   local = Reader.local

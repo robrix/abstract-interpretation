@@ -1,0 +1,1 @@
+module Abs.Store where

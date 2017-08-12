@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, GADTs, TypeOperators, UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Control.Monad.Effect.Failure where
 
 import Control.Monad.Effect

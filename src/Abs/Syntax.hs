@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeFamilies, TypeOperators, UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Abs.Syntax where
 
@@ -19,6 +19,7 @@ import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import Data.Semigroup
 import qualified Data.Set as Set
+import GHC.Exts (IsList(..))
 import Prelude hiding (fail)
 
 data Syntax n a
@@ -92,13 +93,13 @@ ev ev term = case unfix term of
     local (const (Map.insert x a p)) (ev e2)
 
 evalTrace :: Term -> Either String (Val, Trace [])
-evalTrace = run . Writer.runWriter . fix (evTell ev)
+evalTrace = run . Writer.runWriter . fix (evTell (undefined :: proxy []) ev)
 
-evTell :: TracingInterpreter :<: fs => ((Term -> Eff fs Val) -> Term -> Eff fs Val) -> (Term -> Eff fs Val) -> Term -> Eff fs Val
-evTell ev0 ev e = do
+evTell :: forall proxy f fs . (TracingInterpreter f :<: fs, IsList (Trace f), Item (Trace f) ~ TraceEntry) => proxy f -> ((Term -> Eff fs Val) -> Term -> Eff fs Val) -> (Term -> Eff fs Val) -> Term -> Eff fs Val
+evTell _ ev0 ev e = do
   env <- ask
   store <- get
-  Writer.tell [(e, env, store)]
+  Writer.tell (fromList [(e, env, store)] :: Trace f)
   ev0 ev e
 
 
@@ -122,8 +123,9 @@ type Interpreter = '[State Store, Reader, Failure]
 type State = State.State
 type Reader = Reader.Reader Environment
 type Writer = Writer.Writer
-type Trace f = f (Term, Environment, Store)
-type TracingInterpreter = Writer (Trace []) ': Interpreter
+type Trace f = f TraceEntry
+type TraceEntry = (Term, Environment, Store)
+type TracingInterpreter f = Writer (Trace f) ': Interpreter
 type ReachableStateInterpreter = Writer (Trace Set.Set) ': Interpreter
 
 run :: Eff Interpreter a -> Either String a

@@ -305,6 +305,10 @@ instance (Effect f1, Effects (f2 ': fs)) => Effects (f1 ': f2 ': fs) where
   type Final (f1 ': f2 ': fs) a = Final (f2 ': fs) (Result f1 a)
   runEffects = runEffects . runEffect
 
+instance Effect f => Effects '[f] where
+  type Final '[f] a = Result f a
+  runEffects = Effect.run . runEffect
+
 class Effect f where
   type Result f a
   type instance Result f a = a

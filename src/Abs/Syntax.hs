@@ -85,6 +85,12 @@ data Val i = I i | L (Term i, Environment i)
   deriving (Eq, Ord, Show)
 type Store i = IntMap.IntMap (Val i)
 
+
+-- Evaluation
+
+eval :: forall i. AbstractValue i (Eff (Interpreter i)) => Term i -> Either String (Val i)
+eval = run (undefined :: proxy i) . fix ev
+
 ev :: (AbstractValue i (Eff fs), Interpreter i :<: fs)
    => (Term i -> Eff fs (Val i))
    -> Term i

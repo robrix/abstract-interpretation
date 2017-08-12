@@ -7,6 +7,7 @@ import Control.Monad.Fail
 import Control.Monad.Effect as Effect hiding (run)
 import qualified Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
+import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader as Reader
 import Control.Monad.Effect.State as State
 import Control.Monad.Effect.Writer as Writer
@@ -321,3 +322,7 @@ instance Effect (State (Set.Set (Term i))) where
 instance Monoid w => Effect (Writer w) where
   type Result (Writer w) a = (a, w)
   runEffect = runWriter
+
+instance Effect NonDetEff where
+  type Result NonDetEff a = [a]
+  runEffect = makeChoiceA

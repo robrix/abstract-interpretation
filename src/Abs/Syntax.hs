@@ -136,10 +136,10 @@ ev ev term = case unfix term of
 -- Tracing and reachable state analyses
 
 evalTrace :: forall i. AbstractValue i (Eff (TraceInterpreter i)) => Term i -> (Either String (Val i, Trace i []), Store i)
-evalTrace = run @(TraceInterpreter i) . runTell
+evalTrace = run @(TraceInterpreter i) . runTrace
 
-runTell :: (TraceInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
-runTell = fix (evTell [] ev)
+runTrace :: (TraceInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
+runTrace = fix (evTell [] ev)
 
 evalReach :: forall i. (Ord i, AbstractValue i (Eff (ReachableStateInterpreter i))) => Term i -> (Either String (Val i, Trace i Set.Set), Store i)
 evalReach = run @(ReachableStateInterpreter i) . runReach

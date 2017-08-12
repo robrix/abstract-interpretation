@@ -21,6 +21,7 @@ import Prelude hiding (fail)
 data Syntax n a
   = Var n
   | Num Int
+  | Op1 Op1 a
   | Op2 Op2 a a
   | App a a
   | Lam n a
@@ -63,6 +64,9 @@ ev ev term = case unfix term of
   If0 c t e -> do
     I z <- ev c
     ev (if z == 0 then t else e)
+  Op1 o a -> do
+    va <- ev a
+    delta1 o va
   Op2 o a b -> do
     va <- ev a
     vb <- ev b
@@ -151,6 +155,7 @@ instance Show2 Syntax where
   liftShowsPrec2 spN _ spA _ d s = case s of
     Var n -> showsUnaryWith spN "Var" d n
     Num v -> showsUnaryWith showsPrec "Num" d v
+    Op1 o a -> showsBinaryWith showsPrec spA "Op1" d o a
     Op2 o a b -> showsTernaryWith showsPrec spA spA "Op2" d o a b
     App a b -> showsBinaryWith spA spA "App" d a b
     Lam n a -> showsBinaryWith spN spA "Lam" d n a

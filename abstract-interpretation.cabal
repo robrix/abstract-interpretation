@@ -13,7 +13,8 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Abstract.Store
+  exposed-modules:     Abstract.Eval
+                     , Abstract.Store
                      , Abstract.Syntax
                      , Abstract.Value
                      , Control.Effect

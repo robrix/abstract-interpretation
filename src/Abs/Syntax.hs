@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeFamilies, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Abs.Syntax where
 
@@ -89,8 +89,8 @@ type Store i = IntMap.IntMap (Val i)
 
 -- Evaluation
 
-eval :: AbstractValue i (Eff (Interpreter i)) => Term i -> (Either String (Val i), Store i)
-eval = run' (undefined :: f (Interpreter i)) . runEval
+eval :: forall i . AbstractValue i (Eff (Interpreter i)) => Term i -> (Either String (Val i), Store i)
+eval = run @(Interpreter i) . runEval
 
 runEval :: (Interpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
 runEval = fix ev
@@ -135,14 +135,14 @@ ev ev term = case unfix term of
 
 -- Tracing and reachable state analyses
 
-evalTrace :: AbstractValue i (Eff (TraceInterpreter i)) => Term i -> (Either String (Val i, Trace i []), Store i)
-evalTrace = run' (undefined :: f (TraceInterpreter i)) . runTell
+evalTrace :: forall i. AbstractValue i (Eff (TraceInterpreter i)) => Term i -> (Either String (Val i, Trace i []), Store i)
+evalTrace = run @(TraceInterpreter i) . runTell
 
 runTell :: (TraceInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
 runTell = fix (evTell [] ev)
 
-evalReach :: (Ord i, AbstractValue i (Eff (ReachableStateInterpreter i))) => Term i -> (Either String (Val i, Trace i Set.Set), Store i)
-evalReach = run' (undefined :: f (ReachableStateInterpreter i)) . runReach
+evalReach :: forall i. (Ord i, AbstractValue i (Eff (ReachableStateInterpreter i))) => Term i -> (Either String (Val i, Trace i Set.Set), Store i)
+evalReach = run @(ReachableStateInterpreter i) . runReach
 
 runReach :: (Ord i, ReachableStateInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
 runReach = fix (evTell Set.empty ev)
@@ -162,8 +162,8 @@ evTell _ ev0 ev e = do
 
 -- Dead code analysis
 
-evalDead :: (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store i)
-evalDead = run' (undefined :: f (DeadCodeInterpreter i)) . runDead
+evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store i)
+evalDead = run @(DeadCodeInterpreter i) . runDead
 
 runDead :: (Ord i, DeadCodeInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
 runDead e0 = do
@@ -297,9 +297,6 @@ instance (Integral i, AbstractValue i (Eff (Interpreter i))) => Integral (Term i
 
 run :: Effects fs => Eff fs a -> Final fs a
 run = Effect.run . runEffects
-
-run' :: Effects fs => proxy fs -> Eff fs a -> Final fs a
-run' _ = run
 
 class Effects fs where
   type Final fs a

@@ -88,7 +88,7 @@ type Store i = IntMap.IntMap (Val i)
 
 -- Evaluation
 
-eval :: forall i. AbstractValue i (Eff (Interpreter i)) => Term i -> Either String (Val i)
+eval :: forall i. AbstractValue i (Eff (Interpreter i)) => Term i -> (Either String (Val i), Store i)
 eval = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i)) . fix ev
 
 ev :: (AbstractValue i (Eff fs), Interpreter i :<: fs)
@@ -131,10 +131,10 @@ ev ev term = case unfix term of
 
 -- Tracing and reachable state analyses
 
-evalTrace :: forall i. (AbstractValue i (Eff (TracingInterpreter i []))) => Term i -> Either String (Val i, Trace i [])
+evalTrace :: forall i. (AbstractValue i (Eff (TracingInterpreter i []))) => Term i -> (Either String (Val i, Trace i []), Store i)
 evalTrace = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i, Trace i [])) . runWriter . fix (evTell [] ev)
 
-evalReach :: forall i. (Ord i, AbstractValue i (Eff (TracingInterpreter i Set.Set))) => Term i -> Either String (Val i, Trace i Set.Set)
+evalReach :: forall i. (Ord i, AbstractValue i (Eff (TracingInterpreter i Set.Set))) => Term i -> (Either String (Val i, Trace i Set.Set), Store i)
 evalReach = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i, Trace i Set.Set)) . runWriter . fix (evTell Set.empty ev)
 
 evTell :: forall i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i f), Item (Trace i f) ~ TraceEntry i)
@@ -152,7 +152,7 @@ evTell _ ev0 ev e = do
 
 -- Dead code analysis
 
-evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> Either String (Val i, Set.Set (Term i))
+evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store i)
 evalDead = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i, Set.Set (Term i))) . runDead . evalDead' (fix (evDead ev))
   where evalDead' eval e0 = do
           put (subexps e0)
@@ -186,11 +186,10 @@ type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
 type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
 
 run :: Eff (Interpreter i) a
-    -> Either String a
+    -> (Either String a, Store i)
 run f = runFailure f
       & runStore
       & runEnv
-      & fmap fst
       & Effect.run
 
 runStore :: Eff (State (Store i) ': e) b -> Eff e (b, Store i)
@@ -277,14 +276,14 @@ instance Num i => Num (Term i) where
   (*) = (Fix .) . Op2 Times
 
 instance (Real i, AbstractValue i (Eff (Interpreter i))) => Real (Term i) where
-  toRational term = case eval term of
+  toRational term = case fst (eval term) of
     Right (I a) -> toRational a
     Right _ -> error "toRational applied to non-numeric Term"
     Left s -> error s
 
 instance (Enum i, Num i, AbstractValue i (Eff (Interpreter i))) => Enum (Term i) where
   toEnum = fromIntegral
-  fromEnum term = case eval term of
+  fromEnum term = case fst (eval term) of
     Right (I a) -> fromEnum a
     Right _ -> error "fromEnum applied to non-numeric Term"
     Left s -> error s
@@ -294,7 +293,7 @@ instance (Integral i, AbstractValue i (Eff (Interpreter i))) => Integral (Term i
   a `rem` b = Fix (Op2 Remainder a b)
   a `quotRem` b = (a `quot` b, a `rem` b)
 
-  toInteger term = case eval term of
+  toInteger term = case fst (eval term) of
     Right (I a) -> toInteger a
     Right _ -> error "toInteger applied to non-numeric Term"
     Left s -> error s

@@ -3,9 +3,11 @@ module Abs.Syntax where
 
 import Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
-import Control.Monad.Effect.Reader
+import Control.Monad.Effect.Reader hiding (ask, local)
+import qualified Control.Monad.Effect.Reader as Reader
 import Control.Monad.Effect.State hiding (get, modify, put)
 import qualified Control.Monad.Effect.State as State
+import Control.Monad.Reader.Class
 import Control.Monad.State.Class
 import Data.Function ((&))
 import Data.Functor.Foldable
@@ -64,3 +66,7 @@ run f = runState f IntMap.empty
 instance State Store :< fs => MonadState Store (Eff fs) where
   get = State.get
   put = State.put
+
+instance Reader Environment :< fs => MonadReader Environment (Eff fs) where
+  ask = Reader.ask
+  local = Reader.local

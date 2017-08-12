@@ -30,6 +30,9 @@ data Syntax n a
 
 type Term = Fix (Syntax String)
 
+data Op1 = Negate | Abs | Signum
+  deriving (Eq, Show)
+
 data Op2 = Plus | Minus | Times | DividedBy
   deriving (Eq, Show)
 

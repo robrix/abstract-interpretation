@@ -165,8 +165,10 @@ evDead ev0 ev e = do
 instance AbstractValue i => AbstractValue (Val i) where
   delta1 o (I a) = fmap I (delta1 o a)
   delta1 _ _ = fail "non-numeric value"
+
   delta2 o (I a) (I b) = fmap I (delta2 o a b)
   delta2 _ _ _ = fail "non-numeric value"
+
   isZero (I a) = isZero a
   isZero _ = fail "non-numeric value"
 

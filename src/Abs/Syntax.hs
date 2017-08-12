@@ -41,8 +41,11 @@ infixl 0 #
 (#) :: Term -> Term -> Term
 (#) = (Fix .) . App
 
-lam :: String -> Term -> Term
-lam = (Fix .) . Lam
+lam :: String -> (Term -> Term) -> Term
+lam s f = makeLam s (f (var s))
+
+makeLam :: String -> Term -> Term
+makeLam = (Fix .) . Lam
 
 rec :: String -> Term -> Term
 rec = (Fix .) . Rec

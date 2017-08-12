@@ -66,6 +66,9 @@ instance Bifoldable (Syntax i) where
     Rec n a -> f n `mappend` g a
     If0 c t e -> g c `mappend` g t `mappend` g e
 
+instance Foldable (Syntax i n) where
+  foldMap = bifoldMap (const mempty)
+
 instance Bifunctor (Syntax i) where
   bimap f g s = case s of
     Var n -> Var (f n)

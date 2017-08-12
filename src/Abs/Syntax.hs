@@ -18,6 +18,7 @@ import Data.Functor.Foldable
 import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import Data.Semigroup
+import qualified Data.Set as Set
 import Prelude hiding (fail)
 
 data Syntax n a
@@ -123,6 +124,7 @@ type Reader = Reader.Reader Environment
 type Writer = Writer.Writer
 type Trace f = f (Term, Environment, Store)
 type TracingInterpreter = Writer (Trace []) ': Interpreter
+type ReachableStateInterpreter = Writer (Trace Set.Set) ': Interpreter
 
 run :: Eff Interpreter a -> Either String a
 run f = State.runState f IntMap.empty

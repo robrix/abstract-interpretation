@@ -166,3 +166,12 @@ instance Show2 Syntax where
 
 instance Show n => Show1 (Syntax n) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
+
+instance Num Term where
+  fromInteger = Fix . Num . fromInteger
+
+  signum = Fix . Op1 Signum
+  abs = Fix . Op1 Abs
+  negate = Fix . Op1 Negate
+  (+) = (Fix .) . Op2 Plus
+  (*) = (Fix .) . Op2 Times

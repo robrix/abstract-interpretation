@@ -70,7 +70,7 @@ data Op2 = Plus | Minus | Times | DividedBy
   deriving (Eq, Ord, Show)
 
 find :: (State Store :< fs) => Loc -> Eff fs Val
-find = gets . flip (IntMap.!)
+find = gets . flip (IntMap.!) . unLoc
 
 gets :: (State a :< fs) => (a -> b) -> Eff fs b
 gets = flip fmap get
@@ -78,14 +78,15 @@ gets = flip fmap get
 alloc :: (State Store :< fs) => String -> Eff fs Loc
 alloc _ = do
   s <- get
-  return (length (s :: Store))
+  return (Loc (length (s :: Store)))
 
 ext :: (State Store :< fs) => Loc -> Val -> Eff fs ()
-ext loc val = modify (IntMap.insert loc val)
+ext (Loc loc) val = modify (IntMap.insert loc val)
 
 
 type Environment = Map.Map String Loc
-type Loc = Int
+newtype Loc = Loc { unLoc :: Int }
+  deriving (Eq, Ord, Show)
 data Val = I Int | L (Term, Environment)
   deriving (Eq, Ord, Show)
 type Store = IntMap.IntMap Val

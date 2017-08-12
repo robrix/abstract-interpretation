@@ -146,8 +146,8 @@ evTell _ ev0 ev e = do
 
 -- Dead code analysis
 
-evalDead :: forall i fs proxy0. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => proxy0 fs -> Term i -> Either String (Val i, Set.Set (Term i))
-evalDead _ = run (undefined :: proxy1 i) . flip State.runState Set.empty . evalDead' (fix (evDead ev))
+evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> Either String (Val i, Set.Set (Term i))
+evalDead = run (undefined :: proxy1 i) . flip State.runState Set.empty . evalDead' (fix (evDead ev))
   where evalDead' eval e0 = do
           put (subexps e0)
           eval e0

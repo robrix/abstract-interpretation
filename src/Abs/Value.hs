@@ -13,7 +13,7 @@ data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder
   deriving (Eq, Ord, Show)
 
 
-data AbstractNum i = C i | N
+data AbstractNum = N
   deriving (Eq, Ord, Show)
 
 
@@ -49,33 +49,23 @@ instance MonadFail m => AbstractValue Int m where
 
   isZero a = pure (a == 0)
 
-instance (Alternative m, MonadFail m, AbstractValue i m) => AbstractValue (AbstractNum i) m where
-  delta1 o (C a) = fmap C (delta1 o a)
+instance (Alternative m, MonadFail m) => AbstractValue AbstractNum m where
   delta1 _ N = pure N
 
-  delta2 o (C a) (C b) = fmap C (delta2 o a b)
   delta2 DividedBy _ N = pure N <|> divisionByZero
   delta2 _ _ _ = pure N
 
-  isZero (C a) = isZero a
   isZero N = pure True <|> pure False
 
-instance Num i => Num (AbstractNum i) where
-  negate (C i) = C (negate i)
+instance Num AbstractNum where
   negate N = N
 
-  signum (C i) = C (signum i)
   signum N = N
 
-  abs (C i) = C (abs i)
   abs N = N
 
-  N + _ = N
-  _ + N = N
-  C a + C b = C (a + b)
+  _ + _ = N
 
-  N * _ = N
-  _ * N = N
-  C a * C b = C (a + b)
+  _ * _ = N
 
-  fromInteger = C . fromInteger
+  fromInteger = const N

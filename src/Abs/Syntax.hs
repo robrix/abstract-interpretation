@@ -6,10 +6,9 @@ import Control.Monad.Fail
 import Control.Monad.Effect as Effect hiding (run)
 import qualified Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
-import qualified Control.Monad.Effect.Reader as Reader
+import Control.Monad.Effect.Reader as Reader
 import Control.Monad.Effect.State as State
 import qualified Control.Monad.Effect.Writer as Writer
-import Control.Monad.Reader.Class
 import Data.Bifunctor
 import Data.Function ((&), fix)
 import Data.Functor.Classes
@@ -184,8 +183,7 @@ delta2 o ia ib = let { I a = ia ; I b = ib } in case o of
     else
       return . I $ a `div` b
 
-type Interpreter i = '[State (Store i), Reader, Failure]
-type Reader = Reader.Reader Environment
+type Interpreter i = '[State (Store i), Reader Environment, Failure]
 type Writer = Writer.Writer
 type Trace i f = f (TraceEntry i)
 type TraceEntry i = (Term i, Environment, Store i)
@@ -197,7 +195,7 @@ run :: proxy i
     -> Eff (Interpreter i) a
     -> Either String a
 run _ f = State.runState f IntMap.empty
-        & flip Reader.runReader Map.empty
+        & flip runReader Map.empty
         & runFailure
         & Effect.run
         & fmap fst
@@ -215,10 +213,6 @@ instance Bifunctor (Syntax i) where
 
 instance Functor (Syntax i n) where
   fmap = second
-
-instance (Reader :< fs) => MonadReader Environment (Eff fs) where
-  ask = Reader.ask
-  local = Reader.local
 
 instance Eq i => Eq2 (Syntax i) where
   liftEq2 eqN eqA s1 s2 = case (s1, s2) of

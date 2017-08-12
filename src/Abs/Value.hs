@@ -21,6 +21,10 @@ class AbstractValue i m where
   isZero :: i -> m Bool
 
 
+divisionByZero :: MonadFail m => m a
+divisionByZero = fail "division by zero"
+
+
 instance MonadFail m => AbstractValue Int m where
   delta1 o a = pure $ case o of
     Negate -> negate a
@@ -32,7 +36,7 @@ instance MonadFail m => AbstractValue Int m where
     Minus -> return $ a - b
     Times -> return $ a * b
     DividedBy -> if b == 0 then
-        fail "division by zero"
+        divisionByZero
       else
         return $ a `div` b
 

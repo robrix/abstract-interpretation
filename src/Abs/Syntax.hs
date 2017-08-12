@@ -168,26 +168,34 @@ evDead ev0 ev e = do
 
 
 class AbstractValue i where
-  delta1 :: Applicative m => Op1 -> Val i -> m (Val i)
-  delta2 :: MonadFail m => Op2 -> Val i -> Val i -> m (Val i)
-  isZero :: Applicative m => Val i -> m Bool
+  delta1 :: MonadFail m => Op1 -> i -> m i
+  delta2 :: MonadFail m => Op2 -> i -> i -> m i
+  isZero :: MonadFail m => i -> m Bool
 
 instance AbstractValue Int where
-  delta1 o i = let I a = i in pure . I $ case o of
+  delta1 o a = pure $ case o of
     Negate -> negate a
     Abs -> abs a
     Signum -> signum a
 
-  delta2 o ia ib = let { I a = ia ; I b = ib } in case o of
-    Plus -> return . I $ a + b
-    Minus -> return . I $ a - b
-    Times -> return . I $ a * b
+  delta2 o a b = case o of
+    Plus -> return $ a + b
+    Minus -> return $ a - b
+    Times -> return $ a * b
     DividedBy -> if b == 0 then
         fail "division by zero"
       else
-        return . I $ a `div` b
+        return $ a `div` b
 
-  isZero i = let I a = i in pure (a == 0)
+  isZero a = pure (a == 0)
+
+instance AbstractValue i => AbstractValue (Val i) where
+  delta1 o (I a) = fmap I (delta1 o a)
+  delta1 _ _ = fail "non-numeric value"
+  delta2 o (I a) (I b) = fmap I (delta2 o a b)
+  delta2 _ _ _ = fail "non-numeric value"
+  isZero (I a) = isZero a
+  isZero _ = fail "non-numeric value"
 
 data AbstractNum i = C i | N
   deriving (Eq, Ord, Show)

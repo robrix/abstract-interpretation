@@ -162,8 +162,8 @@ evTell _ ev0 ev e = do
 
 -- Dead code analysis
 
-evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store i)
-evalDead = run . flip asTypeOf (undefined :: Eff (DeadCodeInterpreter i) (Val i)) . evalDead' (fix (evDead ev))
+evalDead :: (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store i)
+evalDead = run' (undefined :: f (DeadCodeInterpreter i)) . evalDead' (fix (evDead ev))
   where evalDead' eval e0 = do
           put (subexps e0)
           eval e0

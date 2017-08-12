@@ -134,6 +134,7 @@ type Trace f = f TraceEntry
 type TraceEntry = (Term, Environment, Store)
 type TracingInterpreter f = Writer (Trace f) ': Interpreter
 type ReachableStateInterpreter = Writer (Trace Set.Set) ': Interpreter
+type DeadCodeInterpreter = State (Set.Set Term) ': Interpreter
 
 run :: Eff Interpreter a -> Either String a
 run f = State.runState f IntMap.empty

@@ -233,7 +233,7 @@ instance Eq n => Eq1 (Syntax n) where
 
 instance Ord2 Syntax where
   liftCompare2 compareN compareA s1 s2
-    | ordering <- (compare (bimap (const ()) (const ()) s1) (bimap (const ()) (const ()) s2)), ordering /= EQ = ordering
+    | ordering <- compare (bimap (const ()) (const ()) s1) (bimap (const ()) (const ()) s2), ordering /= EQ = ordering
     | otherwise = case (s1, s2) of
       (Var n1, Var n2) -> compareN n1 n2
       (Num v1, Num v2) -> v1 `compare` v2

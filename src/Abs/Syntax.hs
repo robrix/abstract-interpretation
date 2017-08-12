@@ -34,6 +34,22 @@ data Syntax n a
 
 type Term = Fix (Syntax String)
 
+var :: String -> Term
+var = Fix . Var
+
+infixl 0 #
+(#) :: Term -> Term -> Term
+(#) = (Fix .) . App
+
+lam :: String -> Term -> Term
+lam = (Fix .) . Lam
+
+rec :: String -> Term -> Term
+rec = (Fix .) . Rec
+
+if0 :: Term -> Term -> Term -> Term
+if0 c t e = Fix (If0 c t e)
+
 subexps :: Term -> Set.Set Term
 subexps = para $ \ s -> case s of
   Op1 _ a -> Set.singleton (fst a) <> snd a

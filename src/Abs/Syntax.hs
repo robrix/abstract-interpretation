@@ -89,8 +89,8 @@ type Store i = IntMap.IntMap (Val i)
 
 -- Evaluation
 
-eval :: forall i. AbstractValue i (Eff (Interpreter i)) => Term i -> (Either String (Val i), Store i)
-eval = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i)) . fix ev
+eval :: AbstractValue i (Eff (Interpreter i)) => Term i -> (Either String (Val i), Store i)
+eval = run' (undefined :: f (Interpreter i)) . fix ev
 
 ev :: (AbstractValue i (Eff fs), Interpreter i :<: fs)
    => (Term i -> Eff fs (Val i))

@@ -66,10 +66,7 @@ subexps = para $ \ s -> case s of
   _ -> Set.empty
 
 find :: (State (Store a) :< fs) => Loc a -> Eff fs a
-find = gets . flip (IntMap.!) . unLoc
-
-gets :: (State a :< fs) => (a -> b) -> Eff fs b
-gets = flip fmap get
+find = flip fmap get . flip (IntMap.!) . unLoc
 
 alloc :: forall a fs . (State (Store a) :< fs) => String -> Eff fs (Loc a)
 alloc _ = do

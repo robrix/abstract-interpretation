@@ -313,3 +313,7 @@ instance Effect Failure where
 instance Effect (State (Set.Set (Term i))) where
   type Result (State (Set.Set (Term i))) a = (a, Set.Set (Term i))
   runEffect = flip runState Set.empty
+
+instance Monoid w => Effect (Writer w) where
+  type Result (Writer w) a = (a, w)
+  runEffect = runWriter

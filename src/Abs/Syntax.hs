@@ -186,10 +186,7 @@ type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
 type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
 
 run :: Eff (Interpreter i) a -> (Either String a, Store i)
-run = Effect.run . runInterpreter
-
-runInterpreter :: Eff (Failure ': State (Store i) ': Reader (Environment i) ': fs) a -> Eff fs (Either String a, Store i)
-runInterpreter = runEnv . runStore . runFailure
+run = runEffects
 
 runStore :: Eff (State (Store i) ': e) b -> Eff e (b, Store i)
 runStore = flip State.runState IntMap.empty

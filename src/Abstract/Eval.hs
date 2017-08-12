@@ -98,9 +98,4 @@ instance (MonadFail m, AbstractValue i m) => AbstractValue (Val i) m where
   isZero _ = fail "non-numeric value"
 
 type Interpreter i = '[Failure, State (Store (Val i)), Reader (Environment i)]
-type Trace i f = f (TraceEntry i)
-type TraceEntry i = (Term i, Environment i, Store (Val i))
-type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
-type TraceInterpreter i = Writer (Trace i []) ': Interpreter i
-type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
 type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i

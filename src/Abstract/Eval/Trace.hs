@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE DataKinds, FlexibleContexts, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
 module Abstract.Eval.Trace where
 
 import Abstract.Eval
@@ -13,6 +13,15 @@ import Control.Monad.Effect.Writer
 import Data.Function (fix)
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
+
+type TraceEntry i = (Term i, Environment i, Store (Val i))
+type Trace i f = f (TraceEntry i)
+
+type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
+
+type TraceInterpreter i = Writer (Trace i []) ': Interpreter i
+type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
+
 
 -- Tracing and reachable state analyses
 

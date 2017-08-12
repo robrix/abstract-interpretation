@@ -92,6 +92,9 @@ ev ev term = case unfix term of
     ext a v1
     local (const (Map.insert x a p)) (ev e2)
 
+
+-- Tracing and reachable state analyses
+
 evalTrace :: Term -> Either String (Val, Trace [])
 evalTrace = run . Writer.runWriter . fix (evTell (undefined :: proxy []) ev)
 

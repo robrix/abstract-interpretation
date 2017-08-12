@@ -89,13 +89,13 @@ delta o = \ (I a) (I b) -> case o of
     else
       return . I $ a `div` b
 
-type Interpreter = Eff '[State, Reader, Failure]
+type Interpreter = '[State, Reader, Failure]
 type State = State.State Store
 type Reader = Reader.Reader Environment
 type Writer = Writer.Writer Trace
 type Trace = [(Environment, Store)]
 
-run :: Interpreter a -> Either String a
+run :: Eff Interpreter a -> Either String a
 run f = State.runState f IntMap.empty
       & flip Reader.runReader Map.empty
       & runFailure

@@ -305,3 +305,6 @@ class Effect f where
 instance Effect (State (Store i)) where
   type Result (State (Store i)) a = (a, Store i)
   runEffect = flip runState IntMap.empty
+
+instance Effect (Reader (Environment i)) where
+  runEffect = flip runReader Map.empty

@@ -132,13 +132,13 @@ ev ev term = case unfix term of
 -- Tracing and reachable state analyses
 
 evalTrace :: forall i. (AbstractValue i (Eff (TracingInterpreter i []))) => Term i -> Either String (Val i, Trace i [])
-evalTrace = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i, Trace i [])) . runWriter . fix (evTell (undefined :: proxy2 []) ev)
+evalTrace = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i, Trace i [])) . runWriter . fix (evTell [] ev)
 
 evalReach :: forall i. (Ord i, AbstractValue i (Eff (TracingInterpreter i Set.Set))) => Term i -> Either String (Val i, Trace i Set.Set)
-evalReach = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i, Trace i Set.Set)) . runWriter . fix (evTell (undefined :: proxy2 Set.Set) ev)
+evalReach = run . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i, Trace i Set.Set)) . runWriter . fix (evTell Set.empty ev)
 
-evTell :: forall proxy i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i f), Item (Trace i f) ~ TraceEntry i)
-       => proxy f
+evTell :: forall i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i f), Item (Trace i f) ~ TraceEntry i)
+       => f ()
        -> ((Term i -> Eff fs (Val i)) -> Term i -> Eff fs (Val i))
        -> (Term i -> Eff fs (Val i))
        -> Term i

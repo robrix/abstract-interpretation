@@ -189,6 +189,9 @@ instance AbstractValue Int where
 
   isZero i = let I a = i in pure (a == 0)
 
+data AbstractNum i = C i | N
+  deriving (Eq, Ord, Show)
+
 type Interpreter i = '[State (Store i), Reader (Environment i), Failure]
 type Writer = Writer.Writer
 type Trace i f = f (TraceEntry i)

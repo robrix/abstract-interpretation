@@ -81,6 +81,14 @@ ev ev term = case unfix term of
     local (const (Map.insert x a p)) (ev e2)
 
 
+evTell :: TracingInterpreter :<: fs => ((Term -> Eff fs Val) -> Term -> Eff fs Val) -> (Term -> Eff fs Val) -> Term -> Eff fs Val
+evTell ev0 ev e = do
+  env <- ask
+  store <- get
+  Writer.tell [(e, env, store)]
+  ev0 ev e
+
+
 delta :: MonadFail m => Op2 -> Val -> Val -> m Val
 delta o = \ (I a) (I b) -> case o of
   Plus -> return . I $ a + b

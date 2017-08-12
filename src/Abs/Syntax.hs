@@ -91,7 +91,7 @@ data Val i = I i | L (Term i, Environment i)
 type Store i = IntMap.IntMap (Val i)
 
 ev :: forall i fs
-   .  (Integral i, Interpreter i :<: fs)
+   .  (AbstractValue i, Interpreter i :<: fs)
    => (Term i -> Eff fs (Val i))
    -> Term i
    -> Eff fs (Val i)
@@ -130,10 +130,10 @@ ev ev term = case unfix term of
 
 -- Tracing and reachable state analyses
 
-evalTrace :: forall i. Integral i => Term i -> Either String (Val i, Trace i [])
+evalTrace :: forall i. AbstractValue i => Term i -> Either String (Val i, Trace i [])
 evalTrace = run (undefined :: proxy' i) . Writer.runWriter . fix (evTell (undefined :: proxy []) ev)
 
-evalReach :: forall i. Integral i => Term i -> Either String (Val i, Trace i Set.Set)
+evalReach :: forall i. AbstractValue i => Term i -> Either String (Val i, Trace i Set.Set)
 evalReach = run (undefined :: proxy' i) . Writer.runWriter . fix (evTell (undefined :: proxy Set.Set) ev)
 
 evTell :: forall proxy i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i f), Item (Trace i f) ~ TraceEntry i)
@@ -151,7 +151,7 @@ evTell _ ev0 ev e = do
 
 -- Dead code analysis
 
-evalDead :: forall i. Integral i => Term i -> Either String (Val i, Set.Set (Term i))
+evalDead :: forall i. AbstractValue i => Term i -> Either String (Val i, Set.Set (Term i))
 evalDead = run (undefined :: proxy i) . flip State.runState Set.empty . evalDead' (fix (evDead ev))
   where evalDead' eval e0 = do
           put (subexps e0)
@@ -167,21 +167,24 @@ evDead ev0 ev e = do
   ev0 ev e
 
 
-delta1 :: (Integral i, Monad m) => Op1 -> Val i -> m (Val i)
-delta1 o i = let I a = i in return . I $ case o of
-  Negate -> negate a
-  Abs -> abs a
-  Signum -> signum a
+class Real i => AbstractValue i where
+  delta1 :: Monad m => Op1 -> Val i -> m (Val i)
+  delta2 :: MonadFail m => Op2 -> Val i -> Val i -> m (Val i)
 
-delta2 :: (Integral i, MonadFail m) => Op2 -> Val i -> Val i -> m (Val i)
-delta2 o ia ib = let { I a = ia ; I b = ib } in case o of
-  Plus -> return . I $ a + b
-  Minus -> return . I $ a - b
-  Times -> return . I $ a * b
-  DividedBy -> if b == 0 then
-      fail "division by zero"
-    else
-      return . I $ a `div` b
+instance AbstractValue Int where
+  delta1 o i = let I a = i in return . I $ case o of
+    Negate -> negate a
+    Abs -> abs a
+    Signum -> signum a
+
+  delta2 o ia ib = let { I a = ia ; I b = ib } in case o of
+    Plus -> return . I $ a + b
+    Minus -> return . I $ a - b
+    Times -> return . I $ a * b
+    DividedBy -> if b == 0 then
+        fail "division by zero"
+      else
+        return . I $ a `div` b
 
 type Interpreter i = '[State (Store i), Reader (Environment i), Failure]
 type Writer = Writer.Writer

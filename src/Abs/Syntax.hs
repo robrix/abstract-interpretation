@@ -267,14 +267,14 @@ instance Num i => Num (Term i) where
   (*) = (Fix .) . Op2 Times
 
 instance (Real i, AbstractValue i (Eff (Interpreter i))) => Real (Term i) where
-  toRational term = case run (undefined :: proxy i) (fix ev term) of
+  toRational term = case eval term of
     Right (I a) -> toRational a
     Right _ -> error "toRational applied to non-numeric Term"
     Left s -> error s
 
 instance (Enum i, Num i, AbstractValue i (Eff (Interpreter i))) => Enum (Term i) where
   toEnum = fromIntegral
-  fromEnum term = case run (undefined :: proxy i) (fix ev term) of
+  fromEnum term = case eval term of
     Right (I a) -> fromEnum a
     Right _ -> error "fromEnum applied to non-numeric Term"
     Left s -> error s

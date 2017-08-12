@@ -65,30 +65,30 @@ subexps = para $ \ s -> case s of
   If0 c t e -> foldMap (Set.singleton . fst) [c, t, e] <> foldMap snd [c, t, e]
   _ -> Set.empty
 
-find :: (State (Store i) :< fs) => Loc i -> Eff fs (Val i)
+find :: (State (Store (Val i)) :< fs) => Loc i -> Eff fs (Val i)
 find = gets . flip (IntMap.!) . unLoc
 
 gets :: (State a :< fs) => (a -> b) -> Eff fs b
 gets = flip fmap get
 
-alloc :: forall i fs . (State (Store i) :< fs) => String -> Eff fs (Loc i)
+alloc :: forall i fs . (State (Store (Val i)) :< fs) => String -> Eff fs (Loc i)
 alloc _ = do
   s <- get
-  return (Loc (length (s :: Store i)))
+  return (Loc (length (s :: Store (Val i))))
 
-ext :: (State (Store i) :< fs) => Loc i -> Val i -> Eff fs ()
+ext :: (State (Store (Val i)) :< fs) => Loc i -> Val i -> Eff fs ()
 ext (Loc loc) val = modify (IntMap.insert loc val)
 
 
 type Environment i = Map.Map String (Loc i)
 data Val i = I i | L (Term i, Environment i)
   deriving (Eq, Ord, Show)
-type Store i = IntMap.IntMap (Val i)
+type Store v = IntMap.IntMap v
 
 
 -- Evaluation
 
-eval :: forall i . AbstractValue i (Eff (Interpreter i)) => Term i -> (Either String (Val i), Store i)
+eval :: forall i . AbstractValue i (Eff (Interpreter i)) => Term i -> (Either String (Val i), Store (Val i))
 eval = run @(Interpreter i) . runEval
 
 runEval :: (Interpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
@@ -134,13 +134,13 @@ ev ev term = case unfix term of
 
 -- Tracing and reachable state analyses
 
-evalTrace :: forall i. AbstractValue i (Eff (TraceInterpreter i)) => Term i -> (Either String (Val i, Trace i []), Store i)
+evalTrace :: forall i. AbstractValue i (Eff (TraceInterpreter i)) => Term i -> (Either String (Val i, Trace i []), Store (Val i))
 evalTrace = run @(TraceInterpreter i) . runTrace
 
 runTrace :: (TraceInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
 runTrace = fix (evTell [] ev)
 
-evalReach :: forall i. (Ord i, AbstractValue i (Eff (ReachableStateInterpreter i))) => Term i -> (Either String (Val i, Trace i Set.Set), Store i)
+evalReach :: forall i. (Ord i, AbstractValue i (Eff (ReachableStateInterpreter i))) => Term i -> (Either String (Val i, Trace i Set.Set), Store (Val i))
 evalReach = run @(ReachableStateInterpreter i) . runReach
 
 runReach :: (Ord i, ReachableStateInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
@@ -161,7 +161,7 @@ evTell _ ev0 ev e = do
 
 -- Dead code analysis
 
-evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store i)
+evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store (Val i))
 evalDead = run @(DeadCodeInterpreter i) . runDead
 
 runDead :: (Ord i, DeadCodeInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
@@ -189,9 +189,9 @@ instance (MonadFail m, AbstractValue i m) => AbstractValue (Val i) m where
   isZero (I a) = isZero a
   isZero _ = fail "non-numeric value"
 
-type Interpreter i = '[Failure, State (Store i), Reader (Environment i)]
+type Interpreter i = '[Failure, State (Store (Val i)), Reader (Environment i)]
 type Trace i f = f (TraceEntry i)
-type TraceEntry i = (Term i, Environment i, Store i)
+type TraceEntry i = (Term i, Environment i, Store (Val i))
 type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
 type TraceInterpreter i = Writer (Trace i []) ': Interpreter i
 type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
@@ -314,8 +314,8 @@ class Effect f where
   type instance Result f a = a
   runEffect :: Eff (f ': fs) a -> Eff fs (Result f a)
 
-instance Effect (State (Store i)) where
-  type Result (State (Store i)) a = (a, Store i)
+instance Effect (State (Store (Val i))) where
+  type Result (State (Store (Val i))) a = (a, Store (Val i))
   runEffect = flip runState IntMap.empty
 
 instance Effect (Reader (Environment i)) where

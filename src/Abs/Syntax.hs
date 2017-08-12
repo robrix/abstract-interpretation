@@ -79,11 +79,14 @@ ev ev term = case unfix term of
 
 
 delta :: Monad m => Op2 -> Val -> Val -> m Val
-delta o = \ (I a) (I b) -> return . I $ case o of
-  Plus -> a + b
-  Minus -> a - b
-  Times -> a * b
-  DividedBy -> a `div` b
+delta o = \ (I a) (I b) -> case o of
+  Plus -> return . I $ a + b
+  Minus -> return . I $ a - b
+  Times -> return . I $ a * b
+  DividedBy -> if b == 0 then
+      fail "division by zero"
+    else
+      return . I $ a `div` b
 
 type Interpreter = Eff '[State, Reader, Failure]
 type State = State.State Store

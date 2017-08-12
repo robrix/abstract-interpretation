@@ -95,6 +95,12 @@ evTell ev0 ev e = do
   ev0 ev e
 
 
+delta1 :: Monad m => Op1 -> Val -> m Val
+delta1 o = \ (I a) -> return . I $ case o of
+  Negate -> negate a
+  Abs -> abs a
+  Signum -> signum a
+
 delta2 :: MonadFail m => Op2 -> Val -> Val -> m Val
 delta2 o = \ (I a) (I b) -> case o of
   Plus -> return . I $ a + b

@@ -259,3 +259,9 @@ instance Num i => Num (Term i) where
   negate = Fix . Op1 Negate
   (+) = (Fix .) . Op2 Plus
   (*) = (Fix .) . Op2 Times
+
+instance (Real i, AbstractValue i (Eff (Interpreter i))) => Real (Term i) where
+  toRational term = case run (undefined :: proxy i) (fix ev term) of
+    Right (I a) -> toRational a
+    Right _ -> error "toRational applied to non-numeric Term"
+    Left s -> error s

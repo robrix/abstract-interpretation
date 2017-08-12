@@ -134,8 +134,8 @@ ev ev term = case unfix term of
 evalTrace :: forall i. (AbstractValue i (Eff (TracingInterpreter i []))) => Term i -> Either String (Val i, Trace i [])
 evalTrace = run (undefined :: proxy1 i) . runWriter . fix (evTell (undefined :: proxy2 []) ev)
 
-evalReach :: forall i fs proxy0. (Ord i, AbstractValue i (Eff (TracingInterpreter i Set.Set))) => proxy0 fs -> Term i -> Either String (Val i, Trace i Set.Set)
-evalReach _ = run (undefined :: proxy1 i) . runWriter . fix (evTell (undefined :: proxy2 Set.Set) ev)
+evalReach :: forall i. (Ord i, AbstractValue i (Eff (TracingInterpreter i Set.Set))) => Term i -> Either String (Val i, Trace i Set.Set)
+evalReach = run (undefined :: proxy1 i) . runWriter . fix (evTell (undefined :: proxy2 Set.Set) ev)
 
 evTell :: forall proxy i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i f), Item (Trace i f) ~ TraceEntry i)
        => proxy f

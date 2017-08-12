@@ -100,8 +100,9 @@ ev ev term = case unfix term of
     p <- ask
     find (p Map.! x)
   If0 c t e -> do
-    I z <- ev c
-    ev (if z == 0 then t else e)
+    v <- ev c
+    z <- isZero v
+    ev (if z then t else e)
   Op1 o a -> do
     va <- ev a
     delta1 o va

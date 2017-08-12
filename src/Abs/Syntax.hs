@@ -296,3 +296,7 @@ instance (Integral i, AbstractValue i (Eff (Interpreter i))) => Integral (Term i
     Right (I a) -> toInteger a
     Right _ -> error "toInteger applied to non-numeric Term"
     Left s -> error s
+
+class Effect f where
+  type Result f a
+  runEffect :: Eff (f ': fs) a -> Eff fs (Result f a)

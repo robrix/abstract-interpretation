@@ -1,9 +1,9 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Abs.Syntax where
+module Abstract.Syntax where
 
-import Abs.Store
-import Abs.Value
+import Abstract.Store
+import Abstract.Value
 import Control.Effect
 import Control.Monad.Fail
 import Control.Monad.Effect as Effect hiding (run)

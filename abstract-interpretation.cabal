@@ -13,9 +13,9 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Abs.Store
-                     , Abs.Syntax
-                     , Abs.Value
+  exposed-modules:     Abstract.Store
+                     , Abstract.Syntax
+                     , Abstract.Value
                      , Control.Effect
                      , Control.Monad.Effect.Failure
   build-depends:       base >=4.10 && <4.11

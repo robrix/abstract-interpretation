@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeOperators #-}
-module Abs.Store where
+module Abstract.Store where
 
 import Control.Monad.Effect
 import Control.Monad.Effect.State

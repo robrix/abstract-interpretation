@@ -153,7 +153,7 @@ evTell _ ev0 ev e = do
 -- Dead code analysis
 
 evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store i)
-evalDead = runEffects . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i, Set.Set (Term i))) . runDead . evalDead' (fix (evDead ev))
+evalDead = runEffects . flip asTypeOf (undefined :: Eff (State (Set.Set (Term i)) ': Interpreter i) (Val i)) . evalDead' (fix (evDead ev))
   where evalDead' eval e0 = do
           put (subexps e0)
           eval e0
@@ -184,9 +184,6 @@ type TraceEntry i = (Term i, Environment i, Store i)
 type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
 type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
 type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
-
-runDead :: Eff (State (Set.Set (Term i)) ': e) a -> Eff e (a, Set.Set (Term i))
-runDead = flip State.runState Set.empty
 
 
 -- Instances

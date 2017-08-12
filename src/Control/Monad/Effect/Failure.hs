@@ -11,5 +11,5 @@ data Failure a where
 runFailure :: Eff (Failure ': fs) a -> Eff fs (Either String a)
 runFailure = relay (pure . Right) (\(Failure s) _ -> pure (Left s))
 
-instance Failure :< fs => MonadFail (Eff fs) where
+instance (Failure :< fs) => MonadFail (Eff fs) where
   fail = send . Failure

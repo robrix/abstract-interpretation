@@ -34,6 +34,16 @@ data Syntax n a
 
 type Term = Fix (Syntax String)
 
+subexps :: Term -> Set.Set Term
+subexps = para $ \ s -> case s of
+  Op1 _ a -> Set.singleton (fst a) <> snd a
+  Op2 _ a b -> Set.singleton (fst a) <> snd a <> Set.singleton (fst b) <> snd b
+  App a b -> Set.singleton (fst a) <> snd a <> Set.singleton (fst b) <> snd b
+  Lam _ a -> Set.singleton (fst a) <> snd a
+  Rec _ a -> Set.singleton (fst a) <> snd a
+  If0 c t e -> foldMap (Set.singleton . fst) [c, t, e] <> foldMap snd [c, t, e]
+  _ -> Set.empty
+
 data Op1 = Negate | Abs | Signum
   deriving (Eq, Ord, Show)
 

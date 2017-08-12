@@ -282,12 +282,7 @@ instance (Enum i, Num i, AbstractValue i (Eff (Interpreter i))) => Enum (Term i)
 instance (Integral i, AbstractValue i (Eff (Interpreter i))) => Integral (Term i) where
   a `quot` b = Fix (Op2 Quotient a b)
   a `rem` b = Fix (Op2 Remainder a b)
-  quotRem t1 t2 = case (eval t1, eval t2) of
-    (Right (I a), Right (I b)) -> bimap (Fix . Num) (Fix . Num) (quotRem a b)
-    (Right _, Right _) -> error "quotRem applied to non-numeric Term"
-    (Left s1, Left s2) -> error (s1 ++ ", " ++ s2)
-    (Left s, _) -> error s
-    (_, Left s) -> error s
+  a `quotRem` b = (a `quot` b, a `rem` b)
 
   toInteger term = case eval term of
     Right (I a) -> toInteger a

@@ -301,6 +301,10 @@ class Effects fs where
   type Final fs a
   runEffects :: Eff fs a -> Final fs a
 
+instance (Effect f1, Effects (f2 ': fs)) => Effects (f1 ': f2 ': fs) where
+  type Final (f1 ': f2 ': fs) a = Final (f2 ': fs) (Result f1 a)
+  runEffects = runEffects . runEffect
+
 class Effect f where
   type Result f a
   type instance Result f a = a

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 module Abs.Value where
 
 import Control.Monad.Fail
@@ -14,13 +15,13 @@ data AbstractNum i = C i | N
   deriving (Eq, Ord, Show)
 
 
-class AbstractValue i where
-  delta1 :: MonadFail m => Op1 -> i -> m i
-  delta2 :: MonadFail m => Op2 -> i -> i -> m i
-  isZero :: MonadFail m => i -> m Bool
+class AbstractValue i m where
+  delta1 :: Op1 -> i -> m i
+  delta2 :: Op2 -> i -> i -> m i
+  isZero :: i -> m Bool
 
 
-instance AbstractValue Int where
+instance MonadFail m => AbstractValue Int m where
   delta1 o a = pure $ case o of
     Negate -> negate a
     Abs -> abs a

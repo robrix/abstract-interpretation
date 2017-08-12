@@ -85,7 +85,7 @@ data Val i = I i | L (Term i, Environment i)
   deriving (Eq, Ord, Show)
 type Store i = IntMap.IntMap (Val i)
 
-ev :: (AbstractValue i, Interpreter i :<: fs)
+ev :: (AbstractValue i (Eff fs), Interpreter i :<: fs)
    => (Term i -> Eff fs (Val i))
    -> Term i
    -> Eff fs (Val i)
@@ -125,11 +125,11 @@ ev ev term = case unfix term of
 
 -- Tracing and reachable state analyses
 
-evalTrace :: forall i. AbstractValue i => Term i -> Either String (Val i, Trace i [])
-evalTrace = run (undefined :: proxy' i) . Writer.runWriter . fix (evTell (undefined :: proxy []) ev)
+evalTrace :: forall i. (AbstractValue i (Eff (TracingInterpreter i []))) => Term i -> Either String (Val i, Trace i [])
+evalTrace = run (undefined :: proxy1 i) . Writer.runWriter . fix (evTell (undefined :: proxy2 []) ev)
 
-evalReach :: forall i. (Ord i, AbstractValue i) => Term i -> Either String (Val i, Trace i Set.Set)
-evalReach = run (undefined :: proxy' i) . Writer.runWriter . fix (evTell (undefined :: proxy Set.Set) ev)
+evalReach :: forall i fs proxy0. (Ord i, AbstractValue i (Eff (TracingInterpreter i Set.Set))) => proxy0 fs -> Term i -> Either String (Val i, Trace i Set.Set)
+evalReach _ = run (undefined :: proxy1 i) . Writer.runWriter . fix (evTell (undefined :: proxy2 Set.Set) ev)
 
 evTell :: forall proxy i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i f), Item (Trace i f) ~ TraceEntry i)
        => proxy f
@@ -146,8 +146,8 @@ evTell _ ev0 ev e = do
 
 -- Dead code analysis
 
-evalDead :: forall i. (Ord i, AbstractValue i) => Term i -> Either String (Val i, Set.Set (Term i))
-evalDead = run (undefined :: proxy i) . flip State.runState Set.empty . evalDead' (fix (evDead ev))
+evalDead :: forall i fs proxy0. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => proxy0 fs -> Term i -> Either String (Val i, Set.Set (Term i))
+evalDead _ = run (undefined :: proxy1 i) . flip State.runState Set.empty . evalDead' (fix (evDead ev))
   where evalDead' eval e0 = do
           put (subexps e0)
           eval e0
@@ -162,7 +162,7 @@ evDead ev0 ev e = do
   ev0 ev e
 
 
-instance AbstractValue i => AbstractValue (Val i) where
+instance (MonadFail m, AbstractValue i m) => AbstractValue (Val i) m where
   delta1 o (I a) = fmap I (delta1 o a)
   delta1 _ _ = fail "non-numeric value"
 

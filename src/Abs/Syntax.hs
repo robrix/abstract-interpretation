@@ -37,15 +37,15 @@ data Op1 = Negate | Abs | Signum
 data Op2 = Plus | Minus | Times | DividedBy
   deriving (Eq, Show)
 
-find :: State :< fs => Loc -> Eff fs Val
+find :: State Store :< fs => Loc -> Eff fs Val
 find = gets . flip (IntMap.!)
 
-alloc :: State :< fs => String -> Eff fs Loc
+alloc :: State Store :< fs => String -> Eff fs Loc
 alloc _ = do
   s <- get
   return (length (s :: Store))
 
-ext :: State :< fs => Loc -> Val -> Eff fs ()
+ext :: State Store :< fs => Loc -> Val -> Eff fs ()
 ext loc val = modify (IntMap.insert loc val)
 
 
@@ -115,8 +115,8 @@ delta2 o = \ (I a) (I b) -> case o of
     else
       return . I $ a `div` b
 
-type Interpreter = '[State, Reader, Failure]
-type State = State.State Store
+type Interpreter = '[State Store, Reader, Failure]
+type State = State.State
 type Reader = Reader.Reader Environment
 type Writer = Writer.Writer Trace
 type Trace = [(Term, Environment, Store)]
@@ -129,7 +129,7 @@ run f = State.runState f IntMap.empty
       & Effect.run
       & fmap fst
 
-instance State :< fs => MonadState Store (Eff fs) where
+instance State Store :< fs => MonadState Store (Eff fs) where
   get = State.get
   put = State.put
 

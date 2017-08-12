@@ -287,6 +287,9 @@ instance (Integral i, AbstractValue i (Eff (Interpreter i))) => Integral (Term i
 run :: Effects fs => Eff fs a -> Final fs a
 run = Effect.run . runEffects
 
+run' :: Effects fs => proxy fs -> Eff fs a -> Final fs a
+run' _ = run
+
 class Effects fs where
   type Final fs a
   runEffects :: Eff fs a -> Eff '[] (Final fs a)

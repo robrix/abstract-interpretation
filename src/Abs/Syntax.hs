@@ -192,6 +192,9 @@ run f = runFailure f
       & runEnv
       & Effect.run
 
+runInterpreter :: Eff (Failure ': State (Store i) ': Reader (Environment i) ': fs) a -> Eff fs (Either String a, Store i)
+runInterpreter = runEnv . runStore . runFailure
+
 runStore :: Eff (State (Store i) ': e) b -> Eff e (b, Store i)
 runStore = flip State.runState IntMap.empty
 

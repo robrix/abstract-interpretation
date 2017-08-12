@@ -1,12 +1,13 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeOperators, UndecidableInstances #-}
 module Abs.Syntax where
 
-import Control.Monad.Effect
+import Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State hiding (get, modify, put)
 import qualified Control.Monad.Effect.State as State
 import Control.Monad.State.Class
+import Data.Function ((&))
 import Data.Functor.Foldable
 import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
@@ -52,6 +53,13 @@ delta o = (return .) . case o of
   DividedBy -> div
 
 type Interpreter = Eff '[State Store, Reader Environment, Failure]
+
+run :: Interpreter a -> Either String a
+run f = runState f IntMap.empty
+      & flip runReader Map.empty
+      & runFailure
+      & Effect.run
+      & fmap fst
 
 instance State Store :< fs => MonadState Store (Eff fs) where
   get = State.get

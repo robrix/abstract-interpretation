@@ -185,9 +185,6 @@ type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
 type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
 type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
 
-runEnv :: Eff (Reader (Environment i) ': e) a -> Eff e a
-runEnv = flip runReader Map.empty
-
 runDead :: Eff (State (Set.Set (Term i)) ': e) a -> Eff e (a, Set.Set (Term i))
 runDead = flip State.runState Set.empty
 

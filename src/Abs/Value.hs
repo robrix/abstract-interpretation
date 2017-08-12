@@ -9,7 +9,7 @@ import Prelude hiding (fail)
 data Op1 = Negate | Abs | Signum
   deriving (Eq, Ord, Show)
 
-data Op2 = Plus | Minus | Times | DividedBy
+data Op2 = Plus | Minus | Times | DividedBy | Quotient
   deriving (Eq, Ord, Show)
 
 
@@ -40,6 +40,9 @@ instance MonadFail m => AbstractValue Int m where
     DividedBy -> do
       when (b == 0) divisionByZero
       return $ a `div` b
+    Quotient -> do
+      when (b == 0) divisionByZero
+      return $ a `quot` b
 
   isZero a = pure (a == 0)
 

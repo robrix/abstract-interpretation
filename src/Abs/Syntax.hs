@@ -169,6 +169,7 @@ evDead ev0 ev e = do
 class Real i => AbstractValue i where
   delta1 :: Monad m => Op1 -> Val i -> m (Val i)
   delta2 :: MonadFail m => Op2 -> Val i -> Val i -> m (Val i)
+  isZero :: Applicative m => Val i -> m Bool
 
 instance AbstractValue Int where
   delta1 o i = let I a = i in return . I $ case o of
@@ -184,6 +185,8 @@ instance AbstractValue Int where
         fail "division by zero"
       else
         return . I $ a `div` b
+
+  isZero i = let I a = i in pure (a == 0)
 
 type Interpreter i = '[State (Store i), Reader (Environment i), Failure]
 type Writer = Writer.Writer

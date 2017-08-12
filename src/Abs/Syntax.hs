@@ -83,7 +83,6 @@ ext (Loc loc) val = modify (IntMap.insert loc val)
 type Environment i = Map.Map String (Loc i)
 data Val i = I i | L (Term i, Environment i)
   deriving (Eq, Ord, Show)
-type Store v = IntMap.IntMap v
 
 
 -- Evaluation

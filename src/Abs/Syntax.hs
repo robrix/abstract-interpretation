@@ -300,3 +300,7 @@ instance (Integral i, AbstractValue i (Eff (Interpreter i))) => Integral (Term i
 class Effect f where
   type Result f a
   runEffect :: Eff (f ': fs) a -> Eff fs (Result f a)
+
+instance Effect (State (Store i)) where
+  type Result (State (Store i)) a = (a, Store i)
+  runEffect = flip runState IntMap.empty

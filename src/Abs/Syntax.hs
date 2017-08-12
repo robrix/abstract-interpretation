@@ -185,8 +185,7 @@ type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
 type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
 type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
 
-run :: Eff (Interpreter i) a
-    -> (Either String a, Store i)
+run :: Eff (Interpreter i) a -> (Either String a, Store i)
 run = Effect.run . runInterpreter
 
 runInterpreter :: Eff (Failure ': State (Store i) ': Reader (Environment i) ': fs) a -> Eff fs (Either String a, Store i)

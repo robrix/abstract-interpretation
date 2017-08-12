@@ -299,6 +299,7 @@ instance (Integral i, AbstractValue i (Eff (Interpreter i))) => Integral (Term i
 
 class Effect f where
   type Result f a
+  type instance Result f a = a
   runEffect :: Eff (f ': fs) a -> Eff fs (Result f a)
 
 instance Effect (State (Store i)) where

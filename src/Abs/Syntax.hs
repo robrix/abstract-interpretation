@@ -131,8 +131,8 @@ ev ev term = case unfix term of
 
 -- Tracing and reachable state analyses
 
-evalTrace :: forall i. (AbstractValue i (Eff (TracingInterpreter i []))) => Term i -> (Either String (Val i, Trace i []), Store i)
-evalTrace = runEffects . flip asTypeOf (undefined :: Eff (Interpreter i) (Val i, Trace i [])) . runWriter . fix (evTell [] ev)
+evalTrace :: forall i. (AbstractValue i (Eff (TraceInterpreter i))) => Term i -> (Either String (Val i, Trace i []), Store i)
+evalTrace = runEffects . flip asTypeOf (undefined :: Eff (TraceInterpreter i) (Val i)) . fix (evTell [] ev)
 
 evalReach :: forall i. (Ord i, AbstractValue i (Eff (ReachableStateInterpreter i))) => Term i -> (Either String (Val i, Trace i Set.Set), Store i)
 evalReach = runEffects . flip asTypeOf (undefined :: Eff (ReachableStateInterpreter i) (Val i)) . fix (evTell Set.empty ev)

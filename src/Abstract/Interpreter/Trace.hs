@@ -5,6 +5,7 @@ import Abstract.Interpreter
 import Abstract.Number
 import Abstract.Store
 import Abstract.Syntax
+import Abstract.Value
 import Control.Effect
 import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.Reader

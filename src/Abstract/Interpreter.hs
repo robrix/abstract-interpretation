@@ -4,8 +4,8 @@ module Abstract.Interpreter where
 import Abstract.Number
 import Abstract.Store
 import Abstract.Syntax
+import Abstract.Value
 import Control.Effect
-import Control.Monad.Fail
 import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Reader
@@ -13,13 +13,6 @@ import Control.Monad.Effect.State
 import Data.Function (fix)
 import Data.Functor.Foldable
 import qualified Data.Map as Map
-import Prelude hiding (fail)
-
-
-type Environment = Map.Map String
-
-data Value l i = I i | Closure String (Term i) (Environment (l i))
-  deriving (Eq, Ord, Show)
 
 
 type Interpreter l a = '[Failure, State (Store l a), Reader (Environment (l a))]
@@ -69,14 +62,3 @@ ev ev term = case unfix term of
     a <- alloc x
     ext a v1
     local (const (Map.insert x a p)) (ev e2)
-
-
-instance (MonadFail m, AbstractNumber i m) => AbstractNumber (Value l i) m where
-  delta1 o (I a) = fmap I (delta1 o a)
-  delta1 _ _ = fail "non-numeric value"
-
-  delta2 o (I a) (I b) = fmap I (delta2 o a b)
-  delta2 _ _ _ = fail "non-numeric value"
-
-  isZero (I a) = isZero a
-  isZero _ = fail "non-numeric value"

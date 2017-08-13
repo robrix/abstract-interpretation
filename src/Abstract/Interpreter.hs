@@ -10,6 +10,7 @@ import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
+import Data.Constraint
 import Data.Function (fix)
 import Data.Functor.Foldable
 import qualified Data.Map as Map
@@ -18,32 +19,32 @@ import Prelude hiding (fail)
 
 type Environment = Map.Map String
 
-data Val i = I i | L (Term i, Environment (Loc i))
+data Val l i = I i | L (Term i, Environment (l i))
   deriving (Eq, Ord, Show)
 
 
-type Interpreter f a = '[Failure, State (Store f a), Reader (Environment (Loc a))]
+type Interpreter l a = '[Failure, State (Store l a), Reader (Environment (l a))]
 
 
 -- Evaluation
 
-eval :: forall f i . (AbstractStore f, AbstractValue i (Eff (Interpreter f i))) => Term i -> (Either String (Val i), Store f i)
-eval = run @(Interpreter f i) . runEval (undefined :: proxy f)
+eval :: forall l i . (Monoid (Store l i), AbstractStore l, AbstractValue i (Eff (Interpreter l i))) => Dict (AbstractStore l) -> Term i -> (Either String (Val l i), Store l i)
+eval dict = run @(Interpreter l i) . runEval dict
 
-runEval :: (AbstractStore f, AbstractValue i (Eff fs), Interpreter f i :<: fs) => proxy f -> Term i -> Eff fs (Val i)
-runEval proxy = fix (ev proxy)
+runEval :: (AbstractStore l, AbstractValue i (Eff fs), Interpreter l i :<: fs) => Dict (AbstractStore l) -> Term i -> Eff fs (Val l i)
+runEval dict = fix (ev dict)
 
-ev :: forall f i fs proxy
-   .  (AbstractStore f, AbstractValue i (Eff fs), Interpreter f i :<: fs)
-   => proxy f
-   -> (Term i -> Eff fs (Val i))
+ev :: forall l i fs
+   .  (AbstractStore l, AbstractValue i (Eff fs), Interpreter l i :<: fs)
+   => Dict (AbstractStore l)
+   -> (Term i -> Eff fs (Val l i))
    -> Term i
-   -> Eff fs (Val i)
-ev proxy ev term = case unfix term of
+   -> Eff fs (Val l i)
+ev _ ev term = case unfix term of
   Num n -> return (I n)
   Var x -> do
     p <- ask
-    I <$> find proxy (p Map.! x)
+    I <$> find ((p :: Environment (l i)) Map.! x)
   If0 c t e -> do
     v <- ev c
     z <- isZero v
@@ -57,22 +58,22 @@ ev proxy ev term = case unfix term of
     delta2 o va vb
   Rec f e -> do
     p <- ask
-    a <- alloc proxy f
-    I v <- local (const (Map.insert f a p)) (ev e)
-    ext proxy a v
+    a <- alloc f
+    I v <- local (const (Map.insert f a (p :: Environment (l i)))) (ev e)
+    ext a v
     return (I v)
   Lam x e0 -> do
     p <- ask
-    return (L (makeLam x e0, p))
+    return (L (makeLam x e0, (p :: Environment (l i))))
   App e0 e1 -> do
     L (Fix (Lam x e2), p) <- ev e0
     I v1 <- ev e1
-    a <- alloc proxy x
-    ext proxy a v1
+    a <- alloc x
+    ext a v1
     local (const (Map.insert x a p)) (ev e2)
 
 
-instance (MonadFail m, AbstractValue i m) => AbstractValue (Val i) m where
+instance (MonadFail m, AbstractValue i m) => AbstractValue (Val l i) m where
   delta1 o (I a) = fmap I (delta1 o a)
   delta1 _ _ = fail "non-numeric value"
 

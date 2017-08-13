@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeOperators #-}
+{-# LANGUAGE DataKinds, FlexibleContexts, GADTs, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
 module Abstract.Interpreter.Dead where
 
 import Abstract.Interpreter
@@ -6,30 +6,50 @@ import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value
 import Control.Effect
-import Control.Monad.Effect hiding (run)
-import Control.Monad.Effect.State
+import Control.Monad.Effect.Internal hiding (run)
+import Data.Constraint
 import Data.Function (fix)
 import qualified Data.Set as Set
 
-type DeadCodeInterpreter f i = State (Set.Set (Term i)) ': Interpreter f i
+type DeadCodeInterpreter l i = DeadCode i ': Interpreter l i
 
 
 -- Dead code analysis
 
-evalDead :: forall f i. (Ord i, AbstractStore f, AbstractValue i (Eff (DeadCodeInterpreter f i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store f i)
-evalDead = run @(DeadCodeInterpreter f i) . runDead (undefined :: proxy f)
+evalDead :: forall l i. (Monoid (Store l i), Ord i, AbstractStore l, AbstractValue i (Eff (DeadCodeInterpreter l i))) => Term i -> (Either String (Val l i, Set.Set (Term i)), Store l i)
+evalDead = run @(DeadCodeInterpreter l i) . runDead Dict
 
-runDead :: (Ord i, DeadCodeInterpreter f i :<: fs, AbstractStore f, AbstractValue i (Eff fs)) => proxy f -> Term i -> Eff fs (Val i)
-runDead proxy e0 = do
+runDead :: (Ord i, DeadCodeInterpreter l i :<: fs, AbstractStore l, AbstractValue i (Eff fs)) => Dict (AbstractStore l) -> Term i -> Eff fs (Val l i)
+runDead dict e0 = do
   put (subterms e0)
-  fix (evDead proxy (ev proxy)) e0
+  fix (evDead dict (ev dict)) e0
 
-evDead :: (Ord i, DeadCodeInterpreter f i :<: fs)
-       => proxy f
-       -> ((Term i -> Eff fs (Val i)) -> Term i -> Eff fs (Val i))
-       -> (Term i -> Eff fs (Val i))
+evDead :: (Ord i, DeadCodeInterpreter l i :<: fs)
+       => Dict (AbstractStore l)
+       -> ((Term i -> Eff fs (Val l i)) -> Term i -> Eff fs (Val l i))
+       -> (Term i -> Eff fs (Val l i))
        -> Term i
-       -> Eff fs (Val i)
+       -> Eff fs (Val l i)
 evDead _ ev0 ev e = do
   modify (Set.delete e)
   ev0 ev e
+
+get :: (DeadCode i :< e) => Eff e (Set.Set (Term i))
+get = send Get
+
+put :: (DeadCode i :< e) => Set.Set (Term i) -> Eff e ()
+put s = send (Put s)
+
+modify :: (DeadCode i :< e) => (Set.Set (Term i) -> Set.Set (Term i)) -> Eff e ()
+modify f = fmap f get >>= put
+
+data DeadCode i a where
+  Get :: DeadCode i (Set.Set (Term i))
+  Put :: !(Set.Set (Term i)) -> DeadCode i ()
+
+
+instance Ord i => RunEffect (DeadCode i) where
+  type Result (DeadCode i) a = (a, Set.Set (Term i))
+  runEffect = relayState mempty ((pure .) . flip (,)) $ \ state eff yield -> case eff of
+    Get -> yield state state
+    Put state' -> yield state' ()

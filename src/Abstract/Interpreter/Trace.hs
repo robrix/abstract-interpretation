@@ -10,42 +10,43 @@ import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Control.Monad.Effect.Writer
+import Data.Constraint
 import Data.Function (fix)
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
-type TraceEntry f i = (Term i, Environment (Loc i), Store f i)
-type Trace f i g = g (TraceEntry f i)
+type TraceEntry l i = (Term i, Environment (l i), Store l i)
+type Trace l i g = g (TraceEntry l i)
 
-type TracingInterpreter f i g = Writer (Trace f i g) ': Interpreter f i
+type TracingInterpreter l i g = Writer (Trace l i g) ': Interpreter l i
 
-type TraceInterpreter f i = TracingInterpreter f i []
-type ReachableStateInterpreter f i = TracingInterpreter f i Set.Set
+type TraceInterpreter l i = TracingInterpreter l i []
+type ReachableStateInterpreter l i = TracingInterpreter l i Set.Set
 
 
 -- Tracing and reachable state analyses
 
-evalTrace :: forall i f. (AbstractStore f, AbstractValue i (Eff (TraceInterpreter f i))) => Term i -> (Either String (Val i, Trace f i []), Store f i)
-evalTrace = run @(TraceInterpreter f i) . runTrace (undefined :: proxy f)
+evalTrace :: forall i l. (Monoid (Store l i), AbstractStore l, AbstractValue i (Eff (TraceInterpreter l i))) => Term i -> (Either String (Val l i, Trace l i []), Store l i)
+evalTrace = run @(TraceInterpreter l i) . runTrace Dict
 
-runTrace :: (TraceInterpreter f i :<: fs, AbstractStore f, AbstractValue i (Eff fs)) => proxy f -> Term i -> Eff fs (Val i)
-runTrace proxy = fix (evTell proxy [] (ev proxy))
+runTrace :: (TraceInterpreter l i :<: fs, AbstractStore l, AbstractValue i (Eff fs)) => Dict (AbstractStore l) -> Term i -> Eff fs (Val l i)
+runTrace dict = fix (evTell dict [] (ev dict))
 
-evalReach :: forall i f. (Ord i, Ord (f i), AbstractStore f, AbstractValue i (Eff (ReachableStateInterpreter f i))) => Term i -> (Either String (Val i, Trace f i Set.Set), Store f i)
-evalReach = run @(ReachableStateInterpreter f i) . runReach (undefined :: proxy f)
+evalReach :: forall i l. (Monoid (Store l i), Ord i, Ord (l i), Ord (Store l i), AbstractStore l, AbstractValue i (Eff (ReachableStateInterpreter l i))) => Term i -> (Either String (Val l i, Trace l i Set.Set), Store l i)
+evalReach = run @(ReachableStateInterpreter l i) . runReach Dict
 
-runReach :: (Ord i, Ord (f i), ReachableStateInterpreter f i :<: fs, AbstractStore f, AbstractValue i (Eff fs)) => proxy f -> Term i -> Eff fs (Val i)
-runReach proxy = fix (evTell proxy Set.empty (ev proxy))
+runReach :: (Ord i, Ord (l i), Ord (Store l i), ReachableStateInterpreter l i :<: fs, AbstractStore l, AbstractValue i (Eff fs)) => Dict (AbstractStore l) -> Term i -> Eff fs (Val l i)
+runReach dict = fix (evTell dict Set.empty (ev dict))
 
-evTell :: forall f i g fs proxy . (TracingInterpreter f i g :<: fs, IsList (Trace f i g), Item (Trace f i g) ~ TraceEntry f i)
-       => proxy f
+evTell :: forall l i g fs . (TracingInterpreter l i g :<: fs, IsList (Trace l i g), Item (Trace l i g) ~ TraceEntry l i)
+       => Dict (AbstractStore l)
        -> g ()
-       -> ((Term i -> Eff fs (Val i)) -> Term i -> Eff fs (Val i))
-       -> (Term i -> Eff fs (Val i))
+       -> ((Term i -> Eff fs (Val l i)) -> Term i -> Eff fs (Val l i))
+       -> (Term i -> Eff fs (Val l i))
        -> Term i
-       -> Eff fs (Val i)
+       -> Eff fs (Val l i)
 evTell _ _ ev0 ev e = do
   env <- ask
   store <- get
-  tell (fromList [(e, env, store)] :: Trace f i g)
+  tell (fromList [(e, env, store)] :: Trace l i g)
   ev0 ev e

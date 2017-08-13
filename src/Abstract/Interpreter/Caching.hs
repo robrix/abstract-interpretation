@@ -46,7 +46,7 @@ evCache ev0 ev e = do
   let c = Configuration e env store :: Configuration l i
   out <- getCacheOut
   case Map.lookup c out of
-    Just pairs -> asum . flip map (Set.toList pairs) $ \ (value, store') -> do
+    Just pairs -> asum . flip map (toList pairs) $ \ (value, store') -> do
       put store'
       return value
     Nothing -> do
@@ -73,7 +73,7 @@ fixCache eval e = do
     put store
     _ <- localCacheIn (const dollar) (eval e)
     getCacheOut)
-  asum . flip map (maybe [] Set.toList (Map.lookup c pairs)) $ \ (value, store') -> do
+  asum . flip map (maybe [] toList (Map.lookup c pairs)) $ \ (value, store') -> do
     put store'
     return value
 

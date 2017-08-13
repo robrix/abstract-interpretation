@@ -118,18 +118,29 @@ instance (Eq n, Eq i) => Eq1 (Syntax n i) where
   liftEq = liftEq2 (==)
 
 instance Ord n => Ord2 (Syntax n) where
-  liftCompare2 compareV compareA s1 s2
-    | ordering <- compare (bimap (const ()) (const ()) s1) (bimap (const ()) (const ()) s2), ordering /= EQ = ordering
-    | otherwise = case (s1, s2) of
-      (Var n1, Var n2) -> compare n1 n2
-      (Num v1, Num v2) -> compareV v1 v2
-      (Op1 o1 a1, Op1 o2 a2) -> compare o1 o2 <> compareA a1 a2
-      (Op2 o1 a1 b1, Op2 o2 a2 b2) -> compare o1 o2 <> compareA a1 a2 <> compareA b1 b2
-      (App a1 b1, App a2 b2) -> compareA a1 a2 <> compareA b1 b2
-      (Lam n1 a1, Lam n2 a2) -> compare n1 n2 <> compareA a1 a2
-      (Rec n1 a1, Rec n2 a2) -> compare n1 n2 <> compareA a1 a2
-      (If0 c1 t1 e1, If0 c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
-      _ -> EQ
+  liftCompare2 compareV compareA s1 s2 = case (s1, s2) of
+    (Var n1, Var n2) -> compare n1 n2
+    (Var{}, _) -> LT
+    (_, Var{}) -> GT
+    (Num v1, Num v2) -> compareV v1 v2
+    (Num{}, _) -> LT
+    (_, Num{}) -> GT
+    (Op1 o1 a1, Op1 o2 a2) -> compare o1 o2 <> compareA a1 a2
+    (Op1{}, _) -> LT
+    (_, Op1{}) -> GT
+    (Op2 o1 a1 b1, Op2 o2 a2 b2) -> compare o1 o2 <> compareA a1 a2 <> compareA b1 b2
+    (Op2{}, _) -> LT
+    (_, Op2{}) -> GT
+    (App a1 b1, App a2 b2) -> compareA a1 a2 <> compareA b1 b2
+    (App{}, _) -> LT
+    (_, App{}) -> GT
+    (Lam n1 a1, Lam n2 a2) -> compare n1 n2 <> compareA a1 a2
+    (Lam{}, _) -> LT
+    (_, Lam{}) -> GT
+    (Rec n1 a1, Rec n2 a2) -> compare n1 n2 <> compareA a1 a2
+    (Rec{}, _) -> LT
+    (_, Rec{}) -> GT
+    (If0 c1 t1 e1, If0 c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
 
 instance (Ord n, Ord i) => Ord1 (Syntax n i) where
   liftCompare = liftCompare2 compare

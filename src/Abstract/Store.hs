@@ -11,6 +11,9 @@ import Data.Semigroup
 
 type Store f a = Map.Map (Loc a) (f a)
 
+newtype LocI a = LocI { unLocI :: Int }
+  deriving (Eq, Ord, Show)
+
 newtype Loc a = Loc { unLoc :: String }
   deriving (Eq, Ord, Show)
 

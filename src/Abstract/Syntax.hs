@@ -180,7 +180,7 @@ instance Pretty n => Pretty2 (Syntax n) where
     App a b -> parens (pr a) <+> parens (pr b)
     Lam n a -> prettyC "Lam" [pretty n, pr a]
     Rec n a -> prettyC "Rec" [pretty n, pr a]
-    If0 c t e -> prettyC "If0" [pr c, pr t, pr e]
+    If0 c t e -> pretty "if0" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
 
 instance (Pretty n, Pretty v) => Pretty1 (Syntax n v) where
   liftPretty = liftPretty2 pretty prettyList

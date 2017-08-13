@@ -27,14 +27,14 @@ type Interpreter l a = '[Failure, State (Store l a), Reader (Environment (l a))]
 
 -- Evaluation
 
-eval :: forall l i . (Monoid (Store l i), AbstractStore l, AbstractValue i (Eff (Interpreter l i))) => Term i -> (Either String (Val l i), Store l i)
+eval :: forall l i . (Monoid (Store l i), AbstractStore l, Context l i (Interpreter l i), AbstractValue i (Eff (Interpreter l i))) => Term i -> (Either String (Val l i), Store l i)
 eval = run @(Interpreter l i) . runEval
 
-runEval :: (AbstractStore l, AbstractValue i (Eff fs), Interpreter l i :<: fs) => Term i -> Eff fs (Val l i)
+runEval :: (AbstractStore l, Context l i fs, AbstractValue i (Eff fs), Interpreter l i :<: fs) => Term i -> Eff fs (Val l i)
 runEval = fix ev
 
 ev :: forall l i fs
-   .  (AbstractStore l, AbstractValue i (Eff fs), Interpreter l i :<: fs)
+   .  (AbstractStore l, Context l i fs, AbstractValue i (Eff fs), Interpreter l i :<: fs)
    => (Term i -> Eff fs (Val l i))
    -> Term i
    -> Eff fs (Val l i)

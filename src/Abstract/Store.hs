@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, InstanceSigs, ScopedTypeVariables, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE ConstraintKinds, DataKinds, FlexibleContexts, InstanceSigs, ScopedTypeVariables, TypeFamilies, TypeOperators #-}
 module Abstract.Store where
 
 import Control.Applicative
@@ -6,6 +6,7 @@ import Control.Monad.Effect
 import Control.Monad.Effect.State
 import Data.Foldable (asum)
 import qualified Data.IntMap as IntMap
+import Data.Kind
 import qualified Data.Map as Map
 import Data.Semigroup
 
@@ -17,12 +18,14 @@ newtype Monovariant a = Monovariant { unMonovariant :: String }
 
 class AbstractStore l where
   type Store l a
+  type Context l a (fs :: [* -> *]) :: Constraint
+  type instance Context l a fs = (State (Store l a) :< fs)
 
-  find :: (State (Store l a) :< fs) => l a -> Eff fs a
+  find :: Context l a fs => l a -> Eff fs a
 
-  alloc :: (State (Store l a) :< fs) => String -> Eff fs (l a)
+  alloc :: Context l a fs => String -> Eff fs (l a)
 
-  ext :: (State (Store l a) :< fs) => l a -> a -> Eff fs ()
+  ext :: Context l a fs => l a -> a -> Eff fs ()
 
 instance AbstractStore Precise where
   type Store Precise a = IntMap.IntMap a
@@ -35,13 +38,15 @@ instance AbstractStore Precise where
 
   ext (Precise loc) val = modify (IntMap.insert loc val)
 
-find' :: forall a fs. (Alternative (Eff fs), State (Map.Map (Monovariant a) [a]) :< fs) => Monovariant a -> Eff fs a
-find' loc = do
-  store <- get
-  asum (return <$> ((store :: Map.Map (Monovariant a) [a]) Map.! loc))
+instance AbstractStore Monovariant where
+  type Store Monovariant a = Map.Map (Monovariant a) [a]
+  type Context Monovariant a fs = (State (Store Monovariant a) :< fs, Alternative (Eff fs))
 
-alloc' :: Alternative m => String -> m (Monovariant a)
-alloc' x = pure (Monovariant x)
+  find :: forall a fs. Context Monovariant a fs => Monovariant a -> Eff fs a
+  find loc = do
+    store <- get
+    asum (return <$> ((store :: Store Monovariant a) Map.! loc))
 
-ext' :: (State (Map.Map (Monovariant a) [a]) :< fs) => Monovariant a -> a -> Eff fs ()
-ext' loc val = modify (Map.insertWith (<>) loc [val])
+  alloc x = pure (Monovariant x)
+
+  ext loc val = modify (Map.insertWith (<>) loc [val])

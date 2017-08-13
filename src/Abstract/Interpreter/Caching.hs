@@ -9,12 +9,43 @@ import Abstract.Value
 import Control.Effect
 import Control.Monad.Effect.Internal
 import Control.Monad.Effect.NonDetEff
+import Control.Monad.Effect.Reader
+import Control.Monad.Effect.State
+import Data.Foldable
 import qualified Data.Map as Map
+import Data.Maybe
+import Data.Semigroup
 import qualified Data.Set as Set
 
 type Cache l a = Map.Map (Configuration l a) (Set.Set (Value l a, Store l (Value l a)))
 
 type CachingInterpreter l a = CacheOut l a ': CacheIn l a ': NonDetEff ': Interpreter l a
+
+
+evCache :: forall l i fs
+        .  (Ord i, Ord (l (Value l i)), Ord (Store l (Value l i)), AbstractStore l, Context l (Value l i) fs, CachingInterpreter l i :<: fs)
+        => ((Term i -> Eff fs (Value l i)) -> Term i -> Eff fs (Value l i))
+        -> (Term i -> Eff fs (Value l i))
+        -> Term i
+        -> Eff fs (Value l i)
+evCache ev0 ev e = do
+  env <- ask
+  store <- get
+  let c = Configuration e env store :: Configuration l i
+  out <- getCacheOut
+  case Map.lookup c out of
+    Just pairs -> asum . flip map (Set.toList pairs) $ \ (value, store') -> do
+      put store'
+      return value
+    Nothing -> do
+      in' <- askCacheIn
+      let pairs = fromMaybe Set.empty (Map.lookup c in')
+      putCacheOut (Map.insert c pairs out)
+      v <- ev0 ev e
+      store' <- get
+      let pair = (v, store')
+      modifyCacheOut (Map.insertWith (<>) c (Set.singleton pair))
+      return v
 
 
 askCacheIn :: (CacheIn l a :< fs) => Eff fs (Cache l a)

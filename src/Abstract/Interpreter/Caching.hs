@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, GADTs, ScopedTypeVariables, TypeFamilies, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE DataKinds, FlexibleContexts, GADTs, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Interpreter.Caching where
 
 import Abstract.Configuration
@@ -8,7 +8,7 @@ import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value
 import Control.Effect
-import Control.Monad.Effect.Internal
+import Control.Monad.Effect.Internal hiding (run)
 import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
@@ -23,6 +23,11 @@ type Cache l a = Map.Map (Configuration l a) (Set.Set (Value l a, Store l (Value
 
 type CachingInterpreter l a = CacheOut l a ': CacheIn l a ': NonDetEff ': Interpreter l a
 
+
+-- Coinductively-cached evaluation
+
+evalCache :: forall l a . (Ord a, Ord (l (Value l a)), Ord (Store l (Value l a)), Monoid (Store l (Value l a)), AbstractStore l, Context l (Value l a) (CachingInterpreter l a), AbstractNumber a (Eff (CachingInterpreter l a))) => Term a -> (Either String [(Value l a, Cache l a)], Store l (Value l a))
+evalCache = run @(CachingInterpreter l a) . runCache
 
 runCache :: (Ord a, Ord (l (Value l a)), Ord (Store l (Value l a)), AbstractStore l, Context l (Value l a) fs, AbstractNumber a (Eff fs), CachingInterpreter l a :<: fs) => Term a -> Eff fs (Value l a)
 runCache = fixCache (fix (evCache ev))

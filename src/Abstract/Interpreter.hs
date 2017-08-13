@@ -18,7 +18,7 @@ import Prelude hiding (fail)
 
 type Environment = Map.Map String
 
-data Val l i = I i | L (Term i, Environment (l i))
+data Val l i = I i | Closure (Term i, Environment (l i))
   deriving (Eq, Ord, Show)
 
 
@@ -62,9 +62,9 @@ ev ev term = case unfix term of
     return (I v)
   Lam x e0 -> do
     p <- ask
-    return (L (makeLam x e0, (p :: Environment (l i))))
+    return (Closure (makeLam x e0, (p :: Environment (l i))))
   App e0 e1 -> do
-    L (Fix (Lam x e2), p) <- ev e0
+    Closure (Fix (Lam x e2), p) <- ev e0
     I v1 <- ev e1
     a <- alloc x
     ext a v1

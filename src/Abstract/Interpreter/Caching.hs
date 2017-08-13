@@ -47,6 +47,24 @@ evCache ev0 ev e = do
       modifyCacheOut (Map.insertWith (<>) c (Set.singleton pair))
       return v
 
+fixCache :: forall l a fs
+         .  (Ord a, Ord (l (Value l a)), Ord (Store l (Value l a)), AbstractStore l, Context l (Value l a) fs, CachingInterpreter l a :<: fs)
+         => (Term a -> Eff fs (Value l a))
+         -> Term a
+         -> Eff fs (Value l a)
+fixCache eval e = do
+  env <- ask
+  store <- get
+  let c = Configuration e env store :: Configuration l a
+  pairs <- mlfp Map.empty (\ dollar -> do
+    putCacheOut (Map.empty :: Cache l a)
+    put store
+    _ <- localCacheIn (const dollar) (eval e)
+    getCacheOut)
+  asum . flip map (Set.toList (fromMaybe Set.empty (Map.lookup c pairs))) $ \ (value, store') -> do
+    put store'
+    return value
+
 
 mlfp :: (Eq a, Monad m) => a -> (a -> m a) -> m a
 mlfp a f = loop a

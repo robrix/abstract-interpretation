@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, TypeFamilies, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, GADTs, RankNTypes, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Control.Effect where
 
 import Control.Monad.Effect as Effect hiding (run)
@@ -8,6 +8,9 @@ import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader as Reader
 import Control.Monad.Effect.State as State
 import Control.Monad.Effect.Writer as Writer
+
+newtype Effects fs ffs a where
+  Effects :: { runEff :: fs :<: ffs => Eff ffs a } -> Effects fs ffs a
 
 run :: RunEffects fs => Eff fs a -> Final fs a
 run = Effect.run . runEffects

@@ -1,9 +1,10 @@
-{-# LANGUAGE FlexibleContexts, GADTs, TypeOperators #-}
+{-# LANGUAGE FlexibleContexts, GADTs, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Interpreter.Caching where
 
 import Abstract.Configuration
 import Abstract.Store
 import Abstract.Value
+import Control.Effect
 import Control.Monad.Effect.Internal
 import qualified Data.Map as Map
 
@@ -23,3 +24,9 @@ modifyCacheOut f = fmap f getCacheOut >>= putCacheOut
 data Caching l a v where
   Get :: Caching l a (Cache l a)
   Put :: !(Cache l a) -> Caching l a ()
+
+instance RunEffect (Caching l a) where
+  type Result (Caching l a) v = (v, Cache l a)
+  runEffect = relayState Map.empty ((pure .) . flip (,)) $ \ state eff yield -> case eff of
+    Get -> yield state state
+    Put state' -> yield state' ()

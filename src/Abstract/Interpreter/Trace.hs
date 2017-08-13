@@ -14,7 +14,7 @@ import Data.Function (fix)
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
-type TraceEntry i = (Term i, Environment i, Store (Val i))
+type TraceEntry i = (Term i, Environment (Loc (Val i)), Store (Val i))
 type Trace i f = f (TraceEntry i)
 
 type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i

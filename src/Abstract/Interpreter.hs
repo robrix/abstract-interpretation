@@ -16,13 +16,13 @@ import qualified Data.Map as Map
 import Prelude hiding (fail)
 
 
-type Environment i = Map.Map String (Loc (Val i))
+type Environment = Map.Map String
 
-data Val i = I i | L (Term i, Environment i)
+data Val i = I i | L (Term i, Environment (Loc (Val i)))
   deriving (Eq, Ord, Show)
 
 
-type Interpreter i = '[Failure, State (Store (Val i)), Reader (Environment i)]
+type Interpreter i = '[Failure, State (Store (Val i)), Reader (Environment (Loc (Val i)))]
 
 
 -- Evaluation

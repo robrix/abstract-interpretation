@@ -14,8 +14,16 @@ type Cache l a = Map.Map (Configuration l a) (Value l a, Store l (Value l a))
 
 type CachingInterpreter l a = CacheOut l a ': CacheIn l a ': Interpreter l a
 
+
 askCacheIn :: (CacheIn l a :< fs) => Eff fs (Cache l a)
 askCacheIn = send Ask
+
+localCacheIn :: forall l a fs b. (CacheIn l a :< fs) => (Cache l a -> Cache l a) -> Eff fs b -> Eff fs b
+localCacheIn f m = do
+  e <- fmap f askCacheIn
+  let bind :: CacheIn l a v -> Arrow fs v b -> Eff fs b
+      bind Ask g = g e
+  interpose pure bind m
 
 
 getCacheOut :: (CacheOut l a :< fs) => Eff fs (Cache l a)

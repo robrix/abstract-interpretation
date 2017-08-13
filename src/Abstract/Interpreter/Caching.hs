@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, GADTs, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, GADTs, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Interpreter.Caching where
 
 import Abstract.Configuration
@@ -116,10 +116,10 @@ data CacheOut l a v where
   Get :: CacheOut l a (Cache l a)
   Put :: !(Cache l a) -> CacheOut l a ()
 
-instance RunEffect (CacheIn l a) where
+instance RunEffect (CacheIn l a) b where
   runEffect = relay pure (\ Ask k -> k Map.empty)
 
-instance RunEffect (CacheOut l a) where
+instance RunEffect (CacheOut l a) v where
   type Result (CacheOut l a) v = (v, Cache l a)
   runEffect = relayState Map.empty ((pure .) . flip (,)) $ \ state eff yield -> case eff of
     Get -> yield state state

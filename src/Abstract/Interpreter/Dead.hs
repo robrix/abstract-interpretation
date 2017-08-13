@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, GADTs, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, GADTs, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
 module Abstract.Interpreter.Dead where
 
 import Abstract.Interpreter
@@ -51,7 +51,7 @@ data DeadCode i a where
   Put :: !(Set.Set (Term i)) -> DeadCode i ()
 
 
-instance Ord i => RunEffect (DeadCode i) where
+instance Ord i => RunEffect (DeadCode i) a where
   type Result (DeadCode i) a = (a, Set.Set (Term i))
   runEffect = relayState mempty ((pure .) . flip (,)) $ \ state eff yield -> case eff of
     Get -> yield state state

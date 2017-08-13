@@ -17,7 +17,7 @@ data AbstractNum = N
   deriving (Eq, Ord, Show)
 
 
-class AbstractValue i m where
+class AbstractNumber i m where
   delta1 :: Op1 -> i -> m i
   delta2 :: Op2 -> i -> i -> m i
   isZero :: i -> m Bool
@@ -27,7 +27,7 @@ divisionByZero :: MonadFail m => m a
 divisionByZero = fail "division by zero"
 
 
-instance MonadFail m => AbstractValue Int m where
+instance MonadFail m => AbstractNumber Int m where
   delta1 o a = pure $ case o of
     Negate -> negate a
     Abs -> abs a
@@ -49,7 +49,7 @@ instance MonadFail m => AbstractValue Int m where
 
   isZero a = pure (a == 0)
 
-instance (Alternative m, MonadFail m) => AbstractValue AbstractNum m where
+instance (Alternative m, MonadFail m) => AbstractNumber AbstractNum m where
   delta1 _ N = pure N
 
   delta2 DividedBy _ N = pure N <|> divisionByZero

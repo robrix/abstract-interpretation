@@ -27,14 +27,14 @@ type Interpreter l a = '[Failure, State (Store l a), Reader (Environment (l a))]
 
 -- Evaluation
 
-eval :: forall l i . (Monoid (Store l i), AbstractStore l, Context l i (Interpreter l i), AbstractValue i (Eff (Interpreter l i))) => Term i -> (Either String (Value l i), Store l i)
+eval :: forall l i . (Monoid (Store l i), AbstractStore l, Context l i (Interpreter l i), AbstractNumber i (Eff (Interpreter l i))) => Term i -> (Either String (Value l i), Store l i)
 eval = run @(Interpreter l i) . runEval
 
-runEval :: (AbstractStore l, Context l i fs, AbstractValue i (Eff fs), Interpreter l i :<: fs) => Term i -> Eff fs (Value l i)
+runEval :: (AbstractStore l, Context l i fs, AbstractNumber i (Eff fs), Interpreter l i :<: fs) => Term i -> Eff fs (Value l i)
 runEval = fix ev
 
 ev :: forall l i fs
-   .  (AbstractStore l, Context l i fs, AbstractValue i (Eff fs), Interpreter l i :<: fs)
+   .  (AbstractStore l, Context l i fs, AbstractNumber i (Eff fs), Interpreter l i :<: fs)
    => (Term i -> Eff fs (Value l i))
    -> Term i
    -> Eff fs (Value l i)
@@ -71,7 +71,7 @@ ev ev term = case unfix term of
     local (const (Map.insert x a p)) (ev e2)
 
 
-instance (MonadFail m, AbstractValue i m) => AbstractValue (Value l i) m where
+instance (MonadFail m, AbstractNumber i m) => AbstractNumber (Value l i) m where
   delta1 o (I a) = fmap I (delta1 o a)
   delta1 _ _ = fail "non-numeric value"
 

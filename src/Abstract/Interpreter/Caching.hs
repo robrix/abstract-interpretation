@@ -2,6 +2,7 @@
 module Abstract.Interpreter.Caching where
 
 import Abstract.Configuration
+import Abstract.Interpreter
 import Abstract.Store
 import Abstract.Value
 import Control.Effect
@@ -10,6 +11,7 @@ import qualified Data.Map as Map
 
 type Cache l a = Map.Map (Configuration l a) (Value l a, Store l (Value l a))
 
+type CachingInterpreter l a = CacheOut l a ': Interpreter l a
 
 askCacheIn :: (CacheOut l a :< fs) => Eff fs (Cache l a)
 askCacheIn = send Ask

@@ -13,7 +13,7 @@ import Data.Semigroup
 newtype Precise a = Precise { unPrecise :: Int }
   deriving (Eq, Ord, Show)
 
-newtype Monovariant a = Monovariant { unMonovariant :: String }
+newtype Monovariant a = Monovariant String
   deriving (Eq, Ord, Show)
 
 class AbstractStore l where

@@ -1,7 +1,6 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, GADTs, RankNTypes, TypeFamilies, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Control.Effect where
 
-import Control.Applicative
 import Control.Monad.Effect as Effect hiding (run)
 import qualified Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
@@ -9,9 +8,6 @@ import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader as Reader
 import Control.Monad.Effect.State as State
 import Control.Monad.Effect.Writer as Writer
-
-newtype Effects fs ffs a where
-  Effects :: { runEff :: fs :<: ffs => Eff ffs a } -> Effects fs ffs a
 
 run :: RunEffects fs => Eff fs a -> Final fs a
 run = Effect.run . runEffects
@@ -51,19 +47,3 @@ instance Monoid w => RunEffect (Writer w) where
 instance RunEffect NonDetEff where
   type Result NonDetEff a = [a]
   runEffect = makeChoiceA
-
-instance Functor (Effects fs ffs) where
-  fmap f (Effects eff) = Effects (fmap f eff)
-
-instance Applicative (Effects fs ffs) where
-  pure a = Effects (pure a)
-
-  Effects f <*> Effects a = Effects (f <*> a)
-
-instance Alternative (Eff ffs) => Alternative (Effects fs ffs) where
-  empty = Effects empty
-  Effects a <|> Effects b = Effects (a <|> b)
-
-instance Monad (Effects fs ffs) where
-  return = pure
-  Effects a >>= f = Effects (a >>= runEff . f)

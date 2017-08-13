@@ -33,6 +33,7 @@ evDead ev0 ev e = do
   modify (Set.delete e)
   ev0 ev e
 
+
 get :: (DeadCode i :< e) => Eff e (Set.Set (Term i))
 get = send Get
 
@@ -41,6 +42,7 @@ put s = send (Put s)
 
 modify :: (DeadCode i :< e) => (Set.Set (Term i) -> Set.Set (Term i)) -> Eff e ()
 modify f = fmap f get >>= put
+
 
 data DeadCode i a where
   Get :: DeadCode i (Set.Set (Term i))

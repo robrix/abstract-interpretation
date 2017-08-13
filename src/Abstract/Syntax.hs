@@ -178,7 +178,7 @@ instance Pretty n => Pretty2 (Syntax n) where
     Op1 o a -> pretty o <+> pr a
     Op2 o a b -> pr a <+> pretty o <+> pr b
     App a b -> parens (pr a) <+> parens (pr b)
-    Lam n a -> prettyC "Lam" [pretty n, pr a]
+    Lam n a -> parens (pretty '\\' <+> pretty n <+> pretty "->" <+> pr a)
     Rec n a -> pretty "rec" <+> parens (pretty '\\' <+> pretty n <+> pretty "->" <+> pr a)
     If0 c t e -> pretty "if0" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
 

@@ -14,15 +14,19 @@ type Store f a = Map.Map (Loc a) (f a)
 newtype Loc a = Loc { unLoc :: String }
   deriving (Eq, Ord, Show)
 
-find :: (State (Store Identity a) :< fs) => Loc a -> Eff fs a
-find = fmap runIdentity . flip fmap get . flip (Map.!)
+class AbstractStore f where
+  find :: (State (Store f a) :< fs) => proxy f -> Loc a -> Eff fs a
 
-alloc :: forall a fs . (State (Store Identity a) :< fs) => String -> Eff fs (Loc a)
-alloc s = return (Loc s)
+  alloc :: (State (Store f a) :< fs) => proxy f -> String -> Eff fs (Loc a)
 
-ext :: (State (Store Identity a) :< fs) => Loc a -> a -> Eff fs ()
-ext loc val = modify (Map.insert loc (Identity val))
+  ext :: (State (Store f a) :< fs) => proxy f -> Loc a -> a -> Eff fs ()
 
+instance AbstractStore Identity where
+  find _ = fmap runIdentity . flip fmap get . flip (Map.!)
+
+  alloc _ s = return (Loc s)
+
+  ext _ loc val = modify (Map.insert loc (Identity val))
 
 find' :: forall a fs. (Alternative (Eff fs), State (Store [] a) :< fs) => Loc a -> Eff fs a
 find' loc = do

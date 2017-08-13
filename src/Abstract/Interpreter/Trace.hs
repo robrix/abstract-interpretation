@@ -18,10 +18,10 @@ import GHC.Exts (IsList(..))
 type TraceEntry i = (Term i, Environment (Loc i), Store Identity i)
 type Trace i f = f (TraceEntry i)
 
-type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
+type TracingInterpreter i f = Writer (Trace i f) ': Interpreter Identity i
 
-type TraceInterpreter i = Writer (Trace i []) ': Interpreter i
-type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
+type TraceInterpreter i = Writer (Trace i []) ': Interpreter Identity i
+type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter Identity i
 
 
 -- Tracing and reachable state analyses
@@ -30,13 +30,13 @@ evalTrace :: forall i. AbstractValue i (Eff (TraceInterpreter i)) => Term i -> (
 evalTrace = run @(TraceInterpreter i) . runTrace
 
 runTrace :: (TraceInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
-runTrace = fix (evTell [] ev)
+runTrace = fix (evTell [] (ev (undefined :: proxy Identity)))
 
 evalReach :: forall i. (Ord i, AbstractValue i (Eff (ReachableStateInterpreter i))) => Term i -> (Either String (Val i, Trace i Set.Set), Store Identity i)
 evalReach = run @(ReachableStateInterpreter i) . runReach
 
 runReach :: (Ord i, ReachableStateInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
-runReach = fix (evTell Set.empty ev)
+runReach = fix (evTell Set.empty (ev (undefined :: proxy Identity)))
 
 evTell :: forall i f fs . (TracingInterpreter i f :<: fs, IsList (Trace i f), Item (Trace i f) ~ TraceEntry i)
        => f ()

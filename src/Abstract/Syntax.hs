@@ -123,6 +123,7 @@ instance Ord n => Ord2 (Syntax n) where
     | otherwise = case (s1, s2) of
       (Var n1, Var n2) -> compare n1 n2
       (Num v1, Num v2) -> compareV v1 v2
+      (Op1 o1 a1, Op1 o2 a2) -> compare o1 o2 <> compareA a1 a2
       (Op2 o1 a1 b1, Op2 o2 a2 b2) -> compare o1 o2 <> compareA a1 a2 <> compareA b1 b2
       (App a1 b1, App a2 b2) -> compareA a1 a2 <> compareA b1 b2
       (Lam n1 a1, Lam n2 a2) -> compare n1 n2 <> compareA a1 a2

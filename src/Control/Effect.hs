@@ -58,3 +58,7 @@ instance Applicative (Effects fs ffs) where
   pure a = Effects (pure a)
 
   Effects f <*> Effects a = Effects (f <*> a)
+
+instance Monad (Effects fs ffs) where
+  return = pure
+  Effects a >>= f = Effects (a >>= runEff . f)

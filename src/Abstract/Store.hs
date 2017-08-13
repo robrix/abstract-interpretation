@@ -29,6 +29,12 @@ class (Eq1 l, Ord1 l, Show1 l) => Address l where
 
   ext :: Context l a fs => l a -> a -> Eff fs ()
 
+  liftEqStore :: proxy l -> (a -> b -> Bool) -> Store l a -> Store l b -> Bool
+  liftCompareStore :: proxy l -> (a -> b -> Ordering) -> Store l a -> Store l b -> Ordering
+  liftShowsPrecStore :: proxy l -> (Int -> a -> ShowS) -> ([a] -> ShowS) -> Int -> Store l a -> ShowS
+  liftShowListStore :: proxy l -> (Int -> a -> ShowS) -> ([a] -> ShowS) -> [Store l a] -> ShowS
+
+
 instance Address Precise where
   type Store Precise a = IntMap.IntMap a
   find = flip fmap get . flip (IntMap.!) . unPrecise
@@ -39,6 +45,11 @@ instance Address Precise where
     return (Precise (length (s :: Store Precise a)))
 
   ext (Precise loc) val = modify (IntMap.insert loc val)
+
+  liftEqStore _ = liftEq
+  liftCompareStore _ = liftCompare
+  liftShowsPrecStore _ = liftShowsPrec
+  liftShowListStore _ = liftShowList
 
 instance Address Monovariant where
   type Store Monovariant a = Map.Map (Monovariant a) (Set.Set a)
@@ -52,6 +63,11 @@ instance Address Monovariant where
   alloc x = pure (Monovariant x)
 
   ext loc val = modify (Map.insertWith (<>) loc (Set.singleton val))
+
+  liftEqStore _ eq = liftEq2 addressEq (liftEq eq)
+  liftCompareStore _ compareA = liftCompare2 addressCompare (liftCompare compareA)
+  liftShowsPrecStore _ sp sl = liftShowsPrec2 addressShowsPrec addressShowList (liftShowsPrec sp sl) (liftShowList sp sl)
+  liftShowListStore _ sp sl = liftShowList2 addressShowsPrec addressShowList (liftShowsPrec sp sl) (liftShowList sp sl)
 
 addressEq :: Address l => l a -> l b -> Bool
 addressEq = liftEq (const (const True))

@@ -1,9 +1,9 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeOperators #-}
 module Abstract.Interpreter where
 
+import Abstract.Number
 import Abstract.Store
 import Abstract.Syntax
-import Abstract.Value
 import Control.Effect
 import Control.Monad.Fail
 import Control.Monad.Effect hiding (run)

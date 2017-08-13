@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Abstract.Syntax where
 
-import Abstract.Value
+import Abstract.Number
 import Data.Bifoldable
 import Data.Bifunctor
 import Data.Functor.Classes

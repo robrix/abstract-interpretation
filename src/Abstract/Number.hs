@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
-module Abstract.Value where
+module Abstract.Number where
 
 import Control.Applicative
 import Control.Monad hiding (fail)

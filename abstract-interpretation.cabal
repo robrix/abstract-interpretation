@@ -16,9 +16,9 @@ library
   exposed-modules:     Abstract.Interpreter
                      , Abstract.Interpreter.Dead
                      , Abstract.Interpreter.Trace
+                     , Abstract.Number
                      , Abstract.Store
                      , Abstract.Syntax
-                     , Abstract.Value
                      , Control.Effect
                      , Control.Monad.Effect.Failure
   build-depends:       base >=4.10 && <4.11

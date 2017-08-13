@@ -12,6 +12,7 @@ import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Data.Function (fix)
 import Data.Functor.Foldable
+import Data.Functor.Identity
 import qualified Data.Map as Map
 import Prelude hiding (fail)
 
@@ -22,12 +23,12 @@ data Val i = I i | L (Term i, Environment (Loc i))
   deriving (Eq, Ord, Show)
 
 
-type Interpreter a = '[Failure, State (Store a), Reader (Environment (Loc a))]
+type Interpreter a = '[Failure, State (Store Identity a), Reader (Environment (Loc a))]
 
 
 -- Evaluation
 
-eval :: forall i . AbstractValue i (Eff (Interpreter i)) => Term i -> (Either String (Val i), Store i)
+eval :: forall i . AbstractValue i (Eff (Interpreter i)) => Term i -> (Either String (Val i), Store Identity i)
 eval = run @(Interpreter i) . runEval
 
 runEval :: (Interpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)

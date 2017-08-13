@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
 module Abstract.Interpreter.Trace where
 
+import Abstract.Configuration
 import Abstract.Interpreter
 import Abstract.Number
 import Abstract.Store
@@ -15,7 +16,6 @@ import Data.Function (fix)
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
-type Configuration l i = (Term i, Environment (l (Value l i)), Store l (Value l i))
 type Trace l i g = g (Configuration l i)
 
 type TracingInterpreter l i g = Writer (Trace l i g) ': Interpreter l i

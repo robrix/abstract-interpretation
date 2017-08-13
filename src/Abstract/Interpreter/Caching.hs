@@ -55,8 +55,7 @@ evCache ev0 ev e = do
       putCacheOut (Map.insert c pairs out)
       v <- ev0 ev e
       store' <- get
-      let pair = (v, store')
-      modifyCacheOut (Map.insertWith (<>) c (Set.singleton pair))
+      modifyCacheOut (Map.insertWith (<>) c (Set.singleton (v, store')))
       return v
 
 fixCache :: forall l a fs

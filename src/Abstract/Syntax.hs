@@ -9,7 +9,7 @@ import Data.Functor.Foldable
 import Data.Semigroup
 import qualified Data.Set as Set
 
-data Syntax i n a
+data Syntax n i a
   = Var n
   | Num i
   | Op1 Op1 a
@@ -20,7 +20,7 @@ data Syntax i n a
   | If0 a a a
   deriving (Eq, Ord, Show)
 
-type Term i = Fix (Syntax i String)
+type Term i = Fix (Syntax String i)
 
 var :: String -> Term i
 var = Fix . Var
@@ -56,80 +56,80 @@ subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.sing
 
 -- Instances
 
-instance Bifoldable (Syntax i) where
+instance Bifoldable (Syntax n) where
   bifoldMap f g s = case s of
-    Var n -> f n
-    Num _ -> mempty
+    Var _ -> mempty
+    Num i -> f i
     Op1 _ a -> g a
     Op2 _ a b -> g a `mappend` g b
     App a b -> g a `mappend` g b
-    Lam n a -> f n `mappend` g a
-    Rec n a -> f n `mappend` g a
+    Lam _ a -> g a
+    Rec _ a -> g a
     If0 c t e -> g c `mappend` g t `mappend` g e
 
-instance Foldable (Syntax i n) where
+instance Foldable (Syntax n i) where
   foldMap = bifoldMap (const mempty)
 
-instance Bifunctor (Syntax i) where
+instance Bifunctor (Syntax n) where
   bimap f g s = case s of
-    Var n -> Var (f n)
-    Num v -> Num v
+    Var n -> Var n
+    Num v -> Num (f v)
     Op1 o a -> Op1 o (g a)
     Op2 o a b -> Op2 o (g a) (g b)
     App a b -> App (g a) (g b)
-    Lam n a -> Lam (f n) (g a)
-    Rec n a -> Rec (f n) (g a)
+    Lam n a -> Lam n (g a)
+    Rec n a -> Rec n (g a)
     If0 c t e -> If0 (g c) (g t) (g e)
 
-instance Functor (Syntax i n) where
+instance Functor (Syntax n i) where
   fmap = second
 
-instance Eq i => Eq2 (Syntax i) where
-  liftEq2 eqN eqA s1 s2 = case (s1, s2) of
-    (Var n1, Var n2) -> eqN n1 n2
-    (Num v1, Num v2) -> v1 == v2
+instance Eq n => Eq2 (Syntax n) where
+  liftEq2 eqV eqA s1 s2 = case (s1, s2) of
+    (Var n1, Var n2) -> n1 == n2
+    (Num v1, Num v2) -> eqV v1 v2
     (Op1 o1 a1, Op1 o2 a2) -> o1 == o2 && eqA a1 a2
     (Op2 o1 a1 b1, Op2 o2 a2 b2) -> o1 == o2 && eqA a1 a2 && eqA b1 b2
     (App a1 b1, App a2 b2) -> eqA a1 a2 && eqA b1 b2
-    (Lam n1 a1, Lam n2 a2) -> eqN n1 n2 && eqA a1 a2
-    (Rec n1 a1, Rec n2 a2) -> eqN n1 n2 && eqA a1 a2
+    (Lam n1 a1, Lam n2 a2) -> n1 == n2 && eqA a1 a2
+    (Rec n1 a1, Rec n2 a2) -> n1 == n2 && eqA a1 a2
     (If0 c1 t1 e1, If0 c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
     _ -> False
 
-instance (Eq i, Eq n) => Eq1 (Syntax i n) where
+instance (Eq n, Eq i) => Eq1 (Syntax n i) where
   liftEq = liftEq2 (==)
 
-instance Ord i => Ord2 (Syntax i) where
-  liftCompare2 compareN compareA s1 s2
+instance Ord n => Ord2 (Syntax n) where
+  liftCompare2 compareV compareA s1 s2
     | ordering <- compare (bimap (const ()) (const ()) s1) (bimap (const ()) (const ()) s2), ordering /= EQ = ordering
     | otherwise = case (s1, s2) of
-      (Var n1, Var n2) -> compareN n1 n2
-      (Num v1, Num v2) -> v1 `compare` v2
+      (Var n1, Var n2) -> compare n1 n2
+      (Num v1, Num v2) -> compareV v1 v2
       (Op2 o1 a1 b1, Op2 o2 a2 b2) -> compare o1 o2 <> compareA a1 a2 <> compareA b1 b2
       (App a1 b1, App a2 b2) -> compareA a1 a2 <> compareA b1 b2
-      (Lam n1 a1, Lam n2 a2) -> compareN n1 n2 <> compareA a1 a2
-      (Rec n1 a1, Rec n2 a2) -> compareN n1 n2 <> compareA a1 a2
+      (Lam n1 a1, Lam n2 a2) -> compare n1 n2 <> compareA a1 a2
+      (Rec n1 a1, Rec n2 a2) -> compare n1 n2 <> compareA a1 a2
       (If0 c1 t1 e1, If0 c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
       _ -> EQ
 
-instance (Ord i, Ord n) => Ord1 (Syntax i n) where
+instance (Ord n, Ord i) => Ord1 (Syntax n i) where
   liftCompare = liftCompare2 compare
 
 
-instance Show i => Show2 (Syntax i) where
-  liftShowsPrec2 spN _ spA _ d s = case s of
-    Var n -> showsUnaryWith spN "Var" d n
-    Num v -> showsUnaryWith showsPrec "Num" d v
+instance Show n => Show2 (Syntax n) where
+  liftShowsPrec2 spV _ spA _ d s = case s of
+    Var n -> showsUnaryWith showsPrec "Var" d n
+    Num v -> showsUnaryWith spV "Num" d v
     Op1 o a -> showsBinaryWith showsPrec spA "Op1" d o a
     Op2 o a b -> showsTernaryWith showsPrec spA spA "Op2" d o a b
     App a b -> showsBinaryWith spA spA "App" d a b
-    Lam n a -> showsBinaryWith spN spA "Lam" d n a
-    Rec n a -> showsBinaryWith spN spA "Rec" d n a
+    Lam n a -> showsBinaryWith showsPrec spA "Lam" d n a
+    Rec n a -> showsBinaryWith showsPrec spA "Rec" d n a
     If0 c t e -> showsTernaryWith spA spA spA "If0" d c t e
     where showsTernaryWith :: (Int -> a -> ShowS) -> (Int -> b -> ShowS) -> (Int -> c -> ShowS) -> String -> Int -> a -> b -> c -> ShowS
           showsTernaryWith sp1 sp2 sp3 name d x y z = showParen (d > 10) $ showString name . showChar ' ' . sp1 11 x . showChar ' ' . sp2 11 y . showChar ' ' . sp3 11 z
 
-instance (Show i, Show n) => Show1 (Syntax i n) where
+instance (Show n, Show i) => Show1 (Syntax n i) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
 
 instance Num i => Num (Term i) where

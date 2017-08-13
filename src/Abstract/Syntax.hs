@@ -173,7 +173,7 @@ instance Num i => Num (Term i) where
 
 instance Pretty n => Pretty2 (Syntax n) where
   liftPretty2 pv _ pr _ s = case s of
-    Var n -> pretty "var" <+> pretty n
+    Var n -> pretty n
     Num v -> pv v
     Op1 o a -> pretty o <+> pr a
     Op2 o a b -> pr a <+> pretty o <+> pr b

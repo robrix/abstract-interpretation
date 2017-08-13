@@ -48,6 +48,15 @@ evCache ev0 ev e = do
       return v
 
 
+mlfp :: (Eq a, Monad m) => a -> (a -> m a) -> m a
+mlfp a f = loop a
+  where loop x = do
+          x' <- f x
+          if x' == x then
+            return x
+          else
+            loop x'
+
 askCacheIn :: (CacheIn l a :< fs) => Eff fs (Cache l a)
 askCacheIn = send Ask
 

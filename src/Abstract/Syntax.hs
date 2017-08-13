@@ -58,6 +58,10 @@ liftEqTerms :: (a -> b -> Bool) -> Term a -> Term b -> Bool
 liftEqTerms eq = go
   where go t1 t2 = liftEq2 eq go (unfix t1) (unfix t2)
 
+liftCompareTerms :: (a -> b -> Ordering) -> Term a -> Term b -> Ordering
+liftCompareTerms compare = go
+  where go t1 t2 = liftCompare2 compare go (unfix t1) (unfix t2)
+
 
 -- Instances
 

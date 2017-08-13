@@ -9,6 +9,7 @@ import Data.Functor.Classes
 import qualified Data.IntMap as IntMap
 import Data.Kind
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Data.Semigroup
 
 newtype Precise a = Precise { unPrecise :: Int }
@@ -40,17 +41,17 @@ instance Address Precise where
   ext (Precise loc) val = modify (IntMap.insert loc val)
 
 instance Address Monovariant where
-  type Store Monovariant a = Map.Map (Monovariant a) [a]
-  type Context Monovariant a fs = (State (Store Monovariant a) :< fs, Alternative (Eff fs))
+  type Store Monovariant a = Map.Map (Monovariant a) (Set.Set a)
+  type Context Monovariant a fs = (Ord a, State (Store Monovariant a) :< fs, Alternative (Eff fs))
 
   find :: forall a fs. Context Monovariant a fs => Monovariant a -> Eff fs a
   find loc = do
     store <- get
-    asum (return <$> ((store :: Store Monovariant a) Map.! loc))
+    asum (return <$> Set.toList ((store :: Store Monovariant a) Map.! loc))
 
   alloc x = pure (Monovariant x)
 
-  ext loc val = modify (Map.insertWith (<>) loc [val])
+  ext loc val = modify (Map.insertWith (<>) loc (Set.singleton val))
 
 addressEq :: Address l => l a -> l b -> Bool
 addressEq = liftEq (const (const True))

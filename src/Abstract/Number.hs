@@ -4,6 +4,7 @@ module Abstract.Number where
 import Control.Applicative
 import Control.Monad hiding (fail)
 import Control.Monad.Fail
+import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 
 data Op1 = Negate | Abs | Signum
@@ -69,3 +70,11 @@ instance Num N where
   _ * _ = N
 
   fromInteger = const N
+
+instance Pretty Op2 where
+  pretty Plus = pretty '+'
+  pretty Minus = pretty '-'
+  pretty Times = pretty '*'
+  pretty DividedBy = pretty '/'
+  pretty Quotient = pretty "`quot`"
+  pretty Remainder = pretty "`rem`"

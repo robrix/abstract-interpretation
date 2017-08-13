@@ -9,7 +9,7 @@ import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import Data.Semigroup
 
-newtype LocI a = LocI { unLocI :: Int }
+newtype Precise a = Precise { unPrecise :: Int }
   deriving (Eq, Ord, Show)
 
 newtype Loc a = Loc { unLoc :: String }
@@ -24,16 +24,16 @@ class AbstractStore l where
 
   ext :: (State (Store l a) :< fs) => l a -> a -> Eff fs ()
 
-instance AbstractStore LocI where
-  type Store LocI a = IntMap.IntMap a
-  find = flip fmap get . flip (IntMap.!) . unLocI
+instance AbstractStore Precise where
+  type Store Precise a = IntMap.IntMap a
+  find = flip fmap get . flip (IntMap.!) . unPrecise
 
-  alloc :: forall a fs. (State (Store LocI a) :< fs) => String -> Eff fs (LocI a)
+  alloc :: forall a fs. (State (Store Precise a) :< fs) => String -> Eff fs (Precise a)
   alloc _ = do
     s <- get
-    return (LocI (length (s :: Store LocI a)))
+    return (Precise (length (s :: Store Precise a)))
 
-  ext (LocI loc) val = modify (IntMap.insert loc val)
+  ext (Precise loc) val = modify (IntMap.insert loc val)
 
 find' :: forall a fs. (Alternative (Eff fs), State (Map.Map (Loc a) [a]) :< fs) => Loc a -> Eff fs a
 find' loc = do

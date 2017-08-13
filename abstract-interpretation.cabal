@@ -22,6 +22,7 @@ library
                      , Control.Effect
                      , Control.Monad.Effect.Failure
   build-depends:       base >=4.10 && <4.11
+                     , constraints
                      , containers
                      , effects
                      , recursion-schemes

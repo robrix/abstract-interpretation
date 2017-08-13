@@ -5,9 +5,11 @@ import Abstract.Number
 import Data.Bifoldable
 import Data.Bifunctor
 import Data.Functor.Classes
+import Data.Functor.Classes.Pretty
 import Data.Functor.Foldable
 import Data.Semigroup
 import qualified Data.Set as Set
+import Data.Text.Prettyprint.Doc
 
 data Syntax n i a
   = Var n
@@ -168,3 +170,14 @@ instance Num i => Num (Term i) where
   negate = Fix . Op1 Negate
   (+) = (Fix .) . Op2 Plus
   (*) = (Fix .) . Op2 Times
+
+instance Pretty n => Pretty2 (Syntax n) where
+  liftPretty2 pv _ pr _ s = case s of
+    Var n -> prettyC "Var" [pretty n]
+    Num v -> prettyC "Num" [pv v]
+    Op1 o a -> prettyC "Op1" [pretty (show o), pr a]
+    Op2 o a b -> prettyC "Op2" [pretty (show o), pr a, pr b]
+    App a b -> prettyC "App" [pr a, pr b]
+    Lam n a -> prettyC "Lam" [pretty n, pr a]
+    Rec n a -> prettyC "Rec" [pretty n, pr a]
+    If0 c t e -> prettyC "If0" [pr c, pr t, pr e]

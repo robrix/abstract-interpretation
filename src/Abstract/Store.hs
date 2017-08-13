@@ -52,6 +52,12 @@ instance Address Monovariant where
 
   ext loc val = modify (Map.insertWith (<>) loc [val])
 
+hidesPrec :: Int -> a -> ShowS
+hidesPrec _ _ = id
+
+hideList :: [a] -> ShowS
+hideList _ = id
+
 instance Eq1 Precise where
   liftEq _ (Precise i1) (Precise i2) = i1 == i2
 

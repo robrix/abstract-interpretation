@@ -41,6 +41,9 @@ rec = (Fix .) . Rec
 if0 :: Term i -> Term i -> Term i -> Term i
 if0 c t e = Fix (If0 c t e)
 
+let' :: String -> Term i -> (Term i -> Term i) -> Term i
+let' var val body = lam var body # val
+
 immediateSubterms :: Ord i => Term i -> Set.Set (Term i)
 immediateSubterms = foldMap Set.singleton . unfix
 

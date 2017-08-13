@@ -1,5 +1,7 @@
 module Data.Functor.Classes.Pretty where
 
+import Data.Foldable
+import qualified Data.Set as Set
 import Data.Text.Prettyprint.Doc
 
 class Pretty1 f where
@@ -17,3 +19,6 @@ pretty1 = liftPretty pretty prettyList
 
 instance Pretty1 [] where
   liftPretty _ pl = pl
+
+instance Pretty1 Set.Set where
+  liftPretty _ pl xs = pretty "Set.fromList" <+> pl (toList xs)

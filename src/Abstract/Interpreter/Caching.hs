@@ -14,6 +14,7 @@ import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Data.Foldable
 import Data.Function (fix)
+import Data.Functor.Classes
 import qualified Data.Map as Map
 import Data.Maybe
 import Data.Semigroup
@@ -24,6 +25,18 @@ type Cache l a = Map.Map (Configuration l a) (Set.Set (Value l a, Store l (Value
 type CachingInterpreter l a = NonDetEff ': CacheOut l a ': CacheIn l a ': Interpreter l a
 
 type CachingResult l a = (Either String (Set.Set (Value l a), Cache l a), Store l (Value l a))
+
+
+showCache :: forall a l . (Address l, Show a) => Cache l a -> String
+showCache = ($ "") . liftShowsPrec (liftShowsPrec spSet slSet) (liftShowList spSet slSet) 0
+  where spSet = liftShowsPrec2 spValue slValue spStore slStore
+        slSet = liftShowList2 spValue slValue spStore slStore
+        spStore = liftShowsPrecStore (undefined :: proxy l) spValue slValue
+        slStore = liftShowListStore  (undefined :: proxy l) spValue slValue
+        spValue :: Int -> Value l a -> ShowS
+        spValue = showsPrec
+        slValue :: [Value l a] -> ShowS
+        slValue = showList
 
 
 -- Coinductively-cached evaluation

@@ -16,34 +16,34 @@ class RunEffects fs where
   type Final fs a
   runEffects :: Eff fs a -> Eff '[] (Final fs a)
 
-instance (Effect f1, RunEffects (f2 ': fs)) => RunEffects (f1 ': f2 ': fs) where
+instance (RunEffect f1, RunEffects (f2 ': fs)) => RunEffects (f1 ': f2 ': fs) where
   type Final (f1 ': f2 ': fs) a = Final (f2 ': fs) (Result f1 a)
   runEffects = runEffects . runEffect
 
-instance Effect f => RunEffects '[f] where
+instance RunEffect f => RunEffects '[f] where
   type Final '[f] a = Result f a
   runEffects = runEffect
 
-class Effect f where
+class RunEffect f where
   type Result f a
   type instance Result f a = a
   runEffect :: Eff (f ': fs) a -> Eff fs (Result f a)
 
-instance Monoid b => Effect (State b) where
+instance Monoid b => RunEffect (State b) where
   type Result (State b) a = (a, b)
   runEffect = flip runState mempty
 
-instance Monoid b => Effect (Reader b) where
+instance Monoid b => RunEffect (Reader b) where
   runEffect = flip runReader mempty
 
-instance Effect Failure where
+instance RunEffect Failure where
   type Result Failure a = Either String a
   runEffect = runFailure
 
-instance Monoid w => Effect (Writer w) where
+instance Monoid w => RunEffect (Writer w) where
   type Result (Writer w) a = (a, w)
   runEffect = runWriter
 
-instance Effect NonDetEff where
+instance RunEffect NonDetEff where
   type Result NonDetEff a = [a]
   runEffect = makeChoiceA

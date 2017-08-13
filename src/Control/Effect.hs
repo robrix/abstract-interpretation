@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, GADTs, RankNTypes, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Control.Effect where
 
+import Control.Applicative
 import Control.Monad.Effect as Effect hiding (run)
 import qualified Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
@@ -58,6 +59,10 @@ instance Applicative (Effects fs ffs) where
   pure a = Effects (pure a)
 
   Effects f <*> Effects a = Effects (f <*> a)
+
+instance Alternative (Eff ffs) => Alternative (Effects fs ffs) where
+  empty = Effects empty
+  Effects a <|> Effects b = Effects (a <|> b)
 
 instance Monad (Effects fs ffs) where
   return = pure

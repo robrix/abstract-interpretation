@@ -22,18 +22,18 @@ data Val i = I i | L (Term i, Environment (Loc (Val i)))
   deriving (Eq, Ord, Show)
 
 
-type Interpreter i = '[Failure, State (Store (Val i)), Reader (Environment (Loc (Val i)))]
+type Interpreter a = '[Failure, State (Store a), Reader (Environment (Loc a))]
 
 
 -- Evaluation
 
-eval :: forall i . AbstractValue i (Eff (Interpreter i)) => Term i -> (Either String (Val i), Store (Val i))
-eval = run @(Interpreter i) . runEval
+eval :: forall i . AbstractValue i (Eff (Interpreter (Val i))) => Term i -> (Either String (Val i), Store (Val i))
+eval = run @(Interpreter (Val i)) . runEval
 
-runEval :: (Interpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
+runEval :: (Interpreter (Val i) :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
 runEval = fix ev
 
-ev :: (AbstractValue i (Eff fs), Interpreter i :<: fs)
+ev :: (AbstractValue i (Eff fs), Interpreter (Val i) :<: fs)
    => (Term i -> Eff fs (Val i))
    -> Term i
    -> Eff fs (Val i)

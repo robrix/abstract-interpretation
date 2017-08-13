@@ -17,10 +17,10 @@ import GHC.Exts (IsList(..))
 type TraceEntry i = (Term i, Environment (Loc (Val i)), Store (Val i))
 type Trace i f = f (TraceEntry i)
 
-type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
+type TracingInterpreter i f = Writer (Trace i f) ': Interpreter (Val i)
 
-type TraceInterpreter i = Writer (Trace i []) ': Interpreter i
-type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
+type TraceInterpreter i = Writer (Trace i []) ': Interpreter (Val i)
+type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter (Val i)
 
 
 -- Tracing and reachable state analyses

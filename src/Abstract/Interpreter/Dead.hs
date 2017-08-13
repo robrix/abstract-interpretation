@@ -11,7 +11,7 @@ import Control.Monad.Effect.State
 import Data.Function (fix)
 import qualified Data.Set as Set
 
-type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
+type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter (Val i)
 
 
 -- Dead code analysis

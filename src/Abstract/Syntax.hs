@@ -35,8 +35,11 @@ lam s f = makeLam s (f (var s))
 makeLam :: String -> Term i -> Term i
 makeLam = (Fix .) . Lam
 
-rec :: String -> Term i -> Term i
-rec = (Fix .) . Rec
+rec :: String -> (Term i -> Term i) -> Term i
+rec s f = makeRec s (f (var s))
+
+makeRec :: String -> Term i -> Term i
+makeRec = (Fix .) . Rec
 
 if0 :: Term i -> Term i -> Term i -> Term i
 if0 c t e = Fix (If0 c t e)

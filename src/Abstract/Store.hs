@@ -24,15 +24,13 @@ ext :: (State (Store Identity a) :< fs) => Loc a -> a -> Eff fs ()
 ext loc val = modify (Map.insert loc (Identity val))
 
 
-type Store' a = Map.Map (Loc a) [a]
-
-find' :: forall a fs. (Alternative (Eff fs), State (Store' a) :< fs) => Loc a -> Eff fs a
+find' :: forall a fs. (Alternative (Eff fs), State (Store [] a) :< fs) => Loc a -> Eff fs a
 find' loc = do
   store <- get
-  asum (return <$> ((store :: Store' a) Map.! loc))
+  asum (return <$> ((store :: Store [] a) Map.! loc))
 
 alloc' :: Alternative m => String -> m (Loc a)
 alloc' x = pure (Loc x)
 
-ext' :: (State (Store' a) :< fs) => Loc a -> a -> Eff fs ()
+ext' :: (State (Store [] a) :< fs) => Loc a -> a -> Eff fs ()
 ext' loc val = modify (Map.insertWith (<>) loc [val])

@@ -9,18 +9,18 @@ import Control.Monad.Effect.Reader as Reader
 import Control.Monad.Effect.State as State
 import Control.Monad.Effect.Writer as Writer
 
-run :: Effects fs => Eff fs a -> Final fs a
+run :: RunEffects fs => Eff fs a -> Final fs a
 run = Effect.run . runEffects
 
-class Effects fs where
+class RunEffects fs where
   type Final fs a
   runEffects :: Eff fs a -> Eff '[] (Final fs a)
 
-instance (Effect f1, Effects (f2 ': fs)) => Effects (f1 ': f2 ': fs) where
+instance (Effect f1, RunEffects (f2 ': fs)) => RunEffects (f1 ': f2 ': fs) where
   type Final (f1 ': f2 ': fs) a = Final (f2 ': fs) (Result f1 a)
   runEffects = runEffects . runEffect
 
-instance Effect f => Effects '[f] where
+instance Effect f => RunEffects '[f] where
   type Final '[f] a = Result f a
   runEffects = runEffect
 

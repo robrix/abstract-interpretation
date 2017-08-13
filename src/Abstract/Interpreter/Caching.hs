@@ -21,9 +21,9 @@ import qualified Data.Set as Set
 
 type Cache l a = Map.Map (Configuration l a) (Set.Set (Value l a, Store l (Value l a)))
 
-type CachingInterpreter l a = CacheOut l a ': CacheIn l a ': NonDetEff ': Interpreter l a
+type CachingInterpreter l a = NonDetEff ': CacheOut l a ': CacheIn l a ': Interpreter l a
 
-type CachingResult l a = (Either String (Set.Set (Value l a, Cache l a)), Store l (Value l a))
+type CachingResult l a = (Either String (Set.Set (Value l a), Cache l a), Store l (Value l a))
 
 
 -- Coinductively-cached evaluation

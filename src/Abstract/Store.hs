@@ -24,14 +24,16 @@ preciseStore :: Ord a => AbstractStore Identity fs a
 preciseStore = AbstractStore
   { find = fmap runIdentity . flip fmap get . flip (Map.!)
   , alloc = return . Loc
-  , ext = \ loc val -> modify (Map.insert loc (Identity val))
+  , ext = (modify .) . (. Identity) . Map.insert
   }
 
-abstractStore :: forall a fs. (Ord a, Alternative (Eff fs)) => AbstractStore [] fs a
-abstractStore = AbstractStore
-  { find = \ loc -> do
-    store <- get
-    asum (return <$> ((store :: Store [] a) Map.! loc))
-  , alloc = return . Loc
-  , ext = \ loc val -> modify (Map.insertWith (<>) loc [val])
-  }
+find' :: forall a fs. (Alternative (Eff fs), State (Store [] a) :< fs) => Loc a -> Eff fs a
+find' loc = do
+  store <- get
+  asum (return <$> ((store :: Store [] a) Map.! loc))
+
+alloc' :: Alternative m => String -> m (Loc a)
+alloc' x = pure (Loc x)
+
+ext' :: (State (Store [] a) :< fs) => Loc a -> a -> Eff fs ()
+ext' loc val = modify (Map.insertWith (<>) loc [val])

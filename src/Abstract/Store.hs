@@ -16,7 +16,7 @@ newtype Precise a = Precise { unPrecise :: Int }
 newtype Monovariant a = Monovariant String
   deriving (Eq, Ord, Show)
 
-class AbstractStore l where
+class Address l where
   type Store l a
   type Context l a (fs :: [* -> *]) :: Constraint
   type instance Context l a fs = (State (Store l a) :< fs)
@@ -27,7 +27,7 @@ class AbstractStore l where
 
   ext :: Context l a fs => l a -> a -> Eff fs ()
 
-instance AbstractStore Precise where
+instance Address Precise where
   type Store Precise a = IntMap.IntMap a
   find = flip fmap get . flip (IntMap.!) . unPrecise
 
@@ -38,7 +38,7 @@ instance AbstractStore Precise where
 
   ext (Precise loc) val = modify (IntMap.insert loc val)
 
-instance AbstractStore Monovariant where
+instance Address Monovariant where
   type Store Monovariant a = Map.Map (Monovariant a) [a]
   type Context Monovariant a fs = (State (Store Monovariant a) :< fs, Alternative (Eff fs))
 

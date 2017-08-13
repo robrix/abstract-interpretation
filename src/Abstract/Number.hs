@@ -71,6 +71,9 @@ instance Num N where
 
   fromInteger = const N
 
+instance Pretty N where
+  pretty N = pretty 'N'
+
 instance Pretty Op1 where
   pretty Negate = pretty "negate"
   pretty Abs = pretty "abs"

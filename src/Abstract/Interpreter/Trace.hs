@@ -15,8 +15,8 @@ import Data.Function (fix)
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
-type TraceEntry l i = (Term i, Environment (l (Value l i)), Store l (Value l i))
-type Trace l i g = g (TraceEntry l i)
+type Configuration l i = (Term i, Environment (l (Value l i)), Store l (Value l i))
+type Trace l i g = g (Configuration l i)
 
 type TracingInterpreter l i g = Writer (Trace l i g) ': Interpreter l i
 
@@ -38,7 +38,7 @@ evalReach = run @(ReachableStateInterpreter l i) . runReach
 runReach :: (Ord i, Ord (l (Value l i)), Ord (Store l (Value l i)), ReachableStateInterpreter l i :<: fs, AbstractStore l, Context l (Value l i) fs, AbstractNumber i (Eff fs)) => Term i -> Eff fs (Value l i)
 runReach = fix (evTell Set.empty ev)
 
-evTell :: forall l i g fs . (TracingInterpreter l i g :<: fs, IsList (Trace l i g), Item (Trace l i g) ~ TraceEntry l i)
+evTell :: forall l i g fs . (TracingInterpreter l i g :<: fs, IsList (Trace l i g), Item (Trace l i g) ~ Configuration l i)
        => g ()
        -> ((Term i -> Eff fs (Value l i)) -> Term i -> Eff fs (Value l i))
        -> (Term i -> Eff fs (Value l i))

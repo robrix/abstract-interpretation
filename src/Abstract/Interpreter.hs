@@ -27,23 +27,22 @@ type Interpreter f a = '[Failure, State (Store f a), Reader (Environment (Loc a)
 
 -- Evaluation
 
-eval :: forall f i . (AbstractStore f, AbstractValue i (Eff (Interpreter f i))) => Term i -> (Either String (Val i), Store f i)
-eval = run @(Interpreter f i) . runEval (undefined :: proxy f)
+eval :: forall f i . (AbstractValue i (Eff (Interpreter f i))) => AbstractStore f (Interpreter f i) i -> Term i -> (Either String (Val i), Store f i)
+eval store = run @(Interpreter f i) . runEval store
 
-runEval :: (AbstractStore f, AbstractValue i (Eff fs), Interpreter f i :<: fs) => proxy f -> Term i -> Eff fs (Val i)
-runEval proxy = fix (ev proxy)
+runEval :: (AbstractValue i (Eff fs), Interpreter f i :<: fs) => AbstractStore f fs i -> Term i -> Eff fs (Val i)
+runEval store = fix (ev store)
 
-ev :: forall f i fs proxy
-   .  (AbstractStore f, AbstractValue i (Eff fs), Interpreter f i :<: fs)
-   => proxy f
+ev :: (AbstractValue i (Eff fs), Interpreter f i :<: fs)
+   => AbstractStore f fs i
    -> (Term i -> Eff fs (Val i))
    -> Term i
    -> Eff fs (Val i)
-ev proxy ev term = case unfix term of
+ev store ev term = case unfix term of
   Num n -> return (I n)
   Var x -> do
     p <- ask
-    I <$> find proxy (p Map.! x)
+    I <$> find store (p Map.! x)
   If0 c t e -> do
     v <- ev c
     z <- isZero v
@@ -57,9 +56,9 @@ ev proxy ev term = case unfix term of
     delta2 o va vb
   Rec f e -> do
     p <- ask
-    a <- alloc proxy f
+    a <- alloc store f
     I v <- local (const (Map.insert f a p)) (ev e)
-    ext proxy a v
+    ext store a v
     return (I v)
   Lam x e0 -> do
     p <- ask
@@ -67,8 +66,8 @@ ev proxy ev term = case unfix term of
   App e0 e1 -> do
     L (Fix (Lam x e2), p) <- ev e0
     I v1 <- ev e1
-    a <- alloc proxy x
-    ext proxy a v1
+    a <- alloc store x
+    ext store a v1
     local (const (Map.insert x a p)) (ev e2)
 
 

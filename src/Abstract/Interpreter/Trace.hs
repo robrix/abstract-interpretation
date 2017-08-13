@@ -25,20 +25,20 @@ type ReachableStateInterpreter f i = TracingInterpreter f i Set.Set
 
 -- Tracing and reachable state analyses
 
-evalTrace :: forall i f. (AbstractStore f, AbstractValue i (Eff (TraceInterpreter f i))) => Term i -> (Either String (Val i, Trace f i []), Store f i)
-evalTrace = run @(TraceInterpreter f i) . runTrace (undefined :: proxy f)
+evalTrace :: forall f i. AbstractValue i (Eff (TraceInterpreter f i)) => AbstractStore f (TraceInterpreter f i) i -> Term i -> (Either String (Val i, Trace f i []), Store f i)
+evalTrace store = run @(TraceInterpreter f i) . runTrace store
 
-runTrace :: (TraceInterpreter f i :<: fs, AbstractStore f, AbstractValue i (Eff fs)) => proxy f -> Term i -> Eff fs (Val i)
-runTrace proxy = fix (evTell proxy [] (ev proxy))
+runTrace :: (TraceInterpreter f i :<: fs, AbstractValue i (Eff fs)) => AbstractStore f fs i -> Term i -> Eff fs (Val i)
+runTrace store = fix (evTell store [] (ev store))
 
-evalReach :: forall i f. (Ord i, Ord (f i), AbstractStore f, AbstractValue i (Eff (ReachableStateInterpreter f i))) => Term i -> (Either String (Val i, Trace f i Set.Set), Store f i)
-evalReach = run @(ReachableStateInterpreter f i) . runReach (undefined :: proxy f)
+evalReach :: forall f i. (Ord i, Ord (f i), AbstractValue i (Eff (ReachableStateInterpreter f i))) => AbstractStore f (ReachableStateInterpreter f i) i -> Term i -> (Either String (Val i, Trace f i Set.Set), Store f i)
+evalReach store = run @(ReachableStateInterpreter f i) . runReach store
 
-runReach :: (Ord i, Ord (f i), ReachableStateInterpreter f i :<: fs, AbstractStore f, AbstractValue i (Eff fs)) => proxy f -> Term i -> Eff fs (Val i)
-runReach proxy = fix (evTell proxy Set.empty (ev proxy))
+runReach :: (Ord i, Ord (f i), ReachableStateInterpreter f i :<: fs, AbstractValue i (Eff fs)) => AbstractStore f fs i -> Term i -> Eff fs (Val i)
+runReach store = fix (evTell store Set.empty (ev store))
 
-evTell :: forall f i g fs proxy . (TracingInterpreter f i g :<: fs, IsList (Trace f i g), Item (Trace f i g) ~ TraceEntry f i)
-       => proxy f
+evTell :: forall f i g fs . (TracingInterpreter f i g :<: fs, IsList (Trace f i g), Item (Trace f i g) ~ TraceEntry f i)
+       => AbstractStore f fs i
        -> g ()
        -> ((Term i -> Eff fs (Val i)) -> Term i -> Eff fs (Val i))
        -> (Term i -> Eff fs (Val i))

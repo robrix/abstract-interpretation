@@ -13,7 +13,7 @@ data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder
   deriving (Eq, Ord, Show)
 
 
-data AbstractNum = N
+data N = N
   deriving (Eq, Ord, Show)
 
 
@@ -49,7 +49,7 @@ instance MonadFail m => AbstractNumber Int m where
 
   isZero a = pure (a == 0)
 
-instance (Alternative m, MonadFail m) => AbstractNumber AbstractNum m where
+instance (Alternative m, MonadFail m) => AbstractNumber N m where
   delta1 _ N = pure N
 
   delta2 DividedBy _ N = pure N <|> divisionByZero
@@ -57,7 +57,7 @@ instance (Alternative m, MonadFail m) => AbstractNumber AbstractNum m where
 
   isZero N = pure True <|> pure False
 
-instance Num AbstractNum where
+instance Num N where
   negate N = N
 
   signum N = N

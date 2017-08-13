@@ -9,3 +9,6 @@ class Pretty1 f where
 class Pretty2 f where
   liftPretty2 :: (a -> Doc ann) -> ([a] -> Doc ann) -> (b -> Doc ann) -> ([b] -> Doc ann) -> f a b -> Doc ann
   liftPrettyList2 :: (a -> Doc ann) -> ([a] -> Doc ann) -> (b -> Doc ann) -> ([b] -> Doc ann) -> [f a b] -> Doc ann
+
+pretty1 :: (Pretty a, Pretty1 f) => f a -> Doc ann
+pretty1 = liftPretty pretty prettyList

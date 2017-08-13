@@ -52,6 +52,19 @@ instance Address Monovariant where
 
   ext loc val = modify (Map.insertWith (<>) loc [val])
 
+addressEq :: Address l => l a -> l b -> Bool
+addressEq = liftEq (const (const True))
+
+addressCompare :: Address l => l a -> l b -> Ordering
+addressCompare = liftCompare (const (const EQ))
+
+addressShowsPrec :: Address l => Int -> l a -> ShowS
+addressShowsPrec = liftShowsPrec hidesPrec hideList
+
+addressShowList :: Address l => [l a] -> ShowS
+addressShowList = liftShowList hidesPrec hideList
+
+
 hidesPrec :: Int -> a -> ShowS
 hidesPrec _ _ = id
 

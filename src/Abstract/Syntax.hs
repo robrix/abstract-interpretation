@@ -175,7 +175,7 @@ instance Pretty n => Pretty2 (Syntax n) where
   liftPretty2 pv _ pr _ s = case s of
     Var n -> pretty "var" <+> pretty n
     Num v -> pv v
-    Op1 o a -> prettyC "Op1" [pretty (show o), pr a]
+    Op1 o a -> pretty o <+> pr a
     Op2 o a b -> pr a <+> pretty o <+> pr b
     App a b -> prettyC "App" [pr a, pr b]
     Lam n a -> prettyC "Lam" [pretty n, pr a]

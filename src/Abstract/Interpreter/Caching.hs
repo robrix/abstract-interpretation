@@ -3,6 +3,7 @@ module Abstract.Interpreter.Caching where
 
 import Abstract.Configuration
 import Abstract.Interpreter
+import Abstract.Number
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value
@@ -12,6 +13,7 @@ import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Data.Foldable
+import Data.Function (fix)
 import qualified Data.Map as Map
 import Data.Maybe
 import Data.Semigroup
@@ -21,6 +23,9 @@ type Cache l a = Map.Map (Configuration l a) (Set.Set (Value l a, Store l (Value
 
 type CachingInterpreter l a = CacheOut l a ': CacheIn l a ': NonDetEff ': Interpreter l a
 
+
+runCache :: (Ord a, Ord (l (Value l a)), Ord (Store l (Value l a)), AbstractStore l, Context l (Value l a) fs, AbstractNumber a (Eff fs), CachingInterpreter l a :<: fs) => Term a -> Eff fs (Value l a)
+runCache = fixCache (fix (evCache ev))
 
 evCache :: forall l i fs
         .  (Ord i, Ord (l (Value l i)), Ord (Store l (Value l i)), AbstractStore l, Context l (Value l i) fs, CachingInterpreter l i :<: fs)

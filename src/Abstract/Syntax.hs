@@ -62,6 +62,12 @@ liftCompareTerms :: (a -> b -> Ordering) -> Term a -> Term b -> Ordering
 liftCompareTerms compare = go
   where go t1 t2 = liftCompare2 compare go (unfix t1) (unfix t2)
 
+liftShowsPrecTerm :: (Int -> a -> ShowS) -> ([a] -> ShowS) -> Int -> Term a -> ShowS
+liftShowsPrecTerm spA slA = go where go d = liftShowsPrec2 spA slA go (liftShowListTerm spA slA) d . unfix
+
+liftShowListTerm :: (Int -> a -> ShowS) -> ([a] -> ShowS) -> [Term a] -> ShowS
+liftShowListTerm spA slA = go where go = liftShowList2 spA slA (liftShowsPrecTerm spA slA) go . map unfix
+
 
 -- Instances
 

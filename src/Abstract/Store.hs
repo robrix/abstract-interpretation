@@ -9,8 +9,6 @@ import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import Data.Semigroup
 
--- type Store f a = Map.Map (Loc a) (f a)
-
 newtype LocI a = LocI { unLocI :: Int }
   deriving (Eq, Ord, Show)
 

@@ -17,7 +17,7 @@ newtype Precise a = Precise { unPrecise :: Int }
 newtype Monovariant a = Monovariant String
   deriving (Eq, Ord, Show)
 
-class Eq1 l => Address l where
+class (Eq1 l, Show1 l) => Address l where
   type Store l a
   type Context l a (fs :: [* -> *]) :: Constraint
   type instance Context l a fs = (State (Store l a) :< fs)
@@ -57,3 +57,9 @@ instance Eq1 Precise where
 
 instance Eq1 Monovariant where
   liftEq _ (Monovariant n1) (Monovariant n2) = n1 == n2
+
+instance Show1 Precise where
+  liftShowsPrec _ _ d (Precise i) = showsUnaryWith showsPrec "Precise" d i
+
+instance Show1 Monovariant where
+  liftShowsPrec _ _ d (Monovariant n) = showsUnaryWith showsPrec "Monovariant" d n

@@ -19,8 +19,8 @@ type Trace f i g = g (TraceEntry f i)
 
 type TracingInterpreter f i g = Writer (Trace f i g) ': Interpreter f i
 
-type TraceInterpreter f i = Writer (Trace f i []) ': Interpreter f i
-type ReachableStateInterpreter f i = Writer (Trace f i Set.Set) ': Interpreter f i
+type TraceInterpreter f i = TracingInterpreter f i []
+type ReachableStateInterpreter f i = TracingInterpreter f i Set.Set
 
 
 -- Tracing and reachable state analyses

@@ -16,10 +16,10 @@ type DeadCodeInterpreter l i = DeadCode i ': Interpreter l i
 
 -- Dead code analysis
 
-evalDead :: forall l i. (Monoid (Store l i), Ord i, AbstractStore l, Context l i (DeadCodeInterpreter l i), AbstractNumber i (Eff (DeadCodeInterpreter l i))) => Term i -> (Either String (Value l i, Set.Set (Term i)), Store l i)
+evalDead :: forall l i. (Monoid (Store l (Value l i)), Ord i, AbstractStore l, Context l (Value l i) (DeadCodeInterpreter l i), AbstractNumber i (Eff (DeadCodeInterpreter l i))) => Term i -> (Either String (Value l i, Set.Set (Term i)), Store l (Value l i))
 evalDead = run @(DeadCodeInterpreter l i) . runDead
 
-runDead :: (Ord i, DeadCodeInterpreter l i :<: fs, AbstractStore l, Context l i fs, AbstractNumber i (Eff fs)) => Term i -> Eff fs (Value l i)
+runDead :: (Ord i, DeadCodeInterpreter l i :<: fs, AbstractStore l, Context l (Value l i) fs, AbstractNumber i (Eff fs)) => Term i -> Eff fs (Value l i)
 runDead e0 = do
   put (subterms e0)
   fix (evDead ev) e0

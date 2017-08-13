@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, StandaloneDeriving, UndecidableInstances #-}
 module Abstract.Value where
 
 import Abstract.Number
@@ -9,8 +9,11 @@ import Prelude hiding (fail)
 
 type Environment = Map.Map String
 
-data Value l i = I i | Closure String (Term i) (Environment (l i))
-  deriving (Eq, Ord, Show)
+data Value l i = I i | Closure String (Term i) (Environment (l (Value l i)))
+
+deriving instance (Eq a, Eq (l (Value l a))) => Eq (Value l a)
+deriving instance (Ord a, Ord (l (Value l a))) => Ord (Value l a)
+deriving instance (Show a, Show (l (Value l a))) => Show (Value l a)
 
 
 instance (MonadFail m, AbstractNumber i m) => AbstractNumber (Value l i) m where

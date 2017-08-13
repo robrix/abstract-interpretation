@@ -15,19 +15,19 @@ import Data.Functor.Foldable
 import qualified Data.Map as Map
 
 
-type Interpreter l a = '[Failure, State (Store l a), Reader (Environment (l a))]
+type Interpreter l a = '[Failure, State (Store l (Value l a)), Reader (Environment (l (Value l a)))]
 
 
 -- Evaluation
 
-eval :: forall l i . (Monoid (Store l i), AbstractStore l, Context l i (Interpreter l i), AbstractNumber i (Eff (Interpreter l i))) => Term i -> (Either String (Value l i), Store l i)
+eval :: forall l i . (Monoid (Store l (Value l i)), AbstractStore l, Context l (Value l i) (Interpreter l i), AbstractNumber i (Eff (Interpreter l i))) => Term i -> (Either String (Value l i), Store l (Value l i))
 eval = run @(Interpreter l i) . runEval
 
-runEval :: (AbstractStore l, Context l i fs, AbstractNumber i (Eff fs), Interpreter l i :<: fs) => Term i -> Eff fs (Value l i)
+runEval :: (AbstractStore l, Context l (Value l i) fs, AbstractNumber i (Eff fs), Interpreter l i :<: fs) => Term i -> Eff fs (Value l i)
 runEval = fix ev
 
 ev :: forall l i fs
-   .  (AbstractStore l, Context l i fs, AbstractNumber i (Eff fs), Interpreter l i :<: fs)
+   .  (AbstractStore l, Context l (Value l i) fs, AbstractNumber i (Eff fs), Interpreter l i :<: fs)
    => (Term i -> Eff fs (Value l i))
    -> Term i
    -> Eff fs (Value l i)
@@ -35,7 +35,7 @@ ev ev term = case unfix term of
   Num n -> return (I n)
   Var x -> do
     p <- ask
-    I <$> find ((p :: Environment (l i)) Map.! x)
+    find ((p :: Environment (l (Value l i))) Map.! x)
   If0 c t e -> do
     v <- ev c
     z <- isZero v
@@ -50,15 +50,15 @@ ev ev term = case unfix term of
   Rec f e -> do
     p <- ask
     a <- alloc f
-    I v <- local (const (Map.insert f a (p :: Environment (l i)))) (ev e)
+    v <- local (const (Map.insert f a (p :: Environment (l (Value l i))))) (ev e)
     ext a v
-    return (I v)
+    return v
   Lam x e0 -> do
     p <- ask
-    return (Closure x e0 (p :: Environment (l i)))
+    return (Closure x e0 (p :: Environment (l (Value l i))))
   App e0 e1 -> do
     Closure x e2 p <- ev e0
-    I v1 <- ev e1
+    v1 <- ev e1
     a <- alloc x
     ext a v1
     local (const (Map.insert x a p)) (ev e2)

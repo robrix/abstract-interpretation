@@ -68,6 +68,9 @@ liftShowsPrecTerm spA slA = go where go d = liftShowsPrec2 spA slA go (liftShowL
 liftShowListTerm :: (Int -> a -> ShowS) -> ([a] -> ShowS) -> [Term a] -> ShowS
 liftShowListTerm spA slA = go where go = liftShowList2 spA slA (liftShowsPrecTerm spA slA) go . map unfix
 
+showsTernaryWith :: (Int -> a -> ShowS) -> (Int -> b -> ShowS) -> (Int -> c -> ShowS) -> String -> Int -> a -> b -> c -> ShowS
+showsTernaryWith sp1 sp2 sp3 name d x y z = showParen (d > 10) $ showString name . showChar ' ' . sp1 11 x . showChar ' ' . sp2 11 y . showChar ' ' . sp3 11 z
+
 
 -- Instances
 
@@ -141,8 +144,6 @@ instance Show n => Show2 (Syntax n) where
     Lam n a -> showsBinaryWith showsPrec spA "Lam" d n a
     Rec n a -> showsBinaryWith showsPrec spA "Rec" d n a
     If0 c t e -> showsTernaryWith spA spA spA "If0" d c t e
-    where showsTernaryWith :: (Int -> a -> ShowS) -> (Int -> b -> ShowS) -> (Int -> c -> ShowS) -> String -> Int -> a -> b -> c -> ShowS
-          showsTernaryWith sp1 sp2 sp3 name d x y z = showParen (d > 10) $ showString name . showChar ' ' . sp1 11 x . showChar ' ' . sp2 11 y . showChar ' ' . sp3 11 z
 
 instance (Show n, Show i) => Show1 (Syntax n i) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList

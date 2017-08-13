@@ -177,7 +177,7 @@ instance Pretty n => Pretty2 (Syntax n) where
     Num v -> pv v
     Op1 o a -> pretty o <+> pr a
     Op2 o a b -> pr a <+> pretty o <+> pr b
-    App a b -> prettyC "App" [pr a, pr b]
+    App a b -> parens (pr a) <+> parens (pr b)
     Lam n a -> prettyC "Lam" [pretty n, pr a]
     Rec n a -> prettyC "Rec" [pretty n, pr a]
     If0 c t e -> prettyC "If0" [pr c, pr t, pr e]

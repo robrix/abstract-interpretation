@@ -53,3 +53,8 @@ instance RunEffect NonDetEff where
 
 instance Functor (Effects fs ffs) where
   fmap f (Effects eff) = Effects (fmap f eff)
+
+instance Applicative (Effects fs ffs) where
+  pure a = Effects (pure a)
+
+  Effects f <*> Effects a = Effects (f <*> a)

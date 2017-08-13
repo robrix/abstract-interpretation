@@ -12,7 +12,7 @@ import Data.Semigroup
 newtype Precise a = Precise { unPrecise :: Int }
   deriving (Eq, Ord, Show)
 
-newtype Loc a = Loc { unLoc :: String }
+newtype Monovariant a = Monovariant { unMonovariant :: String }
   deriving (Eq, Ord, Show)
 
 class AbstractStore l where
@@ -35,13 +35,13 @@ instance AbstractStore Precise where
 
   ext (Precise loc) val = modify (IntMap.insert loc val)
 
-find' :: forall a fs. (Alternative (Eff fs), State (Map.Map (Loc a) [a]) :< fs) => Loc a -> Eff fs a
+find' :: forall a fs. (Alternative (Eff fs), State (Map.Map (Monovariant a) [a]) :< fs) => Monovariant a -> Eff fs a
 find' loc = do
   store <- get
-  asum (return <$> ((store :: Map.Map (Loc a) [a]) Map.! loc))
+  asum (return <$> ((store :: Map.Map (Monovariant a) [a]) Map.! loc))
 
-alloc' :: Alternative m => String -> m (Loc a)
-alloc' x = pure (Loc x)
+alloc' :: Alternative m => String -> m (Monovariant a)
+alloc' x = pure (Monovariant x)
 
-ext' :: (State (Map.Map (Loc a) [a]) :< fs) => Loc a -> a -> Eff fs ()
+ext' :: (State (Map.Map (Monovariant a) [a]) :< fs) => Monovariant a -> a -> Eff fs ()
 ext' loc val = modify (Map.insertWith (<>) loc [val])

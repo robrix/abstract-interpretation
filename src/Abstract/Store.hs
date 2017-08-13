@@ -5,6 +5,7 @@ import Control.Applicative
 import Control.Monad.Effect
 import Control.Monad.Effect.State
 import Data.Foldable (asum)
+import Data.Functor.Classes
 import qualified Data.IntMap as IntMap
 import Data.Kind
 import qualified Data.Map as Map
@@ -16,7 +17,7 @@ newtype Precise a = Precise { unPrecise :: Int }
 newtype Monovariant a = Monovariant String
   deriving (Eq, Ord, Show)
 
-class Address l where
+class Eq1 l => Address l where
   type Store l a
   type Context l a (fs :: [* -> *]) :: Constraint
   type instance Context l a fs = (State (Store l a) :< fs)
@@ -50,3 +51,9 @@ instance Address Monovariant where
   alloc x = pure (Monovariant x)
 
   ext loc val = modify (Map.insertWith (<>) loc [val])
+
+instance Eq1 Precise where
+  liftEq _ (Precise i1) (Precise i2) = i1 == i2
+
+instance Eq1 Monovariant where
+  liftEq _ (Monovariant n1) (Monovariant n2) = n1 == n2

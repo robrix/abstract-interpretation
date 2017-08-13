@@ -32,10 +32,10 @@ evalTrace = run @(TraceInterpreter l i) . runTrace
 runTrace :: (TraceInterpreter l i :<: fs, AbstractStore l, Context l (Value l i) fs, AbstractNumber i (Eff fs)) => Term i -> Eff fs (Value l i)
 runTrace = fix (evTell [] ev)
 
-evalReach :: forall i l. (Monoid (Store l (Value l i)), Ord i, Ord (l i), Ord (l (Value l i)), Ord (Store l (Value l i)), AbstractStore l, Context l (Value l i) (ReachableStateInterpreter l i), AbstractNumber i (Eff (ReachableStateInterpreter l i))) => Term i -> (Either String (Value l i, Trace l i Set.Set), Store l (Value l i))
+evalReach :: forall i l. (Monoid (Store l (Value l i)), Ord i, Ord (l (Value l i)), Ord (Store l (Value l i)), AbstractStore l, Context l (Value l i) (ReachableStateInterpreter l i), AbstractNumber i (Eff (ReachableStateInterpreter l i))) => Term i -> (Either String (Value l i, Trace l i Set.Set), Store l (Value l i))
 evalReach = run @(ReachableStateInterpreter l i) . runReach
 
-runReach :: (Ord i, Ord (l i), Ord (l (Value l i)), Ord (Store l (Value l i)), ReachableStateInterpreter l i :<: fs, AbstractStore l, Context l (Value l i) fs, AbstractNumber i (Eff fs)) => Term i -> Eff fs (Value l i)
+runReach :: (Ord i, Ord (l (Value l i)), Ord (Store l (Value l i)), ReachableStateInterpreter l i :<: fs, AbstractStore l, Context l (Value l i) fs, AbstractNumber i (Eff fs)) => Term i -> Eff fs (Value l i)
 runReach = fix (evTell Set.empty ev)
 
 evTell :: forall l i g fs . (TracingInterpreter l i g :<: fs, IsList (Trace l i g), Item (Trace l i g) ~ TraceEntry l i)

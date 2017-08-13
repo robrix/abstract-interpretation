@@ -11,12 +11,12 @@ import Control.Monad.Effect.State
 import Data.Function (fix)
 import qualified Data.Set as Set
 
-type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter (Val i)
+type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter i
 
 
 -- Dead code analysis
 
-evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store (Val i))
+evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store i)
 evalDead = run @(DeadCodeInterpreter i) . runDead
 
 runDead :: (Ord i, DeadCodeInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)

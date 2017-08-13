@@ -18,7 +18,7 @@ import Prelude hiding (fail)
 
 type Environment = Map.Map String
 
-data Val i = I i | L (Term i, Environment (Loc (Val i)))
+data Val i = I i | L (Term i, Environment (Loc i))
   deriving (Eq, Ord, Show)
 
 
@@ -27,13 +27,13 @@ type Interpreter a = '[Failure, State (Store a), Reader (Environment (Loc a))]
 
 -- Evaluation
 
-eval :: forall i . AbstractValue i (Eff (Interpreter (Val i))) => Term i -> (Either String (Val i), Store (Val i))
-eval = run @(Interpreter (Val i)) . runEval
+eval :: forall i . AbstractValue i (Eff (Interpreter i)) => Term i -> (Either String (Val i), Store i)
+eval = run @(Interpreter i) . runEval
 
-runEval :: (Interpreter (Val i) :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
+runEval :: (Interpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
 runEval = fix ev
 
-ev :: (AbstractValue i (Eff fs), Interpreter (Val i) :<: fs)
+ev :: (AbstractValue i (Eff fs), Interpreter i :<: fs)
    => (Term i -> Eff fs (Val i))
    -> Term i
    -> Eff fs (Val i)
@@ -41,7 +41,7 @@ ev ev term = case unfix term of
   Num n -> return (I n)
   Var x -> do
     p <- ask
-    find (p Map.! x)
+    I <$> find (p Map.! x)
   If0 c t e -> do
     v <- ev c
     z <- isZero v
@@ -56,16 +56,15 @@ ev ev term = case unfix term of
   Rec f e -> do
     p <- ask
     a <- alloc f
-    let p' = Map.insert f a p
-    v <- local (const p') (ev e)
+    I v <- local (const (Map.insert f a p)) (ev e)
     ext a v
-    return v
+    return (I v)
   Lam x e0 -> do
     p <- ask
     return (L (makeLam x e0, p))
   App e0 e1 -> do
-    (L (Fix (Lam x e2), p)) <- ev e0
-    v1 <- ev e1
+    L (Fix (Lam x e2), p) <- ev e0
+    I v1 <- ev e1
     a <- alloc x
     ext a v1
     local (const (Map.insert x a p)) (ev e2)

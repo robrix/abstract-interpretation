@@ -14,24 +14,24 @@ import Data.Function (fix)
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
-type TraceEntry i = (Term i, Environment (Loc (Val i)), Store (Val i))
+type TraceEntry i = (Term i, Environment (Loc i), Store i)
 type Trace i f = f (TraceEntry i)
 
-type TracingInterpreter i f = Writer (Trace i f) ': Interpreter (Val i)
+type TracingInterpreter i f = Writer (Trace i f) ': Interpreter i
 
-type TraceInterpreter i = Writer (Trace i []) ': Interpreter (Val i)
-type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter (Val i)
+type TraceInterpreter i = Writer (Trace i []) ': Interpreter i
+type ReachableStateInterpreter i = Writer (Trace i Set.Set) ': Interpreter i
 
 
 -- Tracing and reachable state analyses
 
-evalTrace :: forall i. AbstractValue i (Eff (TraceInterpreter i)) => Term i -> (Either String (Val i, Trace i []), Store (Val i))
+evalTrace :: forall i. AbstractValue i (Eff (TraceInterpreter i)) => Term i -> (Either String (Val i, Trace i []), Store i)
 evalTrace = run @(TraceInterpreter i) . runTrace
 
 runTrace :: (TraceInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
 runTrace = fix (evTell [] ev)
 
-evalReach :: forall i. (Ord i, AbstractValue i (Eff (ReachableStateInterpreter i))) => Term i -> (Either String (Val i, Trace i Set.Set), Store (Val i))
+evalReach :: forall i. (Ord i, AbstractValue i (Eff (ReachableStateInterpreter i))) => Term i -> (Either String (Val i, Trace i Set.Set), Store i)
 evalReach = run @(ReachableStateInterpreter i) . runReach
 
 runReach :: (Ord i, ReachableStateInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)

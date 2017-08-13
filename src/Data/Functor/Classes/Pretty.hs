@@ -14,3 +14,6 @@ class Pretty2 f where
 
 pretty1 :: (Pretty a, Pretty1 f) => f a -> Doc ann
 pretty1 = liftPretty pretty prettyList
+
+instance Pretty1 [] where
+  liftPretty _ pl xs = pl xs

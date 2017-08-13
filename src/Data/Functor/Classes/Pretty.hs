@@ -35,4 +35,4 @@ pprint :: Pretty a => a -> IO ()
 pprint a = renderIO stdout (layoutPretty (LayoutOptions Unbounded) (pretty a <> pretty "\n"))
 
 prettyC :: String -> [Doc ann] -> Doc ann
-prettyC s fs = pretty s <> flatAlt (space <> hsep (map parens fs)) (nest 2 (line <> vsep (map parens fs)))
+prettyC s fs = group (pretty s <> flatAlt (nest 2 (line <> vsep (map parens fs))) (space <> hsep (map parens fs)))

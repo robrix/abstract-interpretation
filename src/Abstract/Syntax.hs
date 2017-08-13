@@ -54,6 +54,11 @@ subterms :: Ord i => Term i -> Set.Set (Term i)
 subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.singleton term
 
 
+liftEqTerms :: (a -> b -> Bool) -> Term a -> Term b -> Bool
+liftEqTerms eq = go
+  where go t1 t2 = liftEq2 eq go (unfix t1) (unfix t2)
+
+
 -- Instances
 
 instance Bifoldable (Syntax n) where

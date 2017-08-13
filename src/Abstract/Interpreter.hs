@@ -22,7 +22,7 @@ type EvalResult l a = (Either String (Value l a), Store l (Value l a))
 
 -- Evaluation
 
-eval :: forall l i . (Monoid (Store l (Value l i)), Address l, Context l (Value l i) (Interpreter l i), AbstractNumber i (Eff (Interpreter l i))) => Term i -> (Either String (Value l i), Store l (Value l i))
+eval :: forall l i . (Monoid (Store l (Value l i)), Address l, Context l (Value l i) (Interpreter l i), AbstractNumber i (Eff (Interpreter l i))) => Term i -> EvalResult l i
 eval = run @(Interpreter l i) . runEval
 
 runEval :: (Address l, Context l (Value l i) fs, AbstractNumber i (Eff fs), Interpreter l i :<: fs) => Term i -> Eff fs (Value l i)

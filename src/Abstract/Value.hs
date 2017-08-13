@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, StandaloneDeriving, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 module Abstract.Value where
 
 import Abstract.Number
@@ -8,12 +8,11 @@ import Data.Functor.Classes
 import qualified Data.Map as Map
 import Data.Semigroup
 import Prelude hiding (fail)
+import Text.Show
 
 type Environment = Map.Map String
 
 data Value l a = I a | Closure String (Term a) (Environment (l (Value l a)))
-
-deriving instance (Show a, Show (l (Value l a))) => Show (Value l a)
 
 
 instance Eq1 l => Eq1 (Value l) where
@@ -34,6 +33,16 @@ instance Ord1 l => Ord1 (Value l) where
 
 instance (Ord a, Ord1 l) => Ord (Value l a) where
   compare = compare1
+
+
+instance Show1 l => Show1 (Value l) where
+  liftShowsPrec spA spL = go
+    where go d (I a) = showsUnaryWith spA "I" d a
+          go d (Closure s t e) = showsTernaryWith showsPrec (liftShowsPrecTerm spA spL) (liftShowsPrec (liftShowsPrec go (showListWith (go 0))) (liftShowList go (showListWith (go 0)))) "Closure" d s t e
+
+instance (Show a, Show1 l) => Show (Value l a) where
+  showsPrec = showsPrec1
+
 
 instance (MonadFail m, AbstractNumber i m) => AbstractNumber (Value l i) m where
   delta1 o (I a) = fmap I (delta1 o a)

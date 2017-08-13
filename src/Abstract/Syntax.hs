@@ -181,3 +181,6 @@ instance Pretty n => Pretty2 (Syntax n) where
     Lam n a -> prettyC "Lam" [pretty n, pr a]
     Rec n a -> prettyC "Rec" [pretty n, pr a]
     If0 c t e -> prettyC "If0" [pr c, pr t, pr e]
+
+instance (Pretty n, Pretty v) => Pretty1 (Syntax n v) where
+  liftPretty = liftPretty2 pretty prettyList

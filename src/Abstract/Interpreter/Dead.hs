@@ -7,7 +7,6 @@ import Abstract.Syntax
 import Abstract.Value
 import Control.Effect
 import Control.Monad.Effect.Internal hiding (run)
-import Data.Constraint
 import Data.Function (fix)
 import qualified Data.Set as Set
 
@@ -17,20 +16,19 @@ type DeadCodeInterpreter l i = DeadCode i ': Interpreter l i
 -- Dead code analysis
 
 evalDead :: forall l i. (Monoid (Store l i), Ord i, AbstractStore l, AbstractValue i (Eff (DeadCodeInterpreter l i))) => Term i -> (Either String (Val l i, Set.Set (Term i)), Store l i)
-evalDead = run @(DeadCodeInterpreter l i) . runDead Dict
+evalDead = run @(DeadCodeInterpreter l i) . runDead
 
-runDead :: (Ord i, DeadCodeInterpreter l i :<: fs, AbstractStore l, AbstractValue i (Eff fs)) => Dict (AbstractStore l) -> Term i -> Eff fs (Val l i)
-runDead dict e0 = do
+runDead :: (Ord i, DeadCodeInterpreter l i :<: fs, AbstractStore l, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val l i)
+runDead e0 = do
   put (subterms e0)
-  fix (evDead dict (ev dict)) e0
+  fix (evDead ev) e0
 
 evDead :: (Ord i, DeadCodeInterpreter l i :<: fs)
-       => Dict (AbstractStore l)
-       -> ((Term i -> Eff fs (Val l i)) -> Term i -> Eff fs (Val l i))
+       => ((Term i -> Eff fs (Val l i)) -> Term i -> Eff fs (Val l i))
        -> (Term i -> Eff fs (Val l i))
        -> Term i
        -> Eff fs (Val l i)
-evDead _ ev0 ev e = do
+evDead ev0 ev e = do
   modify (Set.delete e)
   ev0 ev e
 

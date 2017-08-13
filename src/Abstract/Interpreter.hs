@@ -10,7 +10,6 @@ import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
-import Data.Constraint
 import Data.Function (fix)
 import Data.Functor.Foldable
 import qualified Data.Map as Map
@@ -28,19 +27,18 @@ type Interpreter l a = '[Failure, State (Store l a), Reader (Environment (l a))]
 
 -- Evaluation
 
-eval :: forall l i . (Monoid (Store l i), AbstractStore l, AbstractValue i (Eff (Interpreter l i))) => Dict (AbstractStore l) -> Term i -> (Either String (Val l i), Store l i)
-eval dict = run @(Interpreter l i) . runEval dict
+eval :: forall l i . (Monoid (Store l i), AbstractStore l, AbstractValue i (Eff (Interpreter l i))) => Term i -> (Either String (Val l i), Store l i)
+eval = run @(Interpreter l i) . runEval
 
-runEval :: (AbstractStore l, AbstractValue i (Eff fs), Interpreter l i :<: fs) => Dict (AbstractStore l) -> Term i -> Eff fs (Val l i)
-runEval dict = fix (ev dict)
+runEval :: (AbstractStore l, AbstractValue i (Eff fs), Interpreter l i :<: fs) => Term i -> Eff fs (Val l i)
+runEval = fix ev
 
 ev :: forall l i fs
    .  (AbstractStore l, AbstractValue i (Eff fs), Interpreter l i :<: fs)
-   => Dict (AbstractStore l)
-   -> (Term i -> Eff fs (Val l i))
+   => (Term i -> Eff fs (Val l i))
    -> Term i
    -> Eff fs (Val l i)
-ev _ ev term = case unfix term of
+ev ev term = case unfix term of
   Num n -> return (I n)
   Var x -> do
     p <- ask

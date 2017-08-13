@@ -47,5 +47,5 @@ evTell :: forall l i g fs . (TracingInterpreter l i g :<: fs, IsList (Trace l i 
 evTell _ ev0 ev e = do
   env <- ask
   store <- get
-  tell (fromList [(e, env, store)] :: Trace l i g)
+  tell (fromList [Configuration e env store] :: Trace l i g)
   ev0 ev e

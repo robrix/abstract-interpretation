@@ -13,6 +13,8 @@ import qualified Data.Set as Set
 
 type DeadCodeInterpreter l i = DeadCode i ': Interpreter l i
 
+type DeadCodeResult l a = (Either String (Value l a, Set.Set (Term a)), Store l (Value l a))
+
 
 -- Dead code analysis
 

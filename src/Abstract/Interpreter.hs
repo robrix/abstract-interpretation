@@ -17,6 +17,8 @@ import qualified Data.Map as Map
 
 type Interpreter l a = '[Failure, State (Store l (Value l a)), Reader (Environment (l (Value l a)))]
 
+type EvalResult l a = (Either String (Value l a), Store l (Value l a))
+
 
 -- Evaluation
 

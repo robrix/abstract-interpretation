@@ -8,11 +8,12 @@ import Abstract.Syntax
 import Abstract.Value
 import Control.Effect
 import Control.Monad.Effect.Internal
+import Control.Monad.Effect.NonDetEff
 import qualified Data.Map as Map
 
 type Cache l a = Map.Map (Configuration l a) (Value l a, Store l (Value l a))
 
-type CachingInterpreter l a = CacheOut l a ': CacheIn l a ': Interpreter l a
+type CachingInterpreter l a = CacheOut l a ': CacheIn l a ': NonDetEff ': Interpreter l a
 
 
 askCacheIn :: (CacheIn l a :< fs) => Eff fs (Cache l a)

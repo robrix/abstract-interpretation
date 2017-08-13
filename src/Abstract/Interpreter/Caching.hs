@@ -73,7 +73,7 @@ fixCache eval e = do
     put store
     _ <- localCacheIn (const dollar) (eval e)
     getCacheOut)
-  asum . flip map (Set.toList (fromMaybe Set.empty (Map.lookup c pairs))) $ \ (value, store') -> do
+  asum . flip map (maybe [] Set.toList (Map.lookup c pairs)) $ \ (value, store') -> do
     put store'
     return value
 

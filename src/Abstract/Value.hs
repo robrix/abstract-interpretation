@@ -9,7 +9,7 @@ import Prelude hiding (fail)
 
 type Environment = Map.Map String
 
-data Value l i = I i | Closure String (Term i) (Environment (l (Value l i)))
+data Value l a = I a | Closure String (Term a) (Environment (l (Value l a)))
 
 deriving instance (Eq a, Eq (l (Value l a))) => Eq (Value l a)
 deriving instance (Ord a, Ord (l (Value l a))) => Ord (Value l a)

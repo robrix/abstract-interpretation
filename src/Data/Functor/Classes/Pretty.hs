@@ -31,9 +31,3 @@ pprint a = renderIO stdout (layoutPretty (LayoutOptions Unbounded) (pretty a <> 
 
 prettyC :: String -> [Doc ann] -> Doc ann
 prettyC s fs = pretty s <> flatAlt (space <> hsep (map parens fs)) (nest 2 (line <> vsep (map parens fs)))
-
--- prettyUnaryWith :: (a -> Doc ann) -> String -> a -> Doc ann
--- prettyUnaryWith pa s a = pretty s <> flatAlt (space <> pa a) (nest 2 (line <> pa a))
---
--- prettyBinaryWith :: (a -> Doc ann) -> (b -> Doc ann) -> String -> a -> b -> Doc ann
--- prettyUnaryWith pa pb s a b = pretty s <> flatAlt (space <+> pa a <+> pb b) (nest 2 (line <> pa a))

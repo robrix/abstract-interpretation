@@ -50,3 +50,6 @@ instance Monoid w => RunEffect (Writer w) where
 instance RunEffect NonDetEff where
   type Result NonDetEff a = [a]
   runEffect = makeChoiceA
+
+instance Functor (Effects fs ffs) where
+  fmap f (Effects eff) = Effects (fmap f eff)

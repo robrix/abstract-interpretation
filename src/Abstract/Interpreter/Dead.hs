@@ -9,27 +9,27 @@ import Control.Effect
 import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.State
 import Data.Function (fix)
-import Data.Functor.Identity
 import qualified Data.Set as Set
 
-type DeadCodeInterpreter i = State (Set.Set (Term i)) ': Interpreter Identity i
+type DeadCodeInterpreter f i = State (Set.Set (Term i)) ': Interpreter f i
 
 
 -- Dead code analysis
 
-evalDead :: forall i. (Ord i, AbstractValue i (Eff (DeadCodeInterpreter i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store Identity i)
-evalDead = run @(DeadCodeInterpreter i) . runDead
+evalDead :: forall f i. (Ord i, AbstractStore f, AbstractValue i (Eff (DeadCodeInterpreter f i))) => Term i -> (Either String (Val i, Set.Set (Term i)), Store f i)
+evalDead = run @(DeadCodeInterpreter f i) . runDead (undefined :: proxy f)
 
-runDead :: (Ord i, DeadCodeInterpreter i :<: fs, AbstractValue i (Eff fs)) => Term i -> Eff fs (Val i)
-runDead e0 = do
+runDead :: (Ord i, DeadCodeInterpreter f i :<: fs, AbstractStore f, AbstractValue i (Eff fs)) => proxy f -> Term i -> Eff fs (Val i)
+runDead proxy e0 = do
   put (subterms e0)
-  fix (evDead (ev (undefined :: proxy Identity))) e0
+  fix (evDead proxy (ev proxy)) e0
 
-evDead :: (Ord i, DeadCodeInterpreter i :<: fs)
-       => ((Term i -> Eff fs (Val i)) -> Term i -> Eff fs (Val i))
+evDead :: (Ord i, DeadCodeInterpreter f i :<: fs)
+       => proxy f
+       -> ((Term i -> Eff fs (Val i)) -> Term i -> Eff fs (Val i))
        -> (Term i -> Eff fs (Val i))
        -> Term i
        -> Eff fs (Val i)
-evDead ev0 ev e = do
+evDead _ ev0 ev e = do
   modify (Set.delete e)
   ev0 ev e

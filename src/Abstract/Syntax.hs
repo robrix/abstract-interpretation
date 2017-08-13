@@ -25,7 +25,7 @@ type Term i = Fix (Syntax i String)
 var :: String -> Term i
 var = Fix . Var
 
-infixl 0 #
+infixl 9 #
 (#) :: Term i -> Term i -> Term i
 (#) = (Fix .) . App
 

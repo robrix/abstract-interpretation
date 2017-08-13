@@ -10,8 +10,9 @@ import Control.Effect
 import Control.Monad.Effect.Internal
 import Control.Monad.Effect.NonDetEff
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 
-type Cache l a = Map.Map (Configuration l a) (Value l a, Store l (Value l a))
+type Cache l a = Map.Map (Configuration l a) (Set.Set (Value l a, Store l (Value l a)))
 
 type CachingInterpreter l a = CacheOut l a ': CacheIn l a ': NonDetEff ': Interpreter l a
 

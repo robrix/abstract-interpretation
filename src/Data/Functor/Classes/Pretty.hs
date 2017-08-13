@@ -3,6 +3,8 @@ module Data.Functor.Classes.Pretty where
 import Data.Foldable
 import qualified Data.Set as Set
 import Data.Text.Prettyprint.Doc
+import Data.Text.Prettyprint.Doc.Render.Terminal
+import System.IO (stdout)
 
 class Pretty1 f where
   liftPretty :: (a -> Doc ann) -> ([a] -> Doc ann) -> f a -> Doc ann
@@ -22,3 +24,7 @@ instance Pretty1 [] where
 
 instance Pretty1 Set.Set where
   liftPretty _ pl xs = pretty "Set.fromList" <+> pl (toList xs)
+
+
+pprint :: Pretty a => a -> IO ()
+pprint a = renderIO stdout (layoutPretty (LayoutOptions Unbounded) (pretty a <> pretty "\n"))

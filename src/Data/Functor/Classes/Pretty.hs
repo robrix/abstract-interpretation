@@ -1,5 +1,11 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Data.Functor.Classes.Pretty where
+module Data.Functor.Classes.Pretty
+( Pretty1(..)
+, Pretty2(..)
+, pretty1
+, prettyC
+, pprint
+) where
 
 import Data.Foldable
 import Data.Functor.Foldable

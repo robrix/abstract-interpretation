@@ -6,13 +6,13 @@ import Abstract.Syntax
 import Control.Monad.Fail
 import Data.Functor.Classes
 import qualified Data.Map as Map
+import Data.Semigroup
 import Prelude hiding (fail)
 
 type Environment = Map.Map String
 
 data Value l a = I a | Closure String (Term a) (Environment (l (Value l a)))
 
-deriving instance (Eq1 l, Ord a, Ord (l (Value l a))) => Ord (Value l a)
 deriving instance (Show a, Show (l (Value l a))) => Show (Value l a)
 
 
@@ -24,6 +24,16 @@ instance Eq1 l => Eq1 (Value l) where
 
 instance (Eq a, Eq1 l) => Eq (Value l a) where
   (==) = eq1
+
+instance Ord1 l => Ord1 (Value l) where
+  liftCompare compareA = go
+    where go (I a) (I b) = compareA a b
+          go (Closure s1 t1 e1) (Closure s2 t2 e2) = compare s1 s2 <> liftCompareTerms compareA t1 t2 <> liftCompare (liftCompare go) e1 e2
+          go (I _) _ = LT
+          go _ _ = GT
+
+instance (Ord a, Ord1 l) => Ord (Value l a) where
+  compare = compare1
 
 instance (MonadFail m, AbstractNumber i m) => AbstractNumber (Value l i) m where
   delta1 o (I a) = fmap I (delta1 o a)

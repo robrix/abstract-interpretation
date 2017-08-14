@@ -27,6 +27,11 @@ type CachingInterpreter l a = NonDetEff ': CacheOut l a ': CacheIn l a ': Interp
 type CachingResult l a = (Either String (Set.Set (Value l a), Cache l a), Store l (Value l a))
 
 
+eqCache :: forall a l . (Address l, Eq a) => Cache l a -> Cache l a -> Bool
+eqCache = liftEq (liftEq (liftEq (liftEqStore (undefined :: proxy l) liftValueEq)))
+  where liftValueEq :: Value l a -> Value l a -> Bool
+        liftValueEq = liftEq (==)
+
 showCache :: forall a l . (Address l, Show a) => Cache l a -> String
 showCache = ($ "") . liftShowsPrec (liftShowsPrec spPair slPair) (liftShowList spPair slPair) 0
   where spPair = liftShowsPrec2 spValue slValue spStore slStore

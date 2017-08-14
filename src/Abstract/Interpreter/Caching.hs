@@ -28,9 +28,9 @@ type CachingResult l a = (Either String (Set.Set (Value l a), Cache l a), Store 
 
 
 showCache :: forall a l . (Address l, Show a) => Cache l a -> String
-showCache = ($ "") . liftShowsPrec (liftShowsPrec spSet slSet) (liftShowList spSet slSet) 0
-  where spSet = liftShowsPrec2 spValue slValue spStore slStore
-        slSet = liftShowList2 spValue slValue spStore slStore
+showCache = ($ "") . liftShowsPrec (liftShowsPrec spPair slPair) (liftShowList spPair slPair) 0
+  where spPair = liftShowsPrec2 spValue slValue spStore slStore
+        slPair = liftShowList2 spValue slValue spStore slStore
         spStore = liftShowsPrecStore (undefined :: proxy l) spValue slValue
         slStore = liftShowListStore  (undefined :: proxy l) spValue slValue
         spValue :: Int -> Value l a -> ShowS

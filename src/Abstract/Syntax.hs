@@ -125,6 +125,9 @@ instance Functor (Syntax a) where
   fmap = second
 
 
+instance Traversable Term where
+  traverse f = go where go = fmap In . bitraverse f go . out
+
 instance Bitraversable Syntax where
   bitraverse f g s = case s of
     Var n -> pure (Var n)

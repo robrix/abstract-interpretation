@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving, TypeFamilies #-}
 module Abstract.Syntax where
 
 import Abstract.Number

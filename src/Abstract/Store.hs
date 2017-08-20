@@ -14,6 +14,7 @@ import Control.Monad ((<=<))
 import Control.Monad.Effect
 import Control.Monad.Effect.State
 import Control.Monad.Fail
+import Data.Coerce
 import Data.Foldable (asum)
 import Data.Function (on)
 import Data.Functor.Classes
@@ -96,6 +97,9 @@ hidesPrec _ _ = id
 
 hideList :: [a] -> ShowS
 hideList _ = id
+
+instance Functor MonovariantStore where
+  fmap f = MonovariantStore . Map.mapKeys coerce . fmap (map f) . unMonovariantStore
 
 
 instance Monoid (MonovariantStore a) where

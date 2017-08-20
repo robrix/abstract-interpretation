@@ -30,7 +30,7 @@ class (Eq1 l, Ord1 l, Show1 l, Eq1 (AddressStore l), Ord1 (AddressStore l), Show
   type Context l a (fs :: [* -> *]) :: Constraint
   type instance Context l a fs = (State (AddressStore l a) :< fs, MonadFail (Eff fs))
 
-  find :: Context l a fs => l a -> Eff fs a
+  deref :: Context l a fs => l a -> Eff fs a
 
   alloc :: Context l a fs => Name -> Eff fs (l a)
 
@@ -46,7 +46,7 @@ allocPrecise = Precise . IntMap.size
 instance Address Precise where
   type AddressStore Precise = IntMap.IntMap
 
-  find = maybe uninitializedAddress pure <=< flip fmap get . IntMap.lookup . unPrecise
+  deref = maybe uninitializedAddress pure <=< flip fmap get . IntMap.lookup . unPrecise
 
   alloc _ = fmap allocPrecise get
 
@@ -69,7 +69,7 @@ instance Address Monovariant where
   type AddressStore Monovariant = MonovariantStore
   type Context Monovariant a fs = (Ord a, State (AddressStore Monovariant a) :< fs, Alternative (Eff fs), MonadFail (Eff fs))
 
-  find = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . monovariantLookup
+  deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . monovariantLookup
 
   alloc = pure . Monovariant
 

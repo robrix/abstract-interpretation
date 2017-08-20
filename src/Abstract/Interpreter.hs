@@ -36,7 +36,7 @@ ev ev term = case out term of
   Num n -> return (I n)
   Var x -> do
     p <- ask
-    find ((p :: Environment (l (Value l a))) Map.! x)
+    deref ((p :: Environment (l (Value l a))) Map.! x)
   If0 c t e -> do
     v <- ev c
     z <- isZero v

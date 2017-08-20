@@ -11,7 +11,7 @@ data Configuration l a = Configuration { configurationTerm :: Term a, configurat
 
 instance Address l => Eq1 (Configuration l) where
   liftEq :: forall a b . (a -> b -> Bool) -> Configuration l a -> Configuration l b -> Bool
-  liftEq eq (Configuration t1 e1 s1) (Configuration t2 e2 s2) = liftEqTerms eq t1 t2 && liftEq addressEq e1 e2 && liftEqStore (undefined :: proxy l) (liftEq eq :: Value l a -> Value l b -> Bool) s1 s2
+  liftEq eq (Configuration t1 e1 s1) (Configuration t2 e2 s2) = liftEqTerms eq t1 t2 && liftEq addressEq e1 e2 && liftEq (liftEq eq :: Value l a -> Value l b -> Bool) s1 s2
 
 instance (Eq a, Address l) => Eq (Configuration l a) where
   (==) = eq1

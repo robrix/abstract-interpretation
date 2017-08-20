@@ -4,6 +4,7 @@ module Abstract.Syntax where
 import Abstract.Number
 import Data.Bifoldable
 import Data.Bifunctor
+import Data.Bitraversable
 import Data.Functor.Classes
 import Data.Functor.Classes.Pretty
 import Data.Functor.Foldable
@@ -122,6 +123,18 @@ instance Bifunctor Syntax where
 
 instance Functor (Syntax a) where
   fmap = second
+
+
+instance Bitraversable Syntax where
+  bitraverse f g s = case s of
+    Var n -> pure (Var n)
+    Num v -> Num <$> f v
+    Op1 o a -> Op1 o <$> g a
+    Op2 o a b -> Op2 o <$> g a <*> g b
+    App a b -> App <$> g a <*> g b
+    Lam n a -> Lam n <$> g a
+    Rec n a -> Rec n <$> g a
+    If0 c t e -> If0 <$> g c <*> g t <*> g e
 
 
 instance Eq2 Syntax where

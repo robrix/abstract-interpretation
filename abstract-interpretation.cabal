@@ -17,6 +17,7 @@ library
                      , Abstract.Interpreter
                      , Abstract.Interpreter.Caching
                      , Abstract.Interpreter.Dead
+                     , Abstract.Interpreter.Symbolic
                      , Abstract.Interpreter.Trace
                      , Abstract.Number
                      , Abstract.Store

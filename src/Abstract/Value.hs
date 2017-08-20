@@ -10,7 +10,7 @@ import qualified Data.Map as Map
 import Data.Semigroup
 import Prelude hiding (fail)
 
-type Environment = Map.Map String
+type Environment = Map.Map Name
 
 data Value l a = I a | Closure Name (Term a) (Environment (l (Value l a)))
   deriving (Foldable, Functor, Traversable)

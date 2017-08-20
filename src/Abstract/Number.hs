@@ -18,7 +18,7 @@ data N = N
   deriving (Eq, Ord, Show)
 
 
-class AbstractNumber a m where
+class MonadFail m => AbstractNumber a m where
   delta1 :: Op1 -> a -> m a
   delta2 :: Op2 -> a -> a -> m a
   isZero :: a -> m Bool

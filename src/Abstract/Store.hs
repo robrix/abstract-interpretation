@@ -20,7 +20,6 @@ import Data.Functor.Classes
 import qualified Data.IntMap as IntMap
 import Data.Kind
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import Data.Semigroup
 import Prelude hiding (fail)
 
@@ -55,20 +54,20 @@ instance Address Precise where
 newtype Monovariant a = Monovariant String
   deriving (Eq, Foldable, Functor, Ord, Show, Traversable)
 
-newtype MonovariantStore a = MonovariantStore { unMonovariantStore :: Map.Map (Monovariant a) (Set.Set a) }
+newtype MonovariantStore a = MonovariantStore { unMonovariantStore :: Map.Map (Monovariant a) [a] }
   deriving (Eq, Ord, Show)
 
-monovariantLookup :: Monovariant a -> MonovariantStore a -> Maybe (Set.Set a)
+monovariantLookup :: Monovariant a -> MonovariantStore a -> Maybe [a]
 monovariantLookup = (. unMonovariantStore) . Map.lookup
 
 monovariantInsert :: Ord a => Monovariant a -> a -> MonovariantStore a -> MonovariantStore a
-monovariantInsert = (((MonovariantStore .) . (. unMonovariantStore)) .) . (. Set.singleton) . Map.insertWith (<>)
+monovariantInsert = (((MonovariantStore .) . (. unMonovariantStore)) .) . (. pure) . Map.insertWith (<>)
 
 instance Address Monovariant where
   type AddressStore Monovariant = MonovariantStore
   type Context Monovariant a fs = (Ord a, State (AddressStore Monovariant a) :< fs, Alternative (Eff fs), MonadFail (Eff fs))
 
-  find = maybe uninitializedAddress (asum . fmap pure . Set.toList) <=< flip fmap get . monovariantLookup
+  find = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . monovariantLookup
 
   alloc = pure . Monovariant
 

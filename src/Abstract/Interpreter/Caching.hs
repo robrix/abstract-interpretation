@@ -28,7 +28,7 @@ type CachingResult l a = (Either String ([] (Value l a), Cache l a), AddressStor
 
 
 eqCache :: forall a l . (Address l, Eq a) => Cache l a -> Cache l a -> Bool
-eqCache = liftEq (liftEq (liftEq (liftEqStore (undefined :: proxy l) liftValueEq)))
+eqCache = liftEq (liftEq (liftEq (liftEq liftValueEq)))
   where liftValueEq :: Value l a -> Value l a -> Bool
         liftValueEq = liftEq (==)
 
@@ -36,8 +36,8 @@ showCache :: forall a l . (Address l, Show a) => Cache l a -> String
 showCache = ($ "") . liftShowsPrec (liftShowsPrec spPair slPair) (liftShowList spPair slPair) 0
   where spPair = liftShowsPrec2 spValue slValue spStore slStore
         slPair = liftShowList2 spValue slValue spStore slStore
-        spStore = liftShowsPrecStore (undefined :: proxy l) spValue slValue
-        slStore = liftShowListStore  (undefined :: proxy l) spValue slValue
+        spStore = liftShowsPrec spValue slValue
+        slStore = liftShowList  spValue slValue
         spValue :: Int -> Value l a -> ShowS
         spValue = showsPrec
         slValue :: [Value l a] -> ShowS

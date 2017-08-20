@@ -33,7 +33,7 @@ cacheInsert :: (Ord a, Ord (AddressStore l (Value l a)), Address l) => Configura
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 
-type CachingInterpreter l a = Amb ': CacheOut l a ': CacheIn l a ': Interpreter l a
+type CachingInterpreter l a = Amb ': CacheState l a ': CacheReader l a ': Interpreter l a
 
 type CachingResult l a = (Either String ([] (Value l a), Cache l a), AddressStore l (Value l a))
 
@@ -56,18 +56,18 @@ evCache ev0 ev e = do
   env <- ask
   store <- get
   let c = Configuration e env store :: Configuration l a
-  out <- getCacheOut
+  out <- getCache
   case cacheLookup c out of
     Just pairs -> asum . flip map (toList pairs) $ \ (value, store') -> do
       put store'
       return value
     Nothing -> do
-      in' <- askCacheIn
+      in' <- askCache
       let pairs = fromMaybe Set.empty (cacheLookup c in')
-      putCacheOut (cacheSet c pairs out)
+      putCache (cacheSet c pairs out)
       v <- ev0 ev e
       store' <- get
-      modifyCacheOut (cacheInsert c (v, store'))
+      modifyCache (cacheInsert c (v, store'))
       return v
 
 fixCache :: forall l a fs
@@ -80,10 +80,10 @@ fixCache eval e = do
   store <- get
   let c = Configuration e env store :: Configuration l a
   pairs <- mlfp mempty (\ dollar -> do
-    putCacheOut (mempty :: Cache l a)
+    putCache (mempty :: Cache l a)
     put store
-    _ <- localCacheIn (const dollar) (eval e)
-    getCacheOut)
+    _ <- localCache (const dollar) (eval e)
+    getCache)
   asum . flip map (maybe [] toList (cacheLookup c pairs)) $ \ (value, store') -> do
     put store'
     return value
@@ -99,39 +99,39 @@ mlfp a f = loop a
             loop x'
 
 
-askCacheIn :: (CacheIn l a :< fs) => Eff fs (Cache l a)
-askCacheIn = send Ask
+askCache :: (CacheReader l a :< fs) => Eff fs (Cache l a)
+askCache = send Ask
 
-localCacheIn :: forall l a fs b. (CacheIn l a :< fs) => (Cache l a -> Cache l a) -> Eff fs b -> Eff fs b
-localCacheIn f m = do
-  e <- fmap f askCacheIn
-  let bind :: CacheIn l a v -> Arrow fs v b -> Eff fs b
+localCache :: forall l a fs b. (CacheReader l a :< fs) => (Cache l a -> Cache l a) -> Eff fs b -> Eff fs b
+localCache f m = do
+  e <- fmap f askCache
+  let bind :: CacheReader l a v -> Arrow fs v b -> Eff fs b
       bind Ask g = g e
   interpose pure bind m
 
 
-getCacheOut :: (CacheOut l a :< fs) => Eff fs (Cache l a)
-getCacheOut = send Get
+getCache :: (CacheState l a :< fs) => Eff fs (Cache l a)
+getCache = send Get
 
-putCacheOut :: (CacheOut l a :< fs) => Cache l a -> Eff fs ()
-putCacheOut s = send (Put s)
+putCache :: (CacheState l a :< fs) => Cache l a -> Eff fs ()
+putCache s = send (Put s)
 
-modifyCacheOut :: (CacheOut l a :< fs) => (Cache l a -> Cache l a) -> Eff fs ()
-modifyCacheOut f = fmap f getCacheOut >>= putCacheOut
+modifyCache :: (CacheState l a :< fs) => (Cache l a -> Cache l a) -> Eff fs ()
+modifyCache f = fmap f getCache >>= putCache
 
 
-data CacheIn l a v where
-  Ask :: CacheIn l a (Cache l a)
+data CacheReader l a v where
+  Ask :: CacheReader l a (Cache l a)
 
-data CacheOut l a v where
-  Get :: CacheOut l a (Cache l a)
-  Put :: !(Cache l a) -> CacheOut l a ()
+data CacheState l a v where
+  Get :: CacheState l a (Cache l a)
+  Put :: !(Cache l a) -> CacheState l a ()
 
-instance (Ord a, Address l) => RunEffect (CacheIn l a) b where
+instance (Ord a, Address l) => RunEffect (CacheReader l a) b where
   runEffect = relay pure (\ Ask k -> k mempty)
 
-instance (Ord a, Address l) => RunEffect (CacheOut l a) v where
-  type Result (CacheOut l a) v = (v, Cache l a)
+instance (Ord a, Address l) => RunEffect (CacheState l a) v where
+  type Result (CacheState l a) v = (v, Cache l a)
   runEffect = relayState mempty ((pure .) . flip (,)) $ \ state eff yield -> case eff of
     Get -> yield state state
     Put state' -> yield state' ()

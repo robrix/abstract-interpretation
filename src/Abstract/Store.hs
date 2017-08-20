@@ -24,7 +24,7 @@ import Data.Semigroup
 import Prelude hiding (fail)
 
 class (Eq1 l, Ord1 l, Show1 l) => Address l where
-  type AddressStore l a
+  type AddressStore l :: * -> *
   type Context l a (fs :: [* -> *]) :: Constraint
   type instance Context l a fs = (State (AddressStore l a) :< fs, MonadFail (Eff fs))
 
@@ -47,7 +47,7 @@ allocPrecise :: AddressStore Precise a -> Precise a
 allocPrecise = Precise . IntMap.size
 
 instance Address Precise where
-  type AddressStore Precise a = IntMap.IntMap a
+  type AddressStore Precise = IntMap.IntMap
 
   find = maybe uninitializedAddress pure <=< flip fmap get . IntMap.lookup . unPrecise
 
@@ -74,7 +74,7 @@ monovariantInsert :: Ord a => Monovariant a -> a -> MonovariantStore a -> Monova
 monovariantInsert = (((MonovariantStore .) . (. unMonovariantStore)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 instance Address Monovariant where
-  type AddressStore Monovariant a = MonovariantStore a
+  type AddressStore Monovariant = MonovariantStore
   type Context Monovariant a fs = (Ord a, State (AddressStore Monovariant a) :< fs, Alternative (Eff fs), MonadFail (Eff fs))
 
   find = maybe uninitializedAddress (asum . fmap pure . Set.toList) <=< flip fmap get . monovariantLookup

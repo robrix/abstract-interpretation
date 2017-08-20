@@ -19,9 +19,9 @@ newtype Monovariant a = Monovariant String
   deriving (Eq, Ord, Show)
 
 class (Eq1 l, Ord1 l, Show1 l) => Address l where
-  type Store l a
+  type AddressStore l a
   type Context l a (fs :: [* -> *]) :: Constraint
-  type instance Context l a fs = (State (Store l a) :< fs)
+  type instance Context l a fs = (State (AddressStore l a) :< fs)
 
   find :: Context l a fs => l a -> Eff fs a
 
@@ -29,20 +29,20 @@ class (Eq1 l, Ord1 l, Show1 l) => Address l where
 
   ext :: Context l a fs => l a -> a -> Eff fs ()
 
-  liftEqStore :: proxy l -> (a -> b -> Bool) -> Store l a -> Store l b -> Bool
-  liftCompareStore :: proxy l -> (a -> b -> Ordering) -> Store l a -> Store l b -> Ordering
-  liftShowsPrecStore :: proxy l -> (Int -> a -> ShowS) -> ([a] -> ShowS) -> Int -> Store l a -> ShowS
-  liftShowListStore :: proxy l -> (Int -> a -> ShowS) -> ([a] -> ShowS) -> [Store l a] -> ShowS
+  liftEqStore :: proxy l -> (a -> b -> Bool) -> AddressStore l a -> AddressStore l b -> Bool
+  liftCompareStore :: proxy l -> (a -> b -> Ordering) -> AddressStore l a -> AddressStore l b -> Ordering
+  liftShowsPrecStore :: proxy l -> (Int -> a -> ShowS) -> ([a] -> ShowS) -> Int -> AddressStore l a -> ShowS
+  liftShowListStore :: proxy l -> (Int -> a -> ShowS) -> ([a] -> ShowS) -> [AddressStore l a] -> ShowS
 
 
 instance Address Precise where
-  type Store Precise a = IntMap.IntMap a
+  type AddressStore Precise a = IntMap.IntMap a
   find = flip fmap get . flip (IntMap.!) . unPrecise
 
-  alloc :: forall a fs. (State (Store Precise a) :< fs) => String -> Eff fs (Precise a)
+  alloc :: forall a fs. (State (AddressStore Precise a) :< fs) => String -> Eff fs (Precise a)
   alloc _ = do
     s <- get
-    return (Precise (length (s :: Store Precise a)))
+    return (Precise (length (s :: AddressStore Precise a)))
 
   ext (Precise loc) val = modify (IntMap.insert loc val)
 
@@ -52,13 +52,13 @@ instance Address Precise where
   liftShowListStore _ = liftShowList
 
 instance Address Monovariant where
-  type Store Monovariant a = Map.Map (Monovariant a) (Set.Set a)
-  type Context Monovariant a fs = (Ord a, State (Store Monovariant a) :< fs, Alternative (Eff fs))
+  type AddressStore Monovariant a = Map.Map (Monovariant a) (Set.Set a)
+  type Context Monovariant a fs = (Ord a, State (AddressStore Monovariant a) :< fs, Alternative (Eff fs))
 
   find :: forall a fs. Context Monovariant a fs => Monovariant a -> Eff fs a
   find loc = do
     store <- get
-    asum (return <$> Set.toList ((store :: Store Monovariant a) Map.! loc))
+    asum (return <$> Set.toList ((store :: AddressStore Monovariant a) Map.! loc))
 
   alloc x = pure (Monovariant x)
 

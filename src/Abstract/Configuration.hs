@@ -7,7 +7,7 @@ import Abstract.Value
 import Data.Functor.Classes
 import Data.Semigroup
 
-data Configuration l a = Configuration { configurationTerm :: Term a, configurationEnvironment :: Environment (l (Value l a)), configurationStore :: Store l (Value l a) }
+data Configuration l a = Configuration { configurationTerm :: Term a, configurationEnvironment :: Environment (l (Value l a)), configurationStore :: AddressStore l (Value l a) }
 
 instance Address l => Eq1 (Configuration l) where
   liftEq :: forall a b . (a -> b -> Bool) -> Configuration l a -> Configuration l b -> Bool

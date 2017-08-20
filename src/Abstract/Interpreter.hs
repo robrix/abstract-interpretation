@@ -15,14 +15,14 @@ import Data.Functor.Foldable
 import qualified Data.Map as Map
 
 
-type Interpreter l a = '[Failure, State (Store l (Value l a)), Reader (Environment (l (Value l a)))]
+type Interpreter l a = '[Failure, State (AddressStore l (Value l a)), Reader (Environment (l (Value l a)))]
 
-type EvalResult l a = (Either String (Value l a), Store l (Value l a))
+type EvalResult l a = (Either String (Value l a), AddressStore l (Value l a))
 
 
 -- Evaluation
 
-eval :: forall l i . (Monoid (Store l (Value l i)), Address l, Context l (Value l i) (Interpreter l i), AbstractNumber i (Eff (Interpreter l i))) => Term i -> EvalResult l i
+eval :: forall l i . (Monoid (AddressStore l (Value l i)), Address l, Context l (Value l i) (Interpreter l i), AbstractNumber i (Eff (Interpreter l i))) => Term i -> EvalResult l i
 eval = run @(Interpreter l i) . runEval
 
 runEval :: (Address l, Context l (Value l i) fs, AbstractNumber i (Eff fs), Interpreter l i :<: fs) => Term i -> Eff fs (Value l i)

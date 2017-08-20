@@ -20,11 +20,11 @@ import Data.Maybe
 import Data.Semigroup
 import qualified Data.Set as Set
 
-type Cache l a = Map.Map (Configuration l a) (Set.Set (Value l a, Store l (Value l a)))
+type Cache l a = Map.Map (Configuration l a) (Set.Set (Value l a, AddressStore l (Value l a)))
 
 type CachingInterpreter l a = Amb ': CacheOut l a ': CacheIn l a ': Interpreter l a
 
-type CachingResult l a = (Either String ([] (Value l a), Cache l a), Store l (Value l a))
+type CachingResult l a = (Either String ([] (Value l a), Cache l a), AddressStore l (Value l a))
 
 
 eqCache :: forall a l . (Address l, Eq a) => Cache l a -> Cache l a -> Bool
@@ -46,14 +46,14 @@ showCache = ($ "") . liftShowsPrec (liftShowsPrec spPair slPair) (liftShowList s
 
 -- Coinductively-cached evaluation
 
-evalCache :: forall l a . (Ord a, Ord (l (Value l a)), Ord (Store l (Value l a)), Monoid (Store l (Value l a)), Address l, Context l (Value l a) (CachingInterpreter l a), AbstractNumber a (Eff (CachingInterpreter l a))) => Term a -> CachingResult l a
+evalCache :: forall l a . (Ord a, Ord (l (Value l a)), Ord (AddressStore l (Value l a)), Monoid (AddressStore l (Value l a)), Address l, Context l (Value l a) (CachingInterpreter l a), AbstractNumber a (Eff (CachingInterpreter l a))) => Term a -> CachingResult l a
 evalCache = run @(CachingInterpreter l a) . runCache
 
-runCache :: (Ord a, Ord (l (Value l a)), Ord (Store l (Value l a)), Address l, Context l (Value l a) fs, AbstractNumber a (Eff fs), CachingInterpreter l a :<: fs) => Term a -> Eff fs (Value l a)
+runCache :: (Ord a, Ord (l (Value l a)), Ord (AddressStore l (Value l a)), Address l, Context l (Value l a) fs, AbstractNumber a (Eff fs), CachingInterpreter l a :<: fs) => Term a -> Eff fs (Value l a)
 runCache = fixCache (fix (evCache ev))
 
 evCache :: forall l i fs
-        .  (Ord i, Ord (l (Value l i)), Ord (Store l (Value l i)), Address l, Context l (Value l i) fs, CachingInterpreter l i :<: fs)
+        .  (Ord i, Ord (l (Value l i)), Ord (AddressStore l (Value l i)), Address l, Context l (Value l i) fs, CachingInterpreter l i :<: fs)
         => ((Term i -> Eff fs (Value l i)) -> Term i -> Eff fs (Value l i))
         -> (Term i -> Eff fs (Value l i))
         -> Term i
@@ -77,7 +77,7 @@ evCache ev0 ev e = do
       return v
 
 fixCache :: forall l a fs
-         .  (Ord a, Ord (l (Value l a)), Ord (Store l (Value l a)), Address l, Context l (Value l a) fs, CachingInterpreter l a :<: fs)
+         .  (Ord a, Ord (l (Value l a)), Ord (AddressStore l (Value l a)), Address l, Context l (Value l a) fs, CachingInterpreter l a :<: fs)
          => (Term a -> Eff fs (Value l a))
          -> Term a
          -> Eff fs (Value l a)

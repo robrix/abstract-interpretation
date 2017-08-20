@@ -15,12 +15,12 @@ type DeadCodeInterpreter l i = DeadCode i ': Interpreter l i
 
 type DeadSet a = Set.Set (Term a)
 
-type DeadCodeResult l a = (Either String (Value l a, DeadSet a), Store l (Value l a))
+type DeadCodeResult l a = (Either String (Value l a, DeadSet a), AddressStore l (Value l a))
 
 
 -- Dead code analysis
 
-evalDead :: forall l i. (Monoid (Store l (Value l i)), Ord i, Address l, Context l (Value l i) (DeadCodeInterpreter l i), AbstractNumber i (Eff (DeadCodeInterpreter l i))) => Term i -> DeadCodeResult l i
+evalDead :: forall l i. (Monoid (AddressStore l (Value l i)), Ord i, Address l, Context l (Value l i) (DeadCodeInterpreter l i), AbstractNumber i (Eff (DeadCodeInterpreter l i))) => Term i -> DeadCodeResult l i
 evalDead = run @(DeadCodeInterpreter l i) . runDead
 
 runDead :: (Ord i, DeadCodeInterpreter l i :<: fs, Address l, Context l (Value l i) fs, AbstractNumber i (Eff fs)) => Term i -> Eff fs (Value l i)

@@ -107,6 +107,10 @@ instance Functor MonovariantStore where
   fmap f = MonovariantStore . Map.mapKeys coerce . fmap (map f) . unMonovariantStore
 
 
+instance Traversable MonovariantStore where
+  traverse f = fmap (MonovariantStore . Map.mapKeys coerce) . traverse (traverse f) . unMonovariantStore
+
+
 instance Monoid (MonovariantStore a) where
   mempty = MonovariantStore mempty
   mappend = (MonovariantStore .) . (mappend `on` unMonovariantStore)

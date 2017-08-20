@@ -27,10 +27,8 @@ type CachingInterpreter l a = Amb ': CacheOut l a ': CacheIn l a ': Interpreter 
 type CachingResult l a = (Either String ([] (Value l a), Cache l a), AddressStore l (Value l a))
 
 
-eqCache :: forall a l . (Address l, Eq a) => Cache l a -> Cache l a -> Bool
-eqCache = liftEq (liftEq (liftEq (liftEq liftValueEq)))
-  where liftValueEq :: Value l a -> Value l a -> Bool
-        liftValueEq = liftEq (==)
+eqCache :: (Address l, Eq a) => Cache l a -> Cache l a -> Bool
+eqCache = liftEq (liftEq (liftEq (liftEq (liftEq (==)))))
 
 showCache :: forall a l . (Address l, Show a) => Cache l a -> String
 showCache = ($ "") . liftShowsPrec (liftShowsPrec spPair slPair) (liftShowList spPair slPair) 0

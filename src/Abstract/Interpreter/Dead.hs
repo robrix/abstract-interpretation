@@ -29,10 +29,9 @@ runDead e0 = do
   fix (evDead ev) e0
 
 evDead :: (Ord a, DeadCodeInterpreter l a :<: fs)
-       => ((Eval l fs a) -> Eval l fs a)
-       -> (Eval l fs a)
-       -> Term a
-       -> Eff fs (Value l a)
+       => (Eval l fs a -> Eval l fs a)
+       -> Eval l fs a
+       -> Eval l fs a
 evDead ev0 ev e = do
   modify (Set.delete e)
   ev0 ev e

@@ -136,6 +136,9 @@ instance Bitraversable Syntax where
     Rec n a -> Rec n <$> g a
     If0 c t e -> If0 <$> g c <*> g t <*> g e
 
+instance Traversable (Syntax a) where
+  traverse = bitraverse pure
+
 
 instance Eq2 Syntax where
   liftEq2 eqV eqA s1 s2 = case (s1, s2) of

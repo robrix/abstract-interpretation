@@ -5,11 +5,9 @@ import qualified Control.Monad.Effect as Effect
 import Control.Monad.Effect.Amb
 import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Internal as Effect hiding (run)
-import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader as Reader
 import Control.Monad.Effect.State as State
 import Control.Monad.Effect.Writer as Writer
-import qualified Data.Set as Set
 
 run :: RunEffects fs a => Eff fs a -> Final fs a
 run = Effect.run . runEffects
@@ -45,12 +43,6 @@ instance RunEffect Failure a where
 instance Monoid w => RunEffect (Writer w) a where
   type Result (Writer w) a = (a, w)
   runEffect = runWriter
-
-instance Ord a => RunEffect NonDetEff a where
-  type Result NonDetEff a = Set.Set a
-  runEffect = relay (pure . Set.singleton) $ \ m k -> case m of
-    MZero -> pure Set.empty
-    MPlus -> Set.union <$> k True <*> k False
 
 instance RunEffect Amb a where
   type Result Amb a = [a]

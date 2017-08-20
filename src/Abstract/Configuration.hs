@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, StandaloneDeriving, UndecidableInstances #-}
 module Abstract.Configuration where
 
 import Abstract.Store
@@ -7,6 +8,11 @@ import Data.Functor.Classes
 import Data.Semigroup
 
 data Configuration l a = Configuration { configurationTerm :: Term a, configurationEnvironment :: Environment (l (Value l a)), configurationStore :: AddressStore l (Value l a) }
+
+deriving instance (Address l, Foldable l, Foldable (AddressStore l)) => Foldable (Configuration l)
+deriving instance (Address l, Functor l, Functor (AddressStore l)) => Functor (Configuration l)
+deriving instance (Address l, Traversable l, Traversable (AddressStore l)) => Traversable (Configuration l)
+
 
 instance Address l => Eq1 (Configuration l) where
   liftEq eq (Configuration t1 e1 s1) (Configuration t2 e2 s2) = liftEqTerms eq t1 t2 && liftEq addressEq e1 e2 && liftEq (liftEq eq) s1 s2

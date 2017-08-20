@@ -98,6 +98,11 @@ hidesPrec _ _ = id
 hideList :: [a] -> ShowS
 hideList _ = id
 
+
+instance Foldable MonovariantStore where
+  foldMap = (. unMonovariantStore) . foldMap . foldMap
+
+
 instance Functor MonovariantStore where
   fmap f = MonovariantStore . Map.mapKeys coerce . fmap (map f) . unMonovariantStore
 

@@ -1,8 +1,11 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, MultiParamTypeClasses, RankNTypes #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RankNTypes, UndecidableInstances #-}
 module Abstract.Interpreter.Symbolic where
 
 import Abstract.Interpreter
+import Abstract.Number
 import Abstract.Syntax
+import Control.Applicative
+import Control.Monad
 import Control.Monad.State.Class
 import qualified Data.Set as Set
 
@@ -40,3 +43,29 @@ pathConditionMember = (. unPathCondition) . Set.member
 
 pathConditionInsert :: Ord a => PathExpression a -> PathCondition a -> PathCondition a
 pathConditionInsert = ((PathCondition .) . (. unPathCondition)) . Set.insert
+
+
+instance (Num a, Ord a, AbstractNumber a m, MonadState (PathCondition a) m, Alternative m) => AbstractNumber (Sym a) m where
+  delta1 o a = pure $ case o of
+    Negate -> sym negate a
+    Abs    -> sym abs    a
+    Signum -> sym signum a
+
+  delta2 o a b = case o of
+    Plus  -> sym2 (delta2 Plus ) (+) a b
+    Minus -> sym2 (delta2 Minus) (-) a b
+    Times -> sym2 (delta2 Times) (*) a b
+    DividedBy -> isZero b >>= flip when divisionByZero >> sym2 (delta2 DividedBy) ((In .) . Op2 DividedBy) a b
+    Quotient  -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Quotient)  ((In .) . Op2 Quotient)  a b
+    Remainder -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Remainder) ((In .) . Op2 Remainder) a b
+
+  isZero (V a) = isZero a
+  isZero (Sym e) = do
+    phi <- getPathCondition
+    if E e `pathConditionMember` phi then
+      return True
+    else if NotE e `pathConditionMember` phi then
+      return False
+    else
+        ((refine (E e)    >> return True)
+     <|> (refine (NotE e) >> return False))

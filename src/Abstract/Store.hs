@@ -10,6 +10,7 @@ module Abstract.Store
 ) where
 
 import Control.Applicative
+import Control.Monad ((<=<))
 import Control.Monad.Effect
 import Control.Monad.Effect.State
 import Control.Monad.Fail
@@ -47,7 +48,7 @@ class (Eq1 l, Ord1 l, Show1 l) => Address l where
 
 instance Address Precise where
   type AddressStore Precise a = IntMap.IntMap a
-  find = (>>= maybe uninitializedAddress pure) . flip fmap get . IntMap.lookup . unPrecise
+  find = maybe uninitializedAddress pure <=< flip fmap get . IntMap.lookup . unPrecise
 
   alloc :: forall a fs. (State (AddressStore Precise a) :< fs) => String -> Eff fs (Precise a)
   alloc _ = do
@@ -65,7 +66,7 @@ instance Address Monovariant where
   type AddressStore Monovariant a = Map.Map (Monovariant a) (Set.Set a)
   type Context Monovariant a fs = (Ord a, State (AddressStore Monovariant a) :< fs, Alternative (Eff fs), MonadFail (Eff fs))
 
-  find = (>>= maybe uninitializedAddress (asum . fmap pure . Set.toList)) . flip fmap get . Map.lookup
+  find = maybe uninitializedAddress (asum . fmap pure . Set.toList) <=< flip fmap get . Map.lookup
 
   alloc x = pure (Monovariant x)
 

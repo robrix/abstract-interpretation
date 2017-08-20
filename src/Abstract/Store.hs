@@ -56,7 +56,7 @@ instance Address Precise where
 
   alloc _ = fmap allocPrecise get
 
-  ext (Precise loc) val = modify (IntMap.insert loc val)
+  ext = (modify .) . IntMap.insert . unPrecise
 
   liftEqStore _ = liftEq
   liftCompareStore _ = liftCompare

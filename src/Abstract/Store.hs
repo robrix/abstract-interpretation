@@ -26,6 +26,9 @@ import Prelude hiding (fail)
 newtype Precise a = Precise { unPrecise :: Int }
   deriving (Eq, Ord, Show)
 
+allocPrecise :: AddressStore Precise a -> Precise a
+allocPrecise = Precise . IntMap.size
+
 newtype Monovariant a = Monovariant String
   deriving (Eq, Ord, Show)
 
@@ -51,10 +54,7 @@ instance Address Precise where
 
   find = maybe uninitializedAddress pure <=< flip fmap get . IntMap.lookup . unPrecise
 
-  alloc :: forall a fs. (State (AddressStore Precise a) :< fs) => String -> Eff fs (Precise a)
-  alloc _ = do
-    s <- get
-    return (Precise (length (s :: AddressStore Precise a)))
+  alloc _ = fmap allocPrecise get
 
   ext (Precise loc) val = modify (IntMap.insert loc val)
 

@@ -54,6 +54,8 @@ instance (Alternative m, MonadFail m) => AbstractNumber N m where
   delta1 _ N = pure N
 
   delta2 DividedBy _ N = pure N <|> divisionByZero
+  delta2 Quotient _ N = pure N <|> divisionByZero
+  delta2 Remainder _ N = pure N <|> divisionByZero
   delta2 _ _ _ = pure N
 
   isZero N = pure True <|> pure False

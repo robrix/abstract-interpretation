@@ -6,6 +6,9 @@ import Control.Applicative
 import Control.Monad.Effect.Internal
 import Data.Foldable (asum)
 
+-- | Ambiguity (aka nondeterminism) effect.
+--
+--   This effect avoids nontermination observed with NonDetEff.
 data Amb a where
   Amb :: [a] -> Amb a
 

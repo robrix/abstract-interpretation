@@ -212,6 +212,7 @@ instance Num a => Num (Term a) where
   abs = In . Op1 Abs
   negate = In . Op1 Negate
   (+) = (In .) . Op2 Plus
+  (-) = (In .) . Op2 Minus
   (*) = (In .) . Op2 Times
 
 

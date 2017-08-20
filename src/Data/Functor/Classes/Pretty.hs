@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.Functor.Classes.Pretty
 ( Pretty1(..)
 , Pretty2(..)
@@ -8,7 +7,6 @@ module Data.Functor.Classes.Pretty
 ) where
 
 import Data.Foldable
-import Data.Functor.Foldable
 import qualified Data.Set as Set
 import Data.Text.Prettyprint.Doc
 import Data.Text.Prettyprint.Doc.Render.Terminal
@@ -32,9 +30,6 @@ instance Pretty1 [] where
 
 instance Pretty1 Set.Set where
   liftPretty _ pl xs = pretty "Set.fromList" <+> pl (toList xs)
-
-instance Pretty1 f => Pretty (Fix f) where
-  pretty = liftPretty pretty prettyList . unfix
 
 
 pprint :: Pretty a => a -> IO ()

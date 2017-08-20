@@ -38,15 +38,9 @@ instance MonadFail m => AbstractNumber Int m where
     Plus -> return $ a + b
     Minus -> return $ a - b
     Times -> return $ a * b
-    DividedBy -> do
-      isZero b >>= flip when divisionByZero
-      return $ a `div` b
-    Quotient -> do
-      isZero b >>= flip when divisionByZero
-      return $ a `quot` b
-    Remainder -> do
-      isZero b >>= flip when divisionByZero
-      return $ a `rem` b
+    DividedBy -> isZero b >>= flip when divisionByZero >> return (a `div` b)
+    Quotient ->  isZero b >>= flip when divisionByZero >> return (a `quot` b)
+    Remainder -> isZero b >>= flip when divisionByZero >> return (a `rem` b)
 
   isZero a = pure (a == 0)
 

@@ -9,6 +9,7 @@ module Abstract.Store
 , addressShowList
 ) where
 
+import Abstract.Syntax
 import Control.Applicative
 import Control.Monad ((<=<))
 import Control.Monad.Effect
@@ -31,7 +32,7 @@ class (Eq1 l, Ord1 l, Show1 l, Eq1 (AddressStore l), Ord1 (AddressStore l), Show
 
   find :: Context l a fs => l a -> Eff fs a
 
-  alloc :: Context l a fs => String -> Eff fs (l a)
+  alloc :: Context l a fs => Name -> Eff fs (l a)
 
   ext :: Context l a fs => l a -> a -> Eff fs ()
 
@@ -52,7 +53,7 @@ instance Address Precise where
   ext = (modify .) . IntMap.insert . unPrecise
 
 
-newtype Monovariant a = Monovariant String
+newtype Monovariant a = Monovariant Name
   deriving (Eq, Foldable, Functor, Ord, Show, Traversable)
 
 newtype MonovariantStore a = MonovariantStore { unMonovariantStore :: Map.Map (Monovariant a) [a] }

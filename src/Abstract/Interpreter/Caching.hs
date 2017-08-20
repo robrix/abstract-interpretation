@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, GADTs, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, GADTs, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Interpreter.Caching where
 
 import Abstract.Configuration
@@ -20,22 +20,22 @@ import Data.Maybe
 import Data.Semigroup
 import qualified Data.Set as Set
 
-type Cache l a = Map.Map (Configuration l a) (Set.Set (Value l a, AddressStore l (Value l a)))
+newtype Cache l a = Cache { unCache :: Map.Map (Configuration l a) (Set.Set (Value l a, AddressStore l (Value l a))) }
+  deriving (Monoid)
+
+cacheLookup :: (Ord a, Address l) => Configuration l a -> Cache l a -> Maybe (Set.Set (Value l a, AddressStore l (Value l a)))
+cacheLookup = (. unCache) . Map.lookup
+
+cacheSet :: (Ord a, Ord (AddressStore l (Value l a)), Address l) => Configuration l a -> Set.Set (Value l a, AddressStore l (Value l a)) -> Cache l a -> Cache l a
+cacheSet = (((Cache .) . (. unCache)) .) . Map.insert
+
+cacheInsert :: (Ord a, Ord (AddressStore l (Value l a)), Address l) => Configuration l a -> (Value l a, AddressStore l (Value l a)) -> Cache l a -> Cache l a
+cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
+
 
 type CachingInterpreter l a = Amb ': CacheOut l a ': CacheIn l a ': Interpreter l a
 
 type CachingResult l a = (Either String ([] (Value l a), Cache l a), AddressStore l (Value l a))
-
-
-eqCache :: (Address l, Eq a) => Cache l a -> Cache l a -> Bool
-eqCache = liftEq (liftEq (liftEq (liftEq (liftEq (==)))))
-
-showCache :: (Address l, Show a) => Cache l a -> String
-showCache = ($ "") . liftShowsPrec (liftShowsPrec spPair slPair) (liftShowList spPair slPair) 0
-  where spPair = liftShowsPrec2 showsPrec showList spStore slStore
-        slPair = liftShowList2 showsPrec showList spStore slStore
-        spStore = liftShowsPrec showsPrec showList
-        slStore = liftShowList  showsPrec showList
 
 
 -- Coinductively-cached evaluation
@@ -57,17 +57,17 @@ evCache ev0 ev e = do
   store <- get
   let c = Configuration e env store :: Configuration l a
   out <- getCacheOut
-  case Map.lookup c out of
+  case cacheLookup c out of
     Just pairs -> asum . flip map (toList pairs) $ \ (value, store') -> do
       put store'
       return value
     Nothing -> do
       in' <- askCacheIn
-      let pairs = fromMaybe Set.empty (Map.lookup c in')
-      putCacheOut (Map.insert c pairs out)
+      let pairs = fromMaybe Set.empty (cacheLookup c in')
+      putCacheOut (cacheSet c pairs out)
       v <- ev0 ev e
       store' <- get
-      modifyCacheOut (Map.insertWith (<>) c (Set.singleton (v, store')))
+      modifyCacheOut (cacheInsert c (v, store'))
       return v
 
 fixCache :: forall l a fs
@@ -79,12 +79,12 @@ fixCache eval e = do
   env <- ask
   store <- get
   let c = Configuration e env store :: Configuration l a
-  pairs <- mlfp Map.empty (\ dollar -> do
-    putCacheOut (Map.empty :: Cache l a)
+  pairs <- mlfp mempty (\ dollar -> do
+    putCacheOut (mempty :: Cache l a)
     put store
     _ <- localCacheIn (const dollar) (eval e)
     getCacheOut)
-  asum . flip map (maybe [] toList (Map.lookup c pairs)) $ \ (value, store') -> do
+  asum . flip map (maybe [] toList (cacheLookup c pairs)) $ \ (value, store') -> do
     put store'
     return value
 
@@ -127,11 +127,33 @@ data CacheOut l a v where
   Get :: CacheOut l a (Cache l a)
   Put :: !(Cache l a) -> CacheOut l a ()
 
-instance RunEffect (CacheIn l a) b where
-  runEffect = relay pure (\ Ask k -> k Map.empty)
+instance (Ord a, Address l) => RunEffect (CacheIn l a) b where
+  runEffect = relay pure (\ Ask k -> k mempty)
 
-instance RunEffect (CacheOut l a) v where
+instance (Ord a, Address l) => RunEffect (CacheOut l a) v where
   type Result (CacheOut l a) v = (v, Cache l a)
-  runEffect = relayState Map.empty ((pure .) . flip (,)) $ \ state eff yield -> case eff of
+  runEffect = relayState mempty ((pure .) . flip (,)) $ \ state eff yield -> case eff of
     Get -> yield state state
     Put state' -> yield state' ()
+
+
+instance Address l => Eq1 (Cache l) where
+  liftEq eq (Cache a) (Cache b) = liftEq2 (liftEq eq) (liftEq (liftEq2 (liftEq eq) (liftEq (liftEq eq)))) a b
+
+instance (Eq a, Address l) => Eq (Cache l a) where
+  (==) = eq1
+
+
+instance Address l => Show1 (Cache l) where
+  liftShowsPrec sp sl d = showsUnaryWith (liftShowsPrec2 spKey slKey (liftShowsPrec spPair slPair) (liftShowList spPair slPair)) "Cache" d . unCache
+    where spKey = liftShowsPrec sp sl
+          slKey = liftShowList sp sl
+          spPair = liftShowsPrec2 spValue slValue spStore slStore
+          slPair = liftShowList2 spValue slValue spStore slStore
+          spStore = liftShowsPrec spValue slValue
+          slStore = liftShowList  spValue slValue
+          spValue = liftShowsPrec sp sl
+          slValue = liftShowList sp sl
+
+instance (Show a, Address l) => Show (Cache l a) where
+  showsPrec = showsPrec1

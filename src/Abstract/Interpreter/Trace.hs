@@ -40,7 +40,10 @@ runReach = fix (evTell Set.empty ev)
 
 evTell :: forall l a g fs . (TracingInterpreter l a g :<: fs, IsList (g (Configuration l a)), Item (g (Configuration l a)) ~ Configuration l a)
        => g ()
-       -> Unfixed (Unfixed (Eval l fs a))
+       -> ((Eval l fs a) -> Eval l fs a)
+       -> (Eval l fs a)
+       -> Term a
+       -> Eff fs (Value l a)
 evTell _ ev0 ev e = do
   env <- ask
   store <- get

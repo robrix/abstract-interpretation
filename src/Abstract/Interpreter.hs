@@ -20,8 +20,6 @@ type EvalResult l a = (Either String (Value l a), AddressStore l (Value l a))
 
 type Eval l fs a = Term a -> Eff fs (Value l a)
 
-type Unfixed a = a -> a
-
 
 -- Evaluation
 
@@ -33,7 +31,8 @@ runEval = fix ev
 
 ev :: forall l a fs
    .  (Address l, Context l (Value l a) fs, AbstractNumber a (Eff fs), Interpreter l a :<: fs)
-   => Unfixed (Eval l fs a)
+   => Eval l fs a
+   -> Eval l fs a
 ev ev term = case out term of
   Num n -> return (I n)
   Var x -> do

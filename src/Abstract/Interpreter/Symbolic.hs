@@ -32,6 +32,9 @@ newtype PathCondition a = PathCondition { unPathCondition :: Set.Set (PathExpres
 getPathCondition :: MonadState (PathCondition a) m => m (PathCondition a)
 getPathCondition = get
 
+refine :: (Ord a, MonadState (PathCondition a) m) => PathExpression a -> m ()
+refine = modify . pathConditionInsert
+
 pathConditionMember :: Ord a => PathExpression a -> PathCondition a -> Bool
 pathConditionMember = (. unPathCondition) . Set.member
 

@@ -12,7 +12,7 @@ import Prelude hiding (fail)
 
 type Environment = Map.Map String
 
-data Value l a = I a | Closure String (Term a) (Environment (l (Value l a)))
+data Value l a = I a | Closure Name (Term a) (Environment (l (Value l a)))
   deriving (Foldable, Functor, Traversable)
 
 

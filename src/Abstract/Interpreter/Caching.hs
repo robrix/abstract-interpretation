@@ -33,7 +33,7 @@ cacheInsert :: (Ord a, Ord (AddressStore l (Value l a)), Address l) => Configura
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 
-type CachingInterpreter l a = Amb ': CacheState l a ': CacheReader l a ': Interpreter l a
+type CachingInterpreter l a = Amb ': State (Cache l a) ': CacheReader l a ': Interpreter l a
 
 type CachingResult l a = (Either String ([] (Value l a), Cache l a), AddressStore l (Value l a))
 
@@ -108,31 +108,21 @@ localCache f m = do
   interpose pure bind m
 
 
-getCache :: (CacheState l a :< fs) => Eff fs (Cache l a)
-getCache = send Get
+getCache :: (State (Cache l a) :< fs) => Eff fs (Cache l a)
+getCache = get
 
-putCache :: (CacheState l a :< fs) => Cache l a -> Eff fs ()
-putCache s = send (Put s)
+putCache :: (State (Cache l a) :< fs) => Cache l a -> Eff fs ()
+putCache = put
 
-modifyCache :: (CacheState l a :< fs) => (Cache l a -> Cache l a) -> Eff fs ()
+modifyCache :: (State (Cache l a) :< fs) => (Cache l a -> Cache l a) -> Eff fs ()
 modifyCache f = fmap f getCache >>= putCache
 
 
 data CacheReader l a v where
   Ask :: CacheReader l a (Cache l a)
 
-data CacheState l a v where
-  Get :: CacheState l a (Cache l a)
-  Put :: !(Cache l a) -> CacheState l a ()
-
 instance (Ord a, Address l) => RunEffect (CacheReader l a) b where
   runEffect = relay pure (\ Ask k -> k mempty)
-
-instance (Ord a, Address l) => RunEffect (CacheState l a) v where
-  type Result (CacheState l a) v = (v, Cache l a)
-  runEffect = relayState mempty ((pure .) . flip (,)) $ \ state eff yield -> case eff of
-    Get -> yield state state
-    Put state' -> yield state' ()
 
 
 instance Address l => Eq1 (Cache l) where

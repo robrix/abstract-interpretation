@@ -1,8 +1,9 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, MultiParamTypeClasses, RankNTypes #-}
 module Abstract.Interpreter.Symbolic where
 
 import Abstract.Interpreter
 import Abstract.Syntax
+import Control.Monad.State.Class
 import qualified Data.Set as Set
 
 data Sym a = Sym (Term a) | V a
@@ -27,4 +28,8 @@ data PathExpression a = E (Term a) | NotE (Term a)
 
 newtype PathCondition a = PathCondition { unPathCondition :: Set.Set (PathExpression a) }
   deriving (Eq, Ord, Show)
+
+getPathCondition :: MonadState (PathCondition a) m => m (PathCondition a)
+getPathCondition = get
+
 

@@ -52,16 +52,16 @@ evalCache = run @(CachingInterpreter l a) . runCache
 runCache :: (Ord a, Ord (l (Value l a)), Ord (AddressStore l (Value l a)), Address l, Context l (Value l a) fs, AbstractNumber a (Eff fs), CachingInterpreter l a :<: fs) => Term a -> Eff fs (Value l a)
 runCache = fixCache (fix (evCache ev))
 
-evCache :: forall l i fs
-        .  (Ord i, Ord (l (Value l i)), Ord (AddressStore l (Value l i)), Address l, Context l (Value l i) fs, CachingInterpreter l i :<: fs)
-        => ((Term i -> Eff fs (Value l i)) -> Term i -> Eff fs (Value l i))
-        -> (Term i -> Eff fs (Value l i))
-        -> Term i
-        -> Eff fs (Value l i)
+evCache :: forall l a fs
+        .  (Ord a, Ord (l (Value l a)), Ord (AddressStore l (Value l a)), Address l, Context l (Value l a) fs, CachingInterpreter l a :<: fs)
+        => ((Term a -> Eff fs (Value l a)) -> Term a -> Eff fs (Value l a))
+        -> (Term a -> Eff fs (Value l a))
+        -> Term a
+        -> Eff fs (Value l a)
 evCache ev0 ev e = do
   env <- ask
   store <- get
-  let c = Configuration e env store :: Configuration l i
+  let c = Configuration e env store :: Configuration l a
   out <- getCacheOut
   case Map.lookup c out of
     Just pairs -> asum . flip map (toList pairs) $ \ (value, store') -> do

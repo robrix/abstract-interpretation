@@ -16,36 +16,36 @@ import Data.Function (fix)
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
-type TracingInterpreter l i g = Writer (g (Configuration l i)) ': Interpreter l i
+type TracingInterpreter l a g = Writer (g (Configuration l a)) ': Interpreter l a
 
-type TraceInterpreter l i = TracingInterpreter l i []
-type ReachableStateInterpreter l i = TracingInterpreter l i Set.Set
+type TraceInterpreter l a = TracingInterpreter l a []
+type ReachableStateInterpreter l a = TracingInterpreter l a Set.Set
 
 type TraceResult l a f = (Either String (Value l a, f (Configuration l a)), AddressStore l (Value l a))
 
 
 -- Tracing and reachable state analyses
 
-evalTrace :: forall i l. (Monoid (AddressStore l (Value l i)), Address l, Context l (Value l i) (TraceInterpreter l i), AbstractNumber i (Eff (TraceInterpreter l i))) => Term i -> TraceResult l i []
-evalTrace = run @(TraceInterpreter l i) . runTrace
+evalTrace :: forall a l. (Monoid (AddressStore l (Value l a)), Address l, Context l (Value l a) (TraceInterpreter l a), AbstractNumber a (Eff (TraceInterpreter l a))) => Term a -> TraceResult l a []
+evalTrace = run @(TraceInterpreter l a) . runTrace
 
-runTrace :: (TraceInterpreter l i :<: fs, Address l, Context l (Value l i) fs, AbstractNumber i (Eff fs)) => Term i -> Eff fs (Value l i)
+runTrace :: (TraceInterpreter l a :<: fs, Address l, Context l (Value l a) fs, AbstractNumber a (Eff fs)) => Term a -> Eff fs (Value l a)
 runTrace = fix (evTell [] ev)
 
-evalReach :: forall i l. (Monoid (AddressStore l (Value l i)), Ord i, Ord (l (Value l i)), Ord (AddressStore l (Value l i)), Address l, Context l (Value l i) (ReachableStateInterpreter l i), AbstractNumber i (Eff (ReachableStateInterpreter l i))) => Term i -> TraceResult l i Set.Set
-evalReach = run @(ReachableStateInterpreter l i) . runReach
+evalReach :: forall a l. (Monoid (AddressStore l (Value l a)), Ord a, Ord (l (Value l a)), Ord (AddressStore l (Value l a)), Address l, Context l (Value l a) (ReachableStateInterpreter l a), AbstractNumber a (Eff (ReachableStateInterpreter l a))) => Term a -> TraceResult l a Set.Set
+evalReach = run @(ReachableStateInterpreter l a) . runReach
 
-runReach :: (Ord i, Ord (l (Value l i)), Ord (AddressStore l (Value l i)), ReachableStateInterpreter l i :<: fs, Address l, Context l (Value l i) fs, AbstractNumber i (Eff fs)) => Term i -> Eff fs (Value l i)
+runReach :: (Ord a, Ord (l (Value l a)), Ord (AddressStore l (Value l a)), ReachableStateInterpreter l a :<: fs, Address l, Context l (Value l a) fs, AbstractNumber a (Eff fs)) => Term a -> Eff fs (Value l a)
 runReach = fix (evTell Set.empty ev)
 
-evTell :: forall l i g fs . (TracingInterpreter l i g :<: fs, IsList (g (Configuration l i)), Item (g (Configuration l i)) ~ Configuration l i)
+evTell :: forall l a g fs . (TracingInterpreter l a g :<: fs, IsList (g (Configuration l a)), Item (g (Configuration l a)) ~ Configuration l a)
        => g ()
-       -> ((Term i -> Eff fs (Value l i)) -> Term i -> Eff fs (Value l i))
-       -> (Term i -> Eff fs (Value l i))
-       -> Term i
-       -> Eff fs (Value l i)
+       -> ((Term a -> Eff fs (Value l a)) -> Term a -> Eff fs (Value l a))
+       -> (Term a -> Eff fs (Value l a))
+       -> Term a
+       -> Eff fs (Value l a)
 evTell _ ev0 ev e = do
   env <- ask
   store <- get
-  tell (fromList [Configuration e env store] :: g (Configuration l i))
+  tell (fromList [Configuration e env store] :: g (Configuration l a))
   ev0 ev e

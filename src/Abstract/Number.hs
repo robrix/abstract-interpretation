@@ -18,10 +18,10 @@ data N = N
   deriving (Eq, Ord, Show)
 
 
-class AbstractNumber i m where
-  delta1 :: Op1 -> i -> m i
-  delta2 :: Op2 -> i -> i -> m i
-  isZero :: i -> m Bool
+class AbstractNumber a m where
+  delta1 :: Op1 -> a -> m a
+  delta2 :: Op2 -> a -> a -> m a
+  isZero :: a -> m Bool
 
 
 divisionByZero :: MonadFail m => m a

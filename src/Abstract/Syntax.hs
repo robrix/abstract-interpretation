@@ -11,48 +11,48 @@ import Data.Semigroup
 import qualified Data.Set as Set
 import Data.Text.Prettyprint.Doc
 
-data Syntax n i a
+data Syntax n a r
   = Var n
-  | Num i
-  | Op1 Op1 a
-  | Op2 Op2 a a
-  | App a a
-  | Lam n a
-  | Rec n a
-  | If0 a a a
+  | Num a
+  | Op1 Op1 r
+  | Op2 Op2 r r
+  | App r r
+  | Lam n r
+  | Rec n r
+  | If0 r r r
   deriving (Eq, Ord, Show)
 
-type Term i = Fix (Syntax String i)
+type Term a = Fix (Syntax String a)
 
-var :: String -> Term i
+var :: String -> Term a
 var = Fix . Var
 
 infixl 9 #
-(#) :: Term i -> Term i -> Term i
+(#) :: Term a -> Term a -> Term a
 (#) = (Fix .) . App
 
-lam :: String -> (Term i -> Term i) -> Term i
+lam :: String -> (Term a -> Term a) -> Term a
 lam s f = makeLam s (f (var s))
 
-makeLam :: String -> Term i -> Term i
+makeLam :: String -> Term a -> Term a
 makeLam = (Fix .) . Lam
 
-rec :: String -> String -> (Term i -> Term i -> Term i) -> Term i
+rec :: String -> String -> (Term a -> Term a -> Term a) -> Term a
 rec f x b = makeRec f (lam x (b (var "f")))
 
-makeRec :: String -> Term i -> Term i
+makeRec :: String -> Term a -> Term a
 makeRec = (Fix .) . Rec
 
-if0 :: Term i -> Term i -> Term i -> Term i
+if0 :: Term a -> Term a -> Term a -> Term a
 if0 c t e = Fix (If0 c t e)
 
-let' :: String -> Term i -> (Term i -> Term i) -> Term i
+let' :: String -> Term a -> (Term a -> Term a) -> Term a
 let' var val body = lam var body # val
 
-immediateSubterms :: Ord i => Term i -> Set.Set (Term i)
+immediateSubterms :: Ord a => Term a -> Set.Set (Term a)
 immediateSubterms = foldMap Set.singleton . unfix
 
-subterms :: Ord i => Term i -> Set.Set (Term i)
+subterms :: Ord a => Term a -> Set.Set (Term a)
 subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.singleton term
 
 
@@ -87,7 +87,7 @@ instance Bifoldable (Syntax n) where
     Rec _ a -> g a
     If0 c t e -> g c `mappend` g t `mappend` g e
 
-instance Foldable (Syntax n i) where
+instance Foldable (Syntax n a) where
   foldMap = bifoldMap (const mempty)
 
 instance Bifunctor (Syntax n) where
@@ -101,7 +101,7 @@ instance Bifunctor (Syntax n) where
     Rec n a -> Rec n (g a)
     If0 c t e -> If0 (g c) (g t) (g e)
 
-instance Functor (Syntax n i) where
+instance Functor (Syntax n a) where
   fmap = second
 
 instance Eq n => Eq2 (Syntax n) where
@@ -116,7 +116,7 @@ instance Eq n => Eq2 (Syntax n) where
     (If0 c1 t1 e1, If0 c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
     _ -> False
 
-instance (Eq n, Eq i) => Eq1 (Syntax n i) where
+instance (Eq n, Eq a) => Eq1 (Syntax n a) where
   liftEq = liftEq2 (==)
 
 instance Ord n => Ord2 (Syntax n) where
@@ -144,7 +144,7 @@ instance Ord n => Ord2 (Syntax n) where
     (_, Rec{}) -> GT
     (If0 c1 t1 e1, If0 c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
 
-instance (Ord n, Ord i) => Ord1 (Syntax n i) where
+instance (Ord n, Ord a) => Ord1 (Syntax n a) where
   liftCompare = liftCompare2 compare
 
 
@@ -159,10 +159,10 @@ instance Show n => Show2 (Syntax n) where
     Rec n a -> showsBinaryWith showsPrec spA "Rec" d n a
     If0 c t e -> showsTernaryWith spA spA spA "If0" d c t e
 
-instance (Show n, Show i) => Show1 (Syntax n i) where
+instance (Show n, Show a) => Show1 (Syntax n a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
 
-instance Num i => Num (Term i) where
+instance Num a => Num (Term a) where
   fromInteger = Fix . Num . fromInteger
 
   signum = Fix . Op1 Signum
@@ -182,5 +182,5 @@ instance Pretty n => Pretty2 (Syntax n) where
     Rec n a -> pretty "fix" <+> parens (pretty '\\' <+> pretty n <+> pretty "->" <> nest 2 (line <> pr a))
     If0 c t e -> pretty "if0" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
 
-instance (Pretty n, Pretty v) => Pretty1 (Syntax n v) where
+instance (Pretty n, Pretty a) => Pretty1 (Syntax n a) where
   liftPretty = liftPretty2 pretty prettyList

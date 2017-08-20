@@ -44,7 +44,7 @@ instance (Show a, Address l) => Show (Value l a) where
   showsPrec = showsPrec1
 
 
-instance (MonadFail m, AbstractNumber i m) => AbstractNumber (Value l i) m where
+instance (MonadFail m, AbstractNumber a m) => AbstractNumber (Value l a) m where
   delta1 o (I a) = fmap I (delta1 o a)
   delta1 _ _ = fail "non-numeric value"
 

@@ -22,22 +22,22 @@ type EvalResult l a = (Either String (Value l a), AddressStore l (Value l a))
 
 -- Evaluation
 
-eval :: forall l i . (Monoid (AddressStore l (Value l i)), Address l, Context l (Value l i) (Interpreter l i), AbstractNumber i (Eff (Interpreter l i))) => Term i -> EvalResult l i
-eval = run @(Interpreter l i) . runEval
+eval :: forall l a . (Monoid (AddressStore l (Value l a)), Address l, Context l (Value l a) (Interpreter l a), AbstractNumber a (Eff (Interpreter l a))) => Term a -> EvalResult l a
+eval = run @(Interpreter l a) . runEval
 
-runEval :: (Address l, Context l (Value l i) fs, AbstractNumber i (Eff fs), Interpreter l i :<: fs) => Term i -> Eff fs (Value l i)
+runEval :: (Address l, Context l (Value l a) fs, AbstractNumber a (Eff fs), Interpreter l a :<: fs) => Term a -> Eff fs (Value l a)
 runEval = fix ev
 
-ev :: forall l i fs
-   .  (Address l, Context l (Value l i) fs, AbstractNumber i (Eff fs), Interpreter l i :<: fs)
-   => (Term i -> Eff fs (Value l i))
-   -> Term i
-   -> Eff fs (Value l i)
+ev :: forall l a fs
+   .  (Address l, Context l (Value l a) fs, AbstractNumber a (Eff fs), Interpreter l a :<: fs)
+   => (Term a -> Eff fs (Value l a))
+   -> Term a
+   -> Eff fs (Value l a)
 ev ev term = case unfix term of
   Num n -> return (I n)
   Var x -> do
     p <- ask
-    find ((p :: Environment (l (Value l i))) Map.! x)
+    find ((p :: Environment (l (Value l a))) Map.! x)
   If0 c t e -> do
     v <- ev c
     z <- isZero v
@@ -52,12 +52,12 @@ ev ev term = case unfix term of
   Rec f e -> do
     p <- ask
     a <- alloc f
-    v <- local (const (Map.insert f a (p :: Environment (l (Value l i))))) (ev e)
+    v <- local (const (Map.insert f a (p :: Environment (l (Value l a))))) (ev e)
     ext a v
     return v
   Lam x e0 -> do
     p <- ask
-    return (Closure x e0 (p :: Environment (l (Value l i))))
+    return (Closure x e0 (p :: Environment (l (Value l a))))
   App e0 e1 -> do
     Closure x e2 p <- ev e0
     v1 <- ev e1

@@ -18,7 +18,7 @@ instance (Eq a, Address l) => Eq (Configuration l a) where
 
 instance Address l => Ord1 (Configuration l) where
   liftCompare :: forall a b . (a -> b -> Ordering) -> Configuration l a -> Configuration l b -> Ordering
-  liftCompare compareA (Configuration t1 e1 s1) (Configuration t2 e2 s2) = liftCompareTerms compareA t1 t2 <> liftCompare addressCompare e1 e2 <> liftCompareStore (undefined :: proxy l) (liftCompare compareA :: Value l a -> Value l b -> Ordering) s1 s2
+  liftCompare compareA (Configuration t1 e1 s1) (Configuration t2 e2 s2) = liftCompareTerms compareA t1 t2 <> liftCompare addressCompare e1 e2 <> liftCompare (liftCompare compareA :: Value l a -> Value l b -> Ordering) s1 s2
 
 instance (Ord a, Address l) => Ord (Configuration l a) where
   compare = compare1

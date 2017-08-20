@@ -1,4 +1,4 @@
-{-# LANGUAGE ConstraintKinds, DataKinds, FlexibleContexts, GeneralizedNewtypeDeriving, InstanceSigs, ScopedTypeVariables, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE ConstraintKinds, DataKinds, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, GeneralizedNewtypeDeriving, InstanceSigs, ScopedTypeVariables, TypeFamilies, TypeOperators #-}
 module Abstract.Store
 ( Precise(..)
 , Monovariant(..)
@@ -36,7 +36,7 @@ class (Eq1 l, Ord1 l, Show1 l, Eq1 (AddressStore l), Ord1 (AddressStore l), Show
 
 
 newtype Precise a = Precise { unPrecise :: Int }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Foldable, Functor, Ord, Show, Traversable)
 
 allocPrecise :: AddressStore Precise a -> Precise a
 allocPrecise = Precise . IntMap.size
@@ -52,7 +52,7 @@ instance Address Precise where
 
 
 newtype Monovariant a = Monovariant String
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Foldable, Functor, Ord, Show, Traversable)
 
 newtype MonovariantStore a = MonovariantStore { unMonovariantStore :: Map.Map (Monovariant a) (Set.Set a) }
   deriving (Eq, Ord, Show)

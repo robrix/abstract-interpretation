@@ -58,8 +58,11 @@ ev ev term = case out term of
     p <- ask
     return (Closure x e0 p)
   App e0 e1 -> do
-    Closure x e2 p <- ev e0
-    v1 <- ev e1
-    a <- alloc x
-    assign a v1
-    local (const (envInsert x a p)) (ev e2)
+    closure <- ev e0
+    case closure of
+      Closure x e2 p -> do
+        v1 <- ev e1
+        a <- alloc x
+        assign a v1
+        local (const (envInsert x a p)) (ev e2)
+      _ -> fail "non-closure operator"

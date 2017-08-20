@@ -2,6 +2,7 @@
 module Control.Effect where
 
 import qualified Control.Monad.Effect as Effect
+import Control.Monad.Effect.Amb
 import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Internal as Effect hiding (run)
 import Control.Monad.Effect.NonDetEff
@@ -50,3 +51,7 @@ instance Ord a => RunEffect NonDetEff a where
   runEffect = relay (pure . Set.singleton) $ \ m k -> case m of
     MZero -> pure Set.empty
     MPlus -> Set.union <$> k True <*> k False
+
+instance RunEffect Amb a where
+  type Result Amb a = [a]
+  runEffect = runAmb

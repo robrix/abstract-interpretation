@@ -13,11 +13,11 @@ sym :: Num a => (forall n . Num n => n -> n) -> Sym a -> Sym a
 sym f (Sym t) = Sym (f t)
 sym f (V a) = V (f a)
 
-sym2 :: Num a => (forall n . Num n => n -> n -> n) -> Sym a -> Sym a -> Sym a
-sym2 f (V a) (V b) = V (f a b)
-sym2 f (Sym a) (Sym b) = Sym (f a b)
-sym2 f (Sym a) (V b) = Sym (f a (num b))
-sym2 f (V a) (Sym b) = Sym (f (num a) b)
+sym2 :: Applicative f => (a -> a -> f a) -> (Term a -> Term a -> Term a) -> Sym a -> Sym a -> f (Sym a)
+sym2 f _ (V a) (V b) = V <$> f a b
+sym2 _ g (Sym a) (Sym b) = pure (Sym (g a b))
+sym2 f g a (V b) = sym2 f g a (Sym (num b))
+sym2 f g (V a) b = sym2 f g (Sym (num a)) b
 
 evSymbolic :: (Eval l fs (Sym a) -> Eval l fs (Sym a)) -> Eval l fs (Sym a) -> Eval l fs (Sym a)
 evSymbolic ev0 ev e = ev0 ev e

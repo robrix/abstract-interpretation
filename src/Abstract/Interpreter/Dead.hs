@@ -23,14 +23,14 @@ type DeadCodeResult l a = (Either String (Value l a, DeadSet a), AddressStore l 
 evalDead :: forall l a. (Monoid (AddressStore l (Value l a)), Ord a, Address l, Context l (Value l a) (DeadCodeInterpreter l a), AbstractNumber a (Eff (DeadCodeInterpreter l a))) => Term a -> DeadCodeResult l a
 evalDead = run @(DeadCodeInterpreter l a) . runDead
 
-runDead :: (Ord a, DeadCodeInterpreter l a :<: fs, Address l, Context l (Value l a) fs, AbstractNumber a (Eff fs)) => Term a -> Eff fs (Value l a)
+runDead :: (Ord a, DeadCodeInterpreter l a :<: fs, Address l, Context l (Value l a) fs, AbstractNumber a (Eff fs)) => Eval l fs a
 runDead e0 = do
   put (subterms e0)
   fix (evDead ev) e0
 
 evDead :: (Ord a, DeadCodeInterpreter l a :<: fs)
-       => ((Term a -> Eff fs (Value l a)) -> Term a -> Eff fs (Value l a))
-       -> (Term a -> Eff fs (Value l a))
+       => ((Eval l fs a) -> Eval l fs a)
+       -> (Eval l fs a)
        -> Term a
        -> Eff fs (Value l a)
 evDead ev0 ev e = do

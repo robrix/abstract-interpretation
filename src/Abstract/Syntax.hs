@@ -29,29 +29,29 @@ newtype Term a = In { out :: Syntax a (Term a) }
   deriving (Eq, Ord, Show)
 
 
-var :: String -> Term a
+var :: Name -> Term a
 var = In . Var
 
 infixl 9 #
 (#) :: Term a -> Term a -> Term a
 (#) = (In .) . App
 
-lam :: String -> (Term a -> Term a) -> Term a
+lam :: Name -> (Term a -> Term a) -> Term a
 lam s f = makeLam s (f (var s))
 
-makeLam :: String -> Term a -> Term a
+makeLam :: Name -> Term a -> Term a
 makeLam = (In .) . Lam
 
-rec :: String -> String -> (Term a -> Term a -> Term a) -> Term a
+rec :: Name -> Name -> (Term a -> Term a -> Term a) -> Term a
 rec f x b = makeRec f (lam x (b (var "f")))
 
-makeRec :: String -> Term a -> Term a
+makeRec :: Name -> Term a -> Term a
 makeRec = (In .) . Rec
 
 if0 :: Term a -> Term a -> Term a -> Term a
 if0 c t e = In (If0 c t e)
 
-let' :: String -> Term a -> (Term a -> Term a) -> Term a
+let' :: Name -> Term a -> (Term a -> Term a) -> Term a
 let' var val body = lam var body # val
 
 immediateSubterms :: Ord a => Term a -> Set.Set (Term a)

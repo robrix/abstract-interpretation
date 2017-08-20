@@ -105,6 +105,7 @@ instance Bifoldable Syntax where
 instance Foldable (Syntax a) where
   foldMap = bifoldMap (const mempty)
 
+
 instance Functor Term where
   fmap f = go where go = In . bimap f go . out
 
@@ -121,6 +122,7 @@ instance Bifunctor Syntax where
 
 instance Functor (Syntax a) where
   fmap = second
+
 
 instance Eq2 Syntax where
   liftEq2 eqV eqA s1 s2 = case (s1, s2) of

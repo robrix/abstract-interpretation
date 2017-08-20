@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
 module Abstract.Value where
 
 import Abstract.Number
@@ -10,7 +10,15 @@ import qualified Data.Map as Map
 import Data.Semigroup
 import Prelude hiding (fail)
 
-type Environment = Map.Map Name
+newtype Environment a = Environment { unEnvironment :: Map.Map Name a }
+  deriving (Eq, Eq1, Foldable, Functor, Monoid, Ord, Ord1, Show, Show1, Traversable)
+
+envLookup :: Name -> Environment a -> Maybe a
+envLookup = (. unEnvironment) . Map.lookup
+
+envInsert :: Name -> a -> Environment a -> Environment a
+envInsert = (((Environment .) . (. unEnvironment)) .) . Map.insert
+
 
 data Value l a = I a | Closure Name (Term a) (Environment (l (Value l a)))
   deriving (Foldable, Functor, Traversable)

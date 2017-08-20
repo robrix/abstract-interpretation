@@ -11,7 +11,6 @@ import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Data.Function (fix)
-import qualified Data.Map as Map
 import Prelude hiding (fail)
 
 
@@ -37,7 +36,7 @@ ev ev term = case out term of
   Num n -> return (I n)
   Var x -> do
     p <- ask
-    maybe (fail ("free variable: " ++ x)) deref (Map.lookup x (p :: Environment (l (Value l a))))
+    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (l (Value l a))))
   If0 c t e -> do
     v <- ev c
     z <- isZero v
@@ -52,15 +51,15 @@ ev ev term = case out term of
   Rec f e -> do
     p <- ask
     a <- alloc f
-    v <- local (const (Map.insert f a (p :: Environment (l (Value l a))))) (ev e)
+    v <- local (const (envInsert f a (p :: Environment (l (Value l a))))) (ev e)
     assign a v
     return v
   Lam x e0 -> do
     p <- ask
-    return (Closure x e0 (p :: Environment (l (Value l a))))
+    return (Closure x e0 p)
   App e0 e1 -> do
     Closure x e2 p <- ev e0
     v1 <- ev e1
     a <- alloc x
     assign a v1
-    local (const (Map.insert x a p)) (ev e2)
+    local (const (envInsert x a p)) (ev e2)

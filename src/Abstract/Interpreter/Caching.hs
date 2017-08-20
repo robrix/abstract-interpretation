@@ -8,8 +8,8 @@ import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value
 import Control.Effect
+import Control.Monad.Effect.Amb
 import Control.Monad.Effect.Internal hiding (run)
-import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Data.Foldable
@@ -22,9 +22,9 @@ import qualified Data.Set as Set
 
 type Cache l a = Map.Map (Configuration l a) (Set.Set (Value l a, Store l (Value l a)))
 
-type CachingInterpreter l a = NonDetEff ': CacheOut l a ': CacheIn l a ': Interpreter l a
+type CachingInterpreter l a = Amb ': CacheOut l a ': CacheIn l a ': Interpreter l a
 
-type CachingResult l a = (Either String (Set.Set (Value l a), Cache l a), Store l (Value l a))
+type CachingResult l a = (Either String ([] (Value l a), Cache l a), Store l (Value l a))
 
 
 eqCache :: forall a l . (Address l, Eq a) => Cache l a -> Cache l a -> Bool

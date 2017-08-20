@@ -15,6 +15,7 @@ import Control.Monad.Effect
 import Control.Monad.Effect.State
 import Control.Monad.Fail
 import Data.Foldable (asum)
+import Data.Function (on)
 import Data.Functor.Classes
 import qualified Data.IntMap as IntMap
 import Data.Kind
@@ -96,6 +97,11 @@ hidesPrec _ _ = id
 
 hideList :: [a] -> ShowS
 hideList _ = id
+
+
+instance Monoid (MonovariantStore a) where
+  mempty = MonovariantStore mempty
+  mappend = (MonovariantStore .) . (mappend `on` unMonovariantStore)
 
 instance Eq1 Precise where
   liftEq _ (Precise i1) (Precise i2) = i1 == i2

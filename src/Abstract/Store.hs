@@ -65,11 +65,7 @@ instance Address Monovariant where
   type AddressStore Monovariant a = Map.Map (Monovariant a) (Set.Set a)
   type Context Monovariant a fs = (Ord a, State (AddressStore Monovariant a) :< fs, Alternative (Eff fs), MonadFail (Eff fs))
 
-  find :: forall a fs. Context Monovariant a fs => Monovariant a -> Eff fs a
-  find loc = do
-    store <- get
-    references <- maybe uninitializedAddress pure (Map.lookup loc (store :: AddressStore Monovariant a))
-    asum (return <$> Set.toList references)
+  find = (>>= maybe uninitializedAddress (asum . fmap pure . Set.toList)) . flip fmap get . Map.lookup
 
   alloc x = pure (Monovariant x)
 

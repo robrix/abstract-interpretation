@@ -186,6 +186,9 @@ instance Num a => Num (Term a) where
 instance Pretty1 Term where
   liftPretty p pl = go where go = liftPretty2 p pl go (liftPrettyList p pl) . out
 
+instance Pretty a => Pretty (Term a) where
+  pretty = pretty1
+
 instance Pretty n => Pretty2 (Syntax n) where
   liftPretty2 pv _ pr _ s = case s of
     Var n -> pretty n

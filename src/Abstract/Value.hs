@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveFoldable, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses #-}
 module Abstract.Value where
 
 import Abstract.Number
@@ -13,6 +13,7 @@ import Prelude hiding (fail)
 type Environment = Map.Map String
 
 data Value l a = I a | Closure String (Term a) (Environment (l (Value l a)))
+  deriving (Foldable, Functor)
 
 
 instance Address l => Eq1 (Value l) where

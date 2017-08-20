@@ -52,7 +52,7 @@ ev ev term = case out term of
     p <- ask
     a <- alloc f
     v <- local (const (Map.insert f a (p :: Environment (l (Value l a))))) (ev e)
-    ext a v
+    assign a v
     return v
   Lam x e0 -> do
     p <- ask
@@ -61,5 +61,5 @@ ev ev term = case out term of
     Closure x e2 p <- ev e0
     v1 <- ev e1
     a <- alloc x
-    ext a v1
+    assign a v1
     local (const (Map.insert x a p)) (ev e2)

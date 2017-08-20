@@ -34,7 +34,7 @@ class (Eq1 l, Ord1 l, Show1 l, Eq1 (AddressStore l), Ord1 (AddressStore l), Show
 
   alloc :: Context l a fs => Name -> Eff fs (l a)
 
-  ext :: Context l a fs => l a -> a -> Eff fs ()
+  assign :: Context l a fs => l a -> a -> Eff fs ()
 
 
 newtype Precise a = Precise { unPrecise :: Int }
@@ -50,7 +50,7 @@ instance Address Precise where
 
   alloc _ = fmap allocPrecise get
 
-  ext = (modify .) . IntMap.insert . unPrecise
+  assign = (modify .) . IntMap.insert . unPrecise
 
 
 newtype Monovariant a = Monovariant Name
@@ -73,7 +73,7 @@ instance Address Monovariant where
 
   alloc = pure . Monovariant
 
-  ext = (modify .) . monovariantInsert
+  assign = (modify .) . monovariantInsert
 
 
 addressEq :: Address l => l a -> l b -> Bool

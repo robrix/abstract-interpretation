@@ -23,7 +23,7 @@ import qualified Data.Set as Set
 import Data.Semigroup
 import Prelude hiding (fail)
 
-class (Eq1 l, Ord1 l, Show1 l) => Address l where
+class (Eq1 l, Ord1 l, Show1 l, Eq1 (AddressStore l), Ord1 (AddressStore l), Show1 (AddressStore l)) => Address l where
   type AddressStore l :: * -> *
   type Context l a (fs :: [* -> *]) :: Constraint
   type instance Context l a fs = (State (AddressStore l a) :< fs, MonadFail (Eff fs))

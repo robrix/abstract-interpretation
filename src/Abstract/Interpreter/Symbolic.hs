@@ -2,7 +2,9 @@
 module Abstract.Interpreter.Symbolic where
 
 import Abstract.Interpreter
-data Sym a = Sym String | V a
+import Abstract.Syntax
+
+data Sym a = Sym (Term a) | V a
   deriving (Eq, Ord, Show)
 
 sym :: Num a => (forall n . Num n => n -> n) -> Sym a -> Sym a

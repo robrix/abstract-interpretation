@@ -29,6 +29,7 @@ newtype Precise a = Precise { unPrecise :: Int }
 allocPrecise :: AddressStore Precise a -> Precise a
 allocPrecise = Precise . IntMap.size
 
+
 newtype Monovariant a = Monovariant String
   deriving (Eq, Ord, Show)
 
@@ -62,6 +63,7 @@ instance Address Precise where
   liftCompareStore _ = liftCompare
   liftShowsPrecStore _ = liftShowsPrec
   liftShowListStore _ = liftShowList
+
 
 instance Address Monovariant where
   type AddressStore Monovariant a = Map.Map (Monovariant a) (Set.Set a)

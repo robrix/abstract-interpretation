@@ -13,7 +13,9 @@ import qualified Data.Set as Set
 
 type DeadCodeInterpreter l i = DeadCode i ': Interpreter l i
 
-type DeadCodeResult l a = (Either String (Value l a, Set.Set (Term a)), Store l (Value l a))
+type DeadSet a = Set.Set (Term a)
+
+type DeadCodeResult l a = (Either String (Value l a, DeadSet a), Store l (Value l a))
 
 
 -- Dead code analysis
@@ -36,19 +38,19 @@ evDead ev0 ev e = do
   ev0 ev e
 
 
-get :: (DeadCode i :< e) => Eff e (Set.Set (Term i))
+get :: (DeadCode i :< e) => Eff e (DeadSet i)
 get = send Get
 
-put :: (DeadCode i :< e) => Set.Set (Term i) -> Eff e ()
+put :: (DeadCode i :< e) => DeadSet i -> Eff e ()
 put s = send (Put s)
 
-modify :: (DeadCode i :< e) => (Set.Set (Term i) -> Set.Set (Term i)) -> Eff e ()
+modify :: (DeadCode i :< e) => (DeadSet i -> DeadSet i) -> Eff e ()
 modify f = fmap f get >>= put
 
 
 data DeadCode i a where
-  Get :: DeadCode i (Set.Set (Term i))
-  Put :: !(Set.Set (Term i)) -> DeadCode i ()
+  Get :: DeadCode i (DeadSet i)
+  Put :: !(DeadSet i) -> DeadCode i ()
 
 
 instance Ord i => RunEffect (DeadCode i) a where

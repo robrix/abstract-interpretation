@@ -12,6 +12,7 @@ module Abstract.Store
 import Control.Applicative
 import Control.Monad.Effect
 import Control.Monad.Effect.State
+import Control.Monad.Fail
 import Data.Foldable (asum)
 import Data.Functor.Classes
 import qualified Data.IntMap as IntMap
@@ -19,6 +20,7 @@ import Data.Kind
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Semigroup
+import Prelude hiding (fail)
 
 newtype Precise a = Precise { unPrecise :: Int }
   deriving (Eq, Ord, Show)
@@ -29,7 +31,7 @@ newtype Monovariant a = Monovariant String
 class (Eq1 l, Ord1 l, Show1 l) => Address l where
   type AddressStore l a
   type Context l a (fs :: [* -> *]) :: Constraint
-  type instance Context l a fs = (State (AddressStore l a) :< fs)
+  type instance Context l a fs = (State (AddressStore l a) :< fs, MonadFail (Eff fs))
 
   find :: Context l a fs => l a -> Eff fs a
 
@@ -45,7 +47,7 @@ class (Eq1 l, Ord1 l, Show1 l) => Address l where
 
 instance Address Precise where
   type AddressStore Precise a = IntMap.IntMap a
-  find = flip fmap get . flip (IntMap.!) . unPrecise
+  find = (>>= maybe uninitializedAddress pure) . flip fmap get . IntMap.lookup . unPrecise
 
   alloc :: forall a fs. (State (AddressStore Precise a) :< fs) => String -> Eff fs (Precise a)
   alloc _ = do
@@ -61,12 +63,13 @@ instance Address Precise where
 
 instance Address Monovariant where
   type AddressStore Monovariant a = Map.Map (Monovariant a) (Set.Set a)
-  type Context Monovariant a fs = (Ord a, State (AddressStore Monovariant a) :< fs, Alternative (Eff fs))
+  type Context Monovariant a fs = (Ord a, State (AddressStore Monovariant a) :< fs, Alternative (Eff fs), MonadFail (Eff fs))
 
   find :: forall a fs. Context Monovariant a fs => Monovariant a -> Eff fs a
   find loc = do
     store <- get
-    asum (return <$> Set.toList ((store :: AddressStore Monovariant a) Map.! loc))
+    references <- maybe uninitializedAddress pure (Map.lookup loc (store :: AddressStore Monovariant a))
+    asum (return <$> Set.toList references)
 
   alloc x = pure (Monovariant x)
 
@@ -88,6 +91,10 @@ addressShowsPrec = liftShowsPrec hidesPrec hideList
 
 addressShowList :: Address l => [l a] -> ShowS
 addressShowList = liftShowList hidesPrec hideList
+
+
+uninitializedAddress :: MonadFail m => m a
+uninitializedAddress = fail "uninitialized address"
 
 
 hidesPrec :: Int -> a -> ShowS

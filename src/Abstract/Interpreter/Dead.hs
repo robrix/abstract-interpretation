@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, GADTs, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE DataKinds, DeriveFoldable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
 module Abstract.Interpreter.Dead where
 
 import Abstract.Interpreter
@@ -12,11 +12,15 @@ import Control.Monad.Effect.State
 import Data.Function (fix)
 import qualified Data.Set as Set
 
-type DeadCodeInterpreter l a = State (DeadSet a) ': Interpreter l a
+type DeadCodeInterpreter l a = State (Dead a) ': Interpreter l a
 
-type DeadSet a = Set.Set (Term a)
+newtype Dead a = Dead { unDead :: Set.Set (Term a) }
+  deriving (Eq, Foldable, Monoid, Ord, Show)
 
-type DeadCodeResult l a = (Either String (Value l a, DeadSet a), AddressStore l (Value l a))
+revive :: Ord a => Term a -> Dead a -> Dead a
+revive = (Dead .) . (. unDead) . Set.delete
+
+type DeadCodeResult l a = (Either String (Value l a, Dead a), AddressStore l (Value l a))
 
 
 -- Dead code analysis
@@ -26,7 +30,7 @@ evalDead = run @(DeadCodeInterpreter l a) . runDead
 
 runDead :: (Ord a, DeadCodeInterpreter l a :<: fs, Address l, Context l (Value l a) fs, AbstractNumber a (Eff fs)) => Eval l fs a
 runDead e0 = do
-  put (subterms e0)
+  put (Dead (subterms e0))
   fix (evDead ev) e0
 
 evDead :: (Ord a, DeadCodeInterpreter l a :<: fs)
@@ -34,5 +38,5 @@ evDead :: (Ord a, DeadCodeInterpreter l a :<: fs)
        -> Eval l fs a
        -> Eval l fs a
 evDead ev0 ev e = do
-  modify (Set.delete e)
+  modify (revive e)
   ev0 ev e

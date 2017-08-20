@@ -48,9 +48,7 @@ runCache = fixCache (fix (evCache ev))
 
 evCache :: forall l a fs
         .  (Ord a, Ord (l (Value l a)), Ord (AddressStore l (Value l a)), Address l, Context l (Value l a) fs, CachingInterpreter l a :<: fs)
-        => (Eval l fs a -> Eval l fs a)
-        -> Eval l fs a
-        -> Eval l fs a
+        => Unfixed (Unfixed (Eval l fs a))
 evCache ev0 ev e = do
   env <- ask
   store <- get
@@ -71,8 +69,7 @@ evCache ev0 ev e = do
 
 fixCache :: forall l a fs
          .  (Ord a, Ord (l (Value l a)), Ord (AddressStore l (Value l a)), Address l, Context l (Value l a) fs, CachingInterpreter l a :<: fs)
-         => Eval l fs a
-         -> Eval l fs a
+         => Unfixed (Eval l fs a)
 fixCache eval e = do
   env <- ask
   store <- get

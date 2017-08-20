@@ -12,6 +12,7 @@ import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Data.Function (fix)
 import qualified Data.Map as Map
+import Prelude hiding (fail)
 
 
 type Interpreter l a = '[Failure, State (AddressStore l (Value l a)), Reader (Environment (l (Value l a)))]
@@ -36,7 +37,7 @@ ev ev term = case out term of
   Num n -> return (I n)
   Var x -> do
     p <- ask
-    deref ((p :: Environment (l (Value l a))) Map.! x)
+    maybe (fail ("free variable: " ++ x)) deref (Map.lookup x (p :: Environment (l (Value l a))))
   If0 c t e -> do
     v <- ev c
     z <- isZero v

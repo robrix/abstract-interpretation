@@ -11,7 +11,6 @@ import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Data.Function (fix)
-import Data.Functor.Foldable
 import qualified Data.Map as Map
 
 
@@ -33,7 +32,7 @@ ev :: forall l a fs
    => (Term a -> Eff fs (Value l a))
    -> Term a
    -> Eff fs (Value l a)
-ev ev term = case unfix term of
+ev ev term = case out term of
   Num n -> return (I n)
   Var x -> do
     p <- ask

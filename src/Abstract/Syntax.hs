@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances, TypeFamilies #-}
 module Abstract.Syntax where
 
 import Abstract.Number
@@ -22,35 +22,37 @@ data Syntax n a r
   | If0 r r r
   deriving (Eq, Ord, Show)
 
-type Term a = Fix (Syntax String a)
+newtype Term a = In { out :: Syntax String a (Term a) }
+  deriving (Eq, Ord, Show)
+
 
 var :: String -> Term a
-var = Fix . Var
+var = In . Var
 
 infixl 9 #
 (#) :: Term a -> Term a -> Term a
-(#) = (Fix .) . App
+(#) = (In .) . App
 
 lam :: String -> (Term a -> Term a) -> Term a
 lam s f = makeLam s (f (var s))
 
 makeLam :: String -> Term a -> Term a
-makeLam = (Fix .) . Lam
+makeLam = (In .) . Lam
 
 rec :: String -> String -> (Term a -> Term a -> Term a) -> Term a
 rec f x b = makeRec f (lam x (b (var "f")))
 
 makeRec :: String -> Term a -> Term a
-makeRec = (Fix .) . Rec
+makeRec = (In .) . Rec
 
 if0 :: Term a -> Term a -> Term a -> Term a
-if0 c t e = Fix (If0 c t e)
+if0 c t e = In (If0 c t e)
 
 let' :: String -> Term a -> (Term a -> Term a) -> Term a
 let' var val body = lam var body # val
 
 immediateSubterms :: Ord a => Term a -> Set.Set (Term a)
-immediateSubterms = foldMap Set.singleton . unfix
+immediateSubterms = foldMap Set.singleton . out
 
 subterms :: Ord a => Term a -> Set.Set (Term a)
 subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.singleton term
@@ -58,23 +60,31 @@ subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.sing
 
 liftEqTerms :: (a -> b -> Bool) -> Term a -> Term b -> Bool
 liftEqTerms eq = go
-  where go t1 t2 = liftEq2 eq go (unfix t1) (unfix t2)
+  where go t1 t2 = liftEq2 eq go (out t1) (out t2)
 
 liftCompareTerms :: (a -> b -> Ordering) -> Term a -> Term b -> Ordering
 liftCompareTerms compare = go
-  where go t1 t2 = liftCompare2 compare go (unfix t1) (unfix t2)
+  where go t1 t2 = liftCompare2 compare go (out t1) (out t2)
 
 liftShowsPrecTerm :: (Int -> a -> ShowS) -> ([a] -> ShowS) -> Int -> Term a -> ShowS
-liftShowsPrecTerm spA slA = go where go d = liftShowsPrec2 spA slA go (liftShowListTerm spA slA) d . unfix
+liftShowsPrecTerm spA slA = go where go d = liftShowsPrec2 spA slA go (liftShowListTerm spA slA) d . out
 
 liftShowListTerm :: (Int -> a -> ShowS) -> ([a] -> ShowS) -> [Term a] -> ShowS
-liftShowListTerm spA slA = go where go = liftShowList2 spA slA (liftShowsPrecTerm spA slA) go . map unfix
+liftShowListTerm spA slA = go where go = liftShowList2 spA slA (liftShowsPrecTerm spA slA) go . map out
 
 showsTernaryWith :: (Int -> a -> ShowS) -> (Int -> b -> ShowS) -> (Int -> c -> ShowS) -> String -> Int -> a -> b -> c -> ShowS
 showsTernaryWith sp1 sp2 sp3 name d x y z = showParen (d > 10) $ showString name . showChar ' ' . sp1 11 x . showChar ' ' . sp2 11 y . showChar ' ' . sp3 11 z
 
 
 -- Instances
+
+type instance Base (Term a) = Syntax String a
+
+instance Recursive (Term a) where
+  project = out
+
+instance Corecursive (Term a) where
+  embed = In
 
 instance Bifoldable (Syntax n) where
   bifoldMap f g s = case s of
@@ -162,14 +172,16 @@ instance Show n => Show2 (Syntax n) where
 instance (Show n, Show a) => Show1 (Syntax n a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
 
-instance Num a => Num (Term a) where
-  fromInteger = Fix . Num . fromInteger
 
-  signum = Fix . Op1 Signum
-  abs = Fix . Op1 Abs
-  negate = Fix . Op1 Negate
-  (+) = (Fix .) . Op2 Plus
-  (*) = (Fix .) . Op2 Times
+instance Num a => Num (Term a) where
+  fromInteger = In . Num . fromInteger
+
+  signum = In . Op1 Signum
+  abs = In . Op1 Abs
+  negate = In . Op1 Negate
+  (+) = (In .) . Op2 Plus
+  (*) = (In .) . Op2 Times
+
 
 instance Pretty n => Pretty2 (Syntax n) where
   liftPretty2 pv _ pr _ s = case s of

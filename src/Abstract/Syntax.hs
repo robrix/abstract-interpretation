@@ -11,20 +11,20 @@ import Data.Semigroup
 import qualified Data.Set as Set
 import Data.Text.Prettyprint.Doc
 
-data Syntax n a r
-  = Var n
+data Syntax a r
+  = Var Name
   | Num a
   | Op1 Op1 r
   | Op2 Op2 r r
   | App r r
-  | Lam n r
-  | Rec n r
+  | Lam Name r
+  | Rec Name r
   | If0 r r r
   deriving (Eq, Ord, Show)
 
 type Name = String
 
-newtype Term a = In { out :: Syntax Name a (Term a) }
+newtype Term a = In { out :: Syntax a (Term a) }
   deriving (Eq, Ord, Show)
 
 
@@ -80,7 +80,7 @@ showsTernaryWith sp1 sp2 sp3 name d x y z = showParen (d > 10) $ showString name
 
 -- Instances
 
-type instance Base (Term a) = Syntax String a
+type instance Base (Term a) = Syntax a
 
 instance Recursive (Term a) where
   project = out
@@ -88,7 +88,7 @@ instance Recursive (Term a) where
 instance Corecursive (Term a) where
   embed = In
 
-instance Bifoldable (Syntax n) where
+instance Bifoldable Syntax where
   bifoldMap f g s = case s of
     Var _ -> mempty
     Num i -> f i
@@ -99,10 +99,10 @@ instance Bifoldable (Syntax n) where
     Rec _ a -> g a
     If0 c t e -> g c `mappend` g t `mappend` g e
 
-instance Foldable (Syntax n a) where
+instance Foldable (Syntax a) where
   foldMap = bifoldMap (const mempty)
 
-instance Bifunctor (Syntax n) where
+instance Bifunctor Syntax where
   bimap f g s = case s of
     Var n -> Var n
     Num v -> Num (f v)
@@ -113,10 +113,10 @@ instance Bifunctor (Syntax n) where
     Rec n a -> Rec n (g a)
     If0 c t e -> If0 (g c) (g t) (g e)
 
-instance Functor (Syntax n a) where
+instance Functor (Syntax a) where
   fmap = second
 
-instance Eq n => Eq2 (Syntax n) where
+instance Eq2 Syntax where
   liftEq2 eqV eqA s1 s2 = case (s1, s2) of
     (Var n1, Var n2) -> n1 == n2
     (Num v1, Num v2) -> eqV v1 v2
@@ -128,10 +128,10 @@ instance Eq n => Eq2 (Syntax n) where
     (If0 c1 t1 e1, If0 c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
     _ -> False
 
-instance (Eq n, Eq a) => Eq1 (Syntax n a) where
+instance Eq a => Eq1 (Syntax a) where
   liftEq = liftEq2 (==)
 
-instance Ord n => Ord2 (Syntax n) where
+instance Ord2 Syntax where
   liftCompare2 compareV compareA s1 s2 = case (s1, s2) of
     (Var n1, Var n2) -> compare n1 n2
     (Var{}, _) -> LT
@@ -156,11 +156,11 @@ instance Ord n => Ord2 (Syntax n) where
     (_, Rec{}) -> GT
     (If0 c1 t1 e1, If0 c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
 
-instance (Ord n, Ord a) => Ord1 (Syntax n a) where
+instance Ord a => Ord1 (Syntax a) where
   liftCompare = liftCompare2 compare
 
 
-instance Show n => Show2 (Syntax n) where
+instance Show2 Syntax where
   liftShowsPrec2 spV _ spA _ d s = case s of
     Var n -> showsUnaryWith showsPrec "Var" d n
     Num v -> showsUnaryWith spV "Num" d v
@@ -171,7 +171,7 @@ instance Show n => Show2 (Syntax n) where
     Rec n a -> showsBinaryWith showsPrec spA "Rec" d n a
     If0 c t e -> showsTernaryWith spA spA spA "If0" d c t e
 
-instance (Show n, Show a) => Show1 (Syntax n a) where
+instance Show a => Show1 (Syntax a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
 
 
@@ -191,7 +191,7 @@ instance Pretty1 Term where
 instance Pretty a => Pretty (Term a) where
   pretty = pretty1
 
-instance Pretty n => Pretty2 (Syntax n) where
+instance Pretty2 Syntax where
   liftPretty2 pv _ pr _ s = case s of
     Var n -> pretty n
     Num v -> pv v
@@ -202,5 +202,5 @@ instance Pretty n => Pretty2 (Syntax n) where
     Rec n a -> pretty "fix" <+> parens (pretty '\\' <+> pretty n <+> pretty "->" <> nest 2 (line <> pr a))
     If0 c t e -> pretty "if0" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
 
-instance (Pretty n, Pretty a) => Pretty1 (Syntax n a) where
+instance Pretty a => Pretty1 (Syntax a) where
   liftPretty = liftPretty2 pretty prettyList

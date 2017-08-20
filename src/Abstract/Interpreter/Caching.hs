@@ -30,16 +30,12 @@ type CachingResult l a = (Either String ([] (Value l a), Cache l a), AddressStor
 eqCache :: (Address l, Eq a) => Cache l a -> Cache l a -> Bool
 eqCache = liftEq (liftEq (liftEq (liftEq (liftEq (==)))))
 
-showCache :: forall a l . (Address l, Show a) => Cache l a -> String
+showCache :: (Address l, Show a) => Cache l a -> String
 showCache = ($ "") . liftShowsPrec (liftShowsPrec spPair slPair) (liftShowList spPair slPair) 0
-  where spPair = liftShowsPrec2 spValue slValue spStore slStore
-        slPair = liftShowList2 spValue slValue spStore slStore
-        spStore = liftShowsPrec spValue slValue
-        slStore = liftShowList  spValue slValue
-        spValue :: Int -> Value l a -> ShowS
-        spValue = showsPrec
-        slValue :: [Value l a] -> ShowS
-        slValue = showList
+  where spPair = liftShowsPrec2 showsPrec showList spStore slStore
+        slPair = liftShowList2 showsPrec showList spStore slStore
+        spStore = liftShowsPrec showsPrec showList
+        slStore = liftShowList  showsPrec showList
 
 
 -- Coinductively-cached evaluation

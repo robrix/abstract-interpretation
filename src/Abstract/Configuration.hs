@@ -26,7 +26,7 @@ instance (Ord a, Address l) => Ord (Configuration l a) where
 
 instance Address l => Show1 (Configuration l) where
   liftShowsPrec :: forall a. (Int -> a -> ShowS) -> ([a] -> ShowS) -> Int -> Configuration l a -> ShowS
-  liftShowsPrec spA slA d (Configuration t1 e1 s1) = showsTernaryWith (liftShowsPrecTerm spA slA) (liftShowsPrec addressShowsPrec addressShowList) (liftShowsPrecStore (undefined :: proxy l) (liftShowsPrec spA slA :: Int -> Value l a -> ShowS) (liftShowList spA slA :: [Value l a] -> ShowS)) "Configuration" d t1 e1 s1
+  liftShowsPrec spA slA d (Configuration t1 e1 s1) = showsTernaryWith (liftShowsPrecTerm spA slA) (liftShowsPrec addressShowsPrec addressShowList) (liftShowsPrec (liftShowsPrec spA slA :: Int -> Value l a -> ShowS) (liftShowList spA slA :: [Value l a] -> ShowS)) "Configuration" d t1 e1 s1
 
 instance (Show a, Address l) => Show (Configuration l a) where
   showsPrec = showsPrec1

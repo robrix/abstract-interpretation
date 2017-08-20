@@ -69,7 +69,7 @@ instance Address Monovariant where
 
   find = maybe uninitializedAddress (asum . fmap pure . Set.toList) <=< flip fmap get . Map.lookup
 
-  alloc x = pure (Monovariant x)
+  alloc = pure . Monovariant
 
   ext loc val = modify (Map.insertWith (<>) loc (Set.singleton val))
 

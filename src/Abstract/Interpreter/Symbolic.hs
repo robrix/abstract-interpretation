@@ -35,3 +35,5 @@ getPathCondition = get
 pathConditionMember :: Ord a => PathExpression a -> PathCondition a -> Bool
 pathConditionMember = (. unPathCondition) . Set.member
 
+pathConditionInsert :: Ord a => PathExpression a -> PathCondition a -> PathCondition a
+pathConditionInsert = ((PathCondition .) . (. unPathCondition)) . Set.insert

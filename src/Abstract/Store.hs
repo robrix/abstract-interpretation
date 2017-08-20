@@ -23,26 +23,6 @@ import qualified Data.Set as Set
 import Data.Semigroup
 import Prelude hiding (fail)
 
-newtype Precise a = Precise { unPrecise :: Int }
-  deriving (Eq, Ord, Show)
-
-allocPrecise :: AddressStore Precise a -> Precise a
-allocPrecise = Precise . IntMap.size
-
-
-newtype Monovariant a = Monovariant String
-  deriving (Eq, Ord, Show)
-
-newtype MonovariantStore a = MonovariantStore { unMonovariantStore :: Map.Map (Monovariant a) (Set.Set a) }
-  deriving (Eq, Ord, Show)
-
-monovariantLookup :: Monovariant a -> MonovariantStore a -> Maybe (Set.Set a)
-monovariantLookup = (. unMonovariantStore) . Map.lookup
-
-monovariantInsert :: Ord a => Monovariant a -> a -> MonovariantStore a -> MonovariantStore a
-monovariantInsert = (((MonovariantStore .) . (. unMonovariantStore)) .) . (. Set.singleton) . Map.insertWith (<>)
-
-
 class (Eq1 l, Ord1 l, Show1 l) => Address l where
   type AddressStore l a
   type Context l a (fs :: [* -> *]) :: Constraint
@@ -60,6 +40,12 @@ class (Eq1 l, Ord1 l, Show1 l) => Address l where
   liftShowListStore :: proxy l -> (Int -> a -> ShowS) -> ([a] -> ShowS) -> [AddressStore l a] -> ShowS
 
 
+newtype Precise a = Precise { unPrecise :: Int }
+  deriving (Eq, Ord, Show)
+
+allocPrecise :: AddressStore Precise a -> Precise a
+allocPrecise = Precise . IntMap.size
+
 instance Address Precise where
   type AddressStore Precise a = IntMap.IntMap a
 
@@ -74,6 +60,18 @@ instance Address Precise where
   liftShowsPrecStore _ = liftShowsPrec
   liftShowListStore _ = liftShowList
 
+
+newtype Monovariant a = Monovariant String
+  deriving (Eq, Ord, Show)
+
+newtype MonovariantStore a = MonovariantStore { unMonovariantStore :: Map.Map (Monovariant a) (Set.Set a) }
+  deriving (Eq, Ord, Show)
+
+monovariantLookup :: Monovariant a -> MonovariantStore a -> Maybe (Set.Set a)
+monovariantLookup = (. unMonovariantStore) . Map.lookup
+
+monovariantInsert :: Ord a => Monovariant a -> a -> MonovariantStore a -> MonovariantStore a
+monovariantInsert = (((MonovariantStore .) . (. unMonovariantStore)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 instance Address Monovariant where
   type AddressStore Monovariant a = MonovariantStore a

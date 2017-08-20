@@ -3,6 +3,7 @@ module Abstract.Interpreter.Symbolic where
 
 import Abstract.Interpreter
 import Abstract.Syntax
+import qualified Data.Set as Set
 
 data Sym a = Sym (Term a) | V a
   deriving (Eq, Ord, Show)
@@ -22,5 +23,8 @@ evSymbolic ev0 ev e = ev0 ev e
 
 
 data PathExpression a = E (Term a) | NotE (Term a)
+  deriving (Eq, Ord, Show)
+
+newtype PathCondition a = PathCondition { unPathCondition :: Set.Set (PathExpression a) }
   deriving (Eq, Ord, Show)
 

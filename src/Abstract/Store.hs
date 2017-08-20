@@ -106,6 +106,7 @@ instance Monoid (MonovariantStore a) where
   mempty = MonovariantStore mempty
   mappend = (MonovariantStore .) . (mappend `on` unMonovariantStore)
 
+
 instance Eq1 Precise where
   liftEq _ (Precise i1) (Precise i2) = i1 == i2
 

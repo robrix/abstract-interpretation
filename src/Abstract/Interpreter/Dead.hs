@@ -7,11 +7,12 @@ import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value
 import Control.Effect
-import Control.Monad.Effect.Internal hiding (run)
+import Control.Monad.Effect hiding (run)
+import Control.Monad.Effect.State
 import Data.Function (fix)
 import qualified Data.Set as Set
 
-type DeadCodeInterpreter l a = DeadCode a ': Interpreter l a
+type DeadCodeInterpreter l a = State (DeadSet a) ': Interpreter l a
 
 type DeadSet a = Set.Set (Term a)
 
@@ -35,25 +36,3 @@ evDead :: (Ord a, DeadCodeInterpreter l a :<: fs)
 evDead ev0 ev e = do
   modify (Set.delete e)
   ev0 ev e
-
-
-get :: (DeadCode a :< fs) => Eff fs (DeadSet a)
-get = send Get
-
-put :: (DeadCode a :< fs) => DeadSet a -> Eff fs ()
-put s = send (Put s)
-
-modify :: (DeadCode a :< fs) => (DeadSet a -> DeadSet a) -> Eff fs ()
-modify f = fmap f get >>= put
-
-
-data DeadCode a r where
-  Get :: DeadCode a (DeadSet a)
-  Put :: !(DeadSet a) -> DeadCode a ()
-
-
-instance Ord a => RunEffect (DeadCode a) r where
-  type Result (DeadCode a) r = (r, DeadSet a)
-  runEffect = relayState mempty ((pure .) . flip (,)) $ \ state eff yield -> case eff of
-    Get -> yield state state
-    Put state' -> yield state' ()

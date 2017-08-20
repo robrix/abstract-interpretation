@@ -34,11 +34,6 @@ class (Eq1 l, Ord1 l, Show1 l, Eq1 (AddressStore l), Ord1 (AddressStore l), Show
 
   ext :: Context l a fs => l a -> a -> Eff fs ()
 
-  liftEqStore :: proxy l -> (a -> b -> Bool) -> AddressStore l a -> AddressStore l b -> Bool
-  liftCompareStore :: proxy l -> (a -> b -> Ordering) -> AddressStore l a -> AddressStore l b -> Ordering
-  liftShowsPrecStore :: proxy l -> (Int -> a -> ShowS) -> ([a] -> ShowS) -> Int -> AddressStore l a -> ShowS
-  liftShowListStore :: proxy l -> (Int -> a -> ShowS) -> ([a] -> ShowS) -> [AddressStore l a] -> ShowS
-
 
 newtype Precise a = Precise { unPrecise :: Int }
   deriving (Eq, Ord, Show)
@@ -54,11 +49,6 @@ instance Address Precise where
   alloc _ = fmap allocPrecise get
 
   ext = (modify .) . IntMap.insert . unPrecise
-
-  liftEqStore _ = liftEq
-  liftCompareStore _ = liftCompare
-  liftShowsPrecStore _ = liftShowsPrec
-  liftShowListStore _ = liftShowList
 
 
 newtype Monovariant a = Monovariant String
@@ -83,10 +73,6 @@ instance Address Monovariant where
 
   ext = (modify .) . monovariantInsert
 
-  liftEqStore _ = liftEq
-  liftCompareStore _ = liftCompare
-  liftShowsPrecStore _ = liftShowsPrec
-  liftShowListStore _ = liftShowList
 
 addressEq :: Address l => l a -> l b -> Bool
 addressEq = liftEq (const (const True))

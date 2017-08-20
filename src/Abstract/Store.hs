@@ -1,5 +1,13 @@
 {-# LANGUAGE ConstraintKinds, DataKinds, FlexibleContexts, InstanceSigs, ScopedTypeVariables, TypeFamilies, TypeOperators #-}
-module Abstract.Store where
+module Abstract.Store
+( Precise(..)
+, Monovariant(..)
+, Address(..)
+, addressEq
+, addressCompare
+, addressShowsPrec
+, addressShowList
+) where
 
 import Control.Applicative
 import Control.Monad.Effect

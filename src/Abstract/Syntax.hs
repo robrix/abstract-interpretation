@@ -32,6 +32,9 @@ newtype Term a = In { out :: Syntax a (Term a) }
 var :: Name -> Term a
 var = In . Var
 
+num :: a -> Term a
+num = In . Num
+
 infixl 9 #
 (#) :: Term a -> Term a -> Term a
 (#) = (In .) . App

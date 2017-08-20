@@ -22,7 +22,9 @@ data Syntax n a r
   | If0 r r r
   deriving (Eq, Ord, Show)
 
-newtype Term a = In { out :: Syntax String a (Term a) }
+type Name = String
+
+newtype Term a = In { out :: Syntax Name a (Term a) }
   deriving (Eq, Ord, Show)
 
 

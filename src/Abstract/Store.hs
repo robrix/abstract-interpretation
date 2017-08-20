@@ -1,4 +1,4 @@
-{-# LANGUAGE ConstraintKinds, DataKinds, FlexibleContexts, InstanceSigs, ScopedTypeVariables, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE ConstraintKinds, DataKinds, FlexibleContexts, GeneralizedNewtypeDeriving, InstanceSigs, ScopedTypeVariables, TypeFamilies, TypeOperators #-}
 module Abstract.Store
 ( Precise(..)
 , Monovariant(..)
@@ -33,6 +33,16 @@ allocPrecise = Precise . IntMap.size
 newtype Monovariant a = Monovariant String
   deriving (Eq, Ord, Show)
 
+newtype MonovariantStore a = MonovariantStore { unMonovariantStore :: Map.Map (Monovariant a) (Set.Set a) }
+  deriving (Eq, Ord, Show)
+
+monovariantLookup :: Monovariant a -> MonovariantStore a -> Maybe (Set.Set a)
+monovariantLookup = (. unMonovariantStore) . Map.lookup
+
+monovariantInsert :: Ord a => Monovariant a -> a -> MonovariantStore a -> MonovariantStore a
+monovariantInsert = (((MonovariantStore .) . (. unMonovariantStore)) .) . (. Set.singleton) . Map.insertWith (<>)
+
+
 class (Eq1 l, Ord1 l, Show1 l) => Address l where
   type AddressStore l a
   type Context l a (fs :: [* -> *]) :: Constraint
@@ -66,19 +76,19 @@ instance Address Precise where
 
 
 instance Address Monovariant where
-  type AddressStore Monovariant a = Map.Map (Monovariant a) (Set.Set a)
+  type AddressStore Monovariant a = MonovariantStore a
   type Context Monovariant a fs = (Ord a, State (AddressStore Monovariant a) :< fs, Alternative (Eff fs), MonadFail (Eff fs))
 
-  find = maybe uninitializedAddress (asum . fmap pure . Set.toList) <=< flip fmap get . Map.lookup
+  find = maybe uninitializedAddress (asum . fmap pure . Set.toList) <=< flip fmap get . monovariantLookup
 
   alloc = pure . Monovariant
 
-  ext = (modify .) . (. Set.singleton) . Map.insertWith (<>)
+  ext = (modify .) . monovariantInsert
 
-  liftEqStore _ eq = liftEq2 addressEq (liftEq eq)
-  liftCompareStore _ compareA = liftCompare2 addressCompare (liftCompare compareA)
-  liftShowsPrecStore _ sp sl = liftShowsPrec2 addressShowsPrec addressShowList (liftShowsPrec sp sl) (liftShowList sp sl)
-  liftShowListStore _ sp sl = liftShowList2 addressShowsPrec addressShowList (liftShowsPrec sp sl) (liftShowList sp sl)
+  liftEqStore _ = liftEq
+  liftCompareStore _ = liftCompare
+  liftShowsPrecStore _ = liftShowsPrec
+  liftShowListStore _ = liftShowList
 
 addressEq :: Address l => l a -> l b -> Bool
 addressEq = liftEq (const (const True))
@@ -109,14 +119,23 @@ instance Eq1 Precise where
 instance Eq1 Monovariant where
   liftEq _ (Monovariant n1) (Monovariant n2) = n1 == n2
 
+instance Eq1 MonovariantStore where
+  liftEq eq (MonovariantStore m1) (MonovariantStore m2) = liftEq2 addressEq (liftEq eq) m1 m2
+
 instance Ord1 Precise where
   liftCompare _ (Precise i1) (Precise i2) = compare i1 i2
 
 instance Ord1 Monovariant where
   liftCompare _ (Monovariant n1) (Monovariant n2) = compare n1 n2
 
+instance Ord1 MonovariantStore where
+  liftCompare compareA (MonovariantStore m1) (MonovariantStore m2) = liftCompare2 addressCompare (liftCompare compareA) m1 m2
+
 instance Show1 Precise where
   liftShowsPrec _ _ d (Precise i) = showsUnaryWith showsPrec "Precise" d i
 
 instance Show1 Monovariant where
   liftShowsPrec _ _ d (Monovariant n) = showsUnaryWith showsPrec "Monovariant" d n
+
+instance Show1 MonovariantStore where
+  liftShowsPrec sp sl d (MonovariantStore m) = showsUnaryWith (liftShowsPrec2 addressShowsPrec addressShowList (liftShowsPrec sp sl) (liftShowList sp sl)) "MonovariantStore" d m

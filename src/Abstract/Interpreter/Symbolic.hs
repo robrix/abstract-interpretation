@@ -17,3 +17,8 @@ sym2 f (V a) (Sym b) = Sym (f (num a) b)
 
 evSymbolic :: (Eval l fs (Sym a) -> Eval l fs (Sym a)) -> Eval l fs (Sym a) -> Eval l fs (Sym a)
 evSymbolic ev0 ev e = ev0 ev e
+
+
+data PathExpression a = E (Term a) | NotE (Term a)
+  deriving (Eq, Ord, Show)
+

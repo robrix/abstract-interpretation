@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RankNTypes, UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RankNTypes, TypeOperators, UndecidableInstances #-}
 module Abstract.Interpreter.Symbolic where
 
 import Abstract.Interpreter
@@ -6,7 +6,9 @@ import Abstract.Number
 import Abstract.Syntax
 import Control.Applicative
 import Control.Monad
-import Control.Monad.State.Class
+import Control.Monad.Effect
+import Control.Monad.Effect.Amb
+import Control.Monad.Effect.State
 import qualified Data.Set as Set
 
 data Sym a = Sym (Term a) | V a
@@ -32,10 +34,10 @@ data PathExpression a = E (Term a) | NotE (Term a)
 newtype PathCondition a = PathCondition { unPathCondition :: Set.Set (PathExpression a) }
   deriving (Eq, Ord, Show)
 
-getPathCondition :: MonadState (PathCondition a) m => m (PathCondition a)
+getPathCondition :: State (PathCondition a) :< fs => Eff fs (PathCondition a)
 getPathCondition = get
 
-refine :: (Ord a, MonadState (PathCondition a) m) => PathExpression a -> m ()
+refine :: (Ord a, State (PathCondition a) :< fs) => PathExpression a -> Eff fs ()
 refine = modify . pathConditionInsert
 
 pathConditionMember :: Ord a => PathExpression a -> PathCondition a -> Bool
@@ -45,7 +47,7 @@ pathConditionInsert :: Ord a => PathExpression a -> PathCondition a -> PathCondi
 pathConditionInsert = ((PathCondition .) . (. unPathCondition)) . Set.insert
 
 
-instance (Num a, Ord a, AbstractNumber a m, MonadState (PathCondition a) m, Alternative m) => AbstractNumber (Sym a) m where
+instance (Num a, Ord a, AbstractNumber a (Eff fs), State (PathCondition a) :< fs, Amb :< fs) => AbstractNumber (Sym a) (Eff fs) where
   delta1 o a = pure $ case o of
     Negate -> sym negate a
     Abs    -> sym abs    a

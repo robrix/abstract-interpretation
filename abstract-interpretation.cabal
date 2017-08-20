@@ -30,7 +30,6 @@ library
   build-depends:       base >=4.10 && <4.11
                      , containers
                      , effects
-                     , mtl
                      , prettyprinter
                      , prettyprinter-ansi-terminal
                      , recursion-schemes

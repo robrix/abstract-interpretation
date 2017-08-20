@@ -71,7 +71,7 @@ instance Address Monovariant where
 
   alloc = pure . Monovariant
 
-  ext loc val = modify (Map.insertWith (<>) loc (Set.singleton val))
+  ext = (modify .) . (. Set.singleton) . Map.insertWith (<>)
 
   liftEqStore _ eq = liftEq2 addressEq (liftEq eq)
   liftCompareStore _ compareA = liftCompare2 addressCompare (liftCompare compareA)

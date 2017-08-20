@@ -11,7 +11,6 @@ data Amb a where
 
 instance Amb :< fs => Alternative (Eff fs) where
   empty = send (Amb [])
-  -- a <|> b = (++) <$> runAmb a <*> runAmb b >>= send . Amb
   a <|> b = interpose pure (\ (Amb as) ka -> interpose pure (\ (Amb bs) kb -> (++) <$> traverse ka as <*> traverse kb bs >>= send . Amb) b) a
 
 runAmb :: Alternative f => Eff (Amb ': fs) a -> Eff fs (f a)

@@ -88,6 +88,9 @@ instance Recursive (Term a) where
 instance Corecursive (Term a) where
   embed = In
 
+instance Foldable Term where
+  foldMap f = go where go = bifoldMap f go . out
+
 instance Bifoldable Syntax where
   bifoldMap f g s = case s of
     Var _ -> mempty

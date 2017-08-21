@@ -33,21 +33,21 @@ cacheInsert :: (Ord a, Ord t, Ord (AddressStore l (Value l t a)), Address l) => 
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 
-type CachingInterpreter l a = Amb ': State (Cache l (Term a) a) ': Reader (Cache l (Term a) a) ': Interpreter l (Term a) a
+type CachingInterpreter l t a = Amb ': State (Cache l t a) ': Reader (Cache l t a) ': Interpreter l t a
 
 type CachingResult l t a = (Either String ([] (Value l t a), Cache l t a), AddressStore l (Value l t a))
 
 
 -- Coinductively-cached evaluation
 
-evalCache :: forall l a . (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Monoid (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l a), AbstractNumber a (Eff (CachingInterpreter l a))) => Term a -> CachingResult l (Term a) a
-evalCache = run @(CachingInterpreter l a) . runCache
+evalCache :: forall l a . (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Monoid (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l (Term a) a), AbstractNumber a (Eff (CachingInterpreter l (Term a) a))) => Term a -> CachingResult l (Term a) a
+evalCache = run @(CachingInterpreter l (Term a) a) . runCache
 
-runCache :: (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), CachingInterpreter l a :<: fs) => Eval (Term a) l fs a
+runCache :: (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), CachingInterpreter l (Term a) a :<: fs) => Eval (Term a) l fs a
 runCache = fixCache (fix (evCache ev))
 
 evCache :: forall l a fs
-        .  (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) fs, CachingInterpreter l a :<: fs)
+        .  (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) fs, CachingInterpreter l (Term a) a :<: fs)
         => (Eval (Term a) l fs a -> Eval (Term a) l fs a)
         -> Eval (Term a) l fs a
         -> Eval (Term a) l fs a
@@ -70,7 +70,7 @@ evCache ev0 ev e = do
       return v
 
 fixCache :: forall l a fs
-         .  (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) fs, CachingInterpreter l a :<: fs)
+         .  (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) fs, CachingInterpreter l (Term a) a :<: fs)
          => Eval (Term a) l fs a
          -> Eval (Term a) l fs a
 fixCache eval e = do

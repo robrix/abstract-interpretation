@@ -12,15 +12,15 @@ import Control.Monad.Effect.State
 import Data.Function (fix)
 import qualified Data.Set as Set
 
-type DeadCodeInterpreter l a = State (Dead a) ': Interpreter l (Value l (Term a) a)
+type DeadCodeInterpreter l a = State (Dead (Term a)) ': Interpreter l (Value l (Term a) a)
 
-newtype Dead a = Dead { unDead :: Set.Set (Term a) }
+newtype Dead a = Dead { unDead :: Set.Set a }
   deriving (Eq, Foldable, Monoid, Ord, Show)
 
-revive :: Ord a => Term a -> Dead a -> Dead a
+revive :: Ord a => a -> Dead a -> Dead a
 revive = (Dead .) . (. unDead) . Set.delete
 
-type DeadCodeResult l a = (Either String (Value l (Term a) a, Dead a), Store l (Value l (Term a) a))
+type DeadCodeResult l a = (Either String (Value l (Term a) a, Dead (Term a)), Store l (Value l (Term a) a))
 
 
 -- Dead code analysis

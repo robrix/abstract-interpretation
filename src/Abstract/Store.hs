@@ -26,6 +26,8 @@ import qualified Data.Map as Map
 import Data.Semigroup
 import Prelude hiding (fail)
 
+newtype Store l a = Store { unStore :: Map.Map (l a) (Cell l a) }
+
 class (Eq1 l, Ord1 l, Show1 l, Eq1 (AddressStore l), Ord1 (AddressStore l), Show1 (AddressStore l), Eq1 (Cell l), Ord1 (Cell l), Show1 (Cell l)) => Address l where
   type AddressStore l :: * -> *
   type Cell l :: * -> *

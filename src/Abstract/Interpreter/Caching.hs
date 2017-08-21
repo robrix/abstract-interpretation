@@ -20,16 +20,16 @@ import Data.Maybe
 import Data.Semigroup
 import qualified Data.Set as Set
 
-newtype Cache l t a = Cache { unCache :: Map.Map (Configuration l t a) (Set.Set (Value l t a, AddressStore l (Value l t a))) }
+newtype Cache l t a = Cache { unCache :: Map.Map (Configuration l t (Value l t a)) (Set.Set (Value l t a, AddressStore l (Value l t a))) }
   deriving (Monoid)
 
-cacheLookup :: (Ord a, Ord t, Address l) => Configuration l t a -> Cache l t a -> Maybe (Set.Set (Value l t a, AddressStore l (Value l t a)))
+cacheLookup :: (Ord a, Ord t, Address l) => Configuration l t (Value l t a) -> Cache l t a -> Maybe (Set.Set (Value l t a, AddressStore l (Value l t a)))
 cacheLookup = (. unCache) . Map.lookup
 
-cacheSet :: (Ord a, Ord t, Ord (AddressStore l (Value l t a)), Address l) => Configuration l t a -> Set.Set (Value l t a, AddressStore l (Value l t a)) -> Cache l t a -> Cache l t a
+cacheSet :: (Ord a, Ord t, Ord (AddressStore l (Value l t a)), Address l) => Configuration l t (Value l t a) -> Set.Set (Value l t a, AddressStore l (Value l t a)) -> Cache l t a -> Cache l t a
 cacheSet = (((Cache .) . (. unCache)) .) . Map.insert
 
-cacheInsert :: (Ord a, Ord t, Ord (AddressStore l (Value l t a)), Address l) => Configuration l t a -> (Value l t a, AddressStore l (Value l t a)) -> Cache l t a -> Cache l t a
+cacheInsert :: (Ord a, Ord t, Ord (AddressStore l (Value l t a)), Address l) => Configuration l t (Value l t a) -> (Value l t a, AddressStore l (Value l t a)) -> Cache l t a -> Cache l t a
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 
@@ -56,7 +56,7 @@ evCache :: forall l t a fs
 evCache ev0 ev e = do
   env <- ask
   store <- get
-  let c = Configuration e env store :: Configuration l t a
+  let c = Configuration e env store :: Configuration l t (Value l t a)
   out <- getCache
   case cacheLookup c out of
     Just pairs -> asum . flip map (toList pairs) $ \ (value, store') -> do
@@ -78,7 +78,7 @@ fixCache :: forall l t a fs
 fixCache eval e = do
   env <- ask
   store <- get
-  let c = Configuration e env store :: Configuration l t a
+  let c = Configuration e env store :: Configuration l t (Value l t a)
   pairs <- mlfp mempty (\ dollar -> do
     putCache (mempty :: Cache l t a)
     put store
@@ -117,7 +117,7 @@ modifyCache f = fmap f getCache >>= putCache
 
 
 instance Address l => Eq2 (Cache l) where
-  liftEq2 eqT eqA (Cache a) (Cache b) = liftEq2 (liftEq2 eqT eqA) (liftEq (liftEq2 eqValue (liftEq eqValue))) a b
+  liftEq2 eqT eqA (Cache a) (Cache b) = liftEq2 (liftEq2 eqT eqValue) (liftEq (liftEq2 eqValue (liftEq eqValue))) a b
     where eqValue = liftEq2 eqT eqA
 
 instance (Eq t, Address l) => Eq1 (Cache l t) where
@@ -129,8 +129,8 @@ instance (Eq a, Eq t, Address l) => Eq (Cache l t a) where
 
 instance Address l => Show2 (Cache l) where
   liftShowsPrec2 spT slT spA slA d = showsUnaryWith (liftShowsPrec2 spKey slKey (liftShowsPrec spPair slPair) (liftShowList spPair slPair)) "Cache" d . unCache
-    where spKey = liftShowsPrec2 spT slT spA slA
-          slKey = liftShowList2 spT slT spA slA
+    where spKey = liftShowsPrec2 spT slT spValue slValue
+          slKey = liftShowList2 spT slT spValue slValue
           spPair = liftShowsPrec2 spValue slValue spStore slStore
           slPair = liftShowList2 spValue slValue spStore slStore
           spStore = liftShowsPrec spValue slValue

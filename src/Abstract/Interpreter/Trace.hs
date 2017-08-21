@@ -16,12 +16,12 @@ import Data.Function (fix)
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
-type TracingInterpreter l a g = Writer (g (Configuration l (Term a) a)) ': Interpreter l (Term a) a
+type TracingInterpreter l a g = Writer (g (Configuration l (Term a) (Value l (Term a) a))) ': Interpreter l (Term a) a
 
 type TraceInterpreter l a = TracingInterpreter l a []
 type ReachableStateInterpreter l a = TracingInterpreter l a Set.Set
 
-type TraceResult l a f = (Either String (Value l (Term a) a, f (Configuration l (Term a) a)), AddressStore l (Value l (Term a) a))
+type TraceResult l a f = (Either String (Value l (Term a) a, f (Configuration l (Term a) (Value l (Term a) a))), AddressStore l (Value l (Term a) a))
 
 
 -- Tracing and reachable state analyses
@@ -38,7 +38,7 @@ evalReach = run @(ReachableStateInterpreter l a) . runReach
 runReach :: (Ord a, Ord (l (Value l (Term a) a)), ReachableStateInterpreter l a :<: fs, Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs)) => Eval (Term a) fs (Value l (Term a) a)
 runReach = fix (evTell Set.empty ev)
 
-evTell :: forall l a g fs . (TracingInterpreter l a g :<: fs, IsList (g (Configuration l (Term a) a)), Item (g (Configuration l (Term a) a)) ~ Configuration l (Term a) a)
+evTell :: forall l a g fs . (TracingInterpreter l a g :<: fs, IsList (g (Configuration l (Term a) (Value l (Term a) a))), Item (g (Configuration l (Term a) (Value l (Term a) a))) ~ Configuration l (Term a) (Value l (Term a) a))
        => g ()
        -> (Eval (Term a) fs (Value l (Term a) a) -> Eval (Term a) fs (Value l (Term a) a))
        -> Eval (Term a) fs (Value l (Term a) a)
@@ -46,5 +46,5 @@ evTell :: forall l a g fs . (TracingInterpreter l a g :<: fs, IsList (g (Configu
 evTell _ ev0 ev e = do
   env <- ask
   store <- get
-  tell (fromList [Configuration e env store] :: g (Configuration l (Term a) a))
+  tell (fromList [Configuration e env store] :: g (Configuration l (Term a) (Value l (Term a) a)))
   ev0 ev e

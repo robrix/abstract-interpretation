@@ -20,22 +20,22 @@ import Data.Maybe
 import Data.Semigroup
 import qualified Data.Set as Set
 
-newtype Cache l t a = Cache { unCache :: Map.Map (Configuration l t (Value l t a)) (Set.Set (Value l t a, Store l (Value l t a))) }
+newtype Cache l t v = Cache { unCache :: Map.Map (Configuration l t v) (Set.Set (v, Store l v)) }
   deriving (Monoid)
 
-cacheLookup :: (Ord a, Ord t, Address l) => Configuration l t (Value l t a) -> Cache l t a -> Maybe (Set.Set (Value l t a, Store l (Value l t a)))
+cacheLookup :: (Ord t, Ord v, Address l) => Configuration l t v -> Cache l t v -> Maybe (Set.Set (v, Store l v))
 cacheLookup = (. unCache) . Map.lookup
 
-cacheSet :: (Ord a, Ord t, Address l) => Configuration l t (Value l t a) -> Set.Set (Value l t a, Store l (Value l t a)) -> Cache l t a -> Cache l t a
+cacheSet :: (Ord t, Ord v, Ord (Store l v), Address l) => Configuration l t v -> Set.Set (v, Store l v) -> Cache l t v -> Cache l t v
 cacheSet = (((Cache .) . (. unCache)) .) . Map.insert
 
-cacheInsert :: (Ord a, Ord t, Ord (Store l (Value l t a)), Address l) => Configuration l t (Value l t a) -> (Value l t a, Store l (Value l t a)) -> Cache l t a -> Cache l t a
+cacheInsert :: (Ord t, Ord v, Ord (Store l v), Address l) => Configuration l t v -> (v, Store l v) -> Cache l t v -> Cache l t v
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 
-type CachingInterpreter l t a = Amb ': State (Cache l t a) ': Reader (Cache l t a) ': Interpreter l t a
+type CachingInterpreter l t a = Amb ': State (Cache l t (Value l t a)) ': Reader (Cache l t (Value l t a)) ': Interpreter l t a
 
-type CachingResult l t a = (Either String ([] (Value l t a), Cache l t a), Store l (Value l t a))
+type CachingResult l t a = (Either String ([] (Value l t a), Cache l t (Value l t a)), Store l (Value l t a))
 
 
 -- Coinductively-cached evaluation
@@ -80,7 +80,7 @@ fixCache eval e = do
   store <- get
   let c = Configuration e env store :: Configuration l t (Value l t a)
   pairs <- mlfp mempty (\ dollar -> do
-    putCache (mempty :: Cache l t a)
+    putCache (mempty :: Cache l t (Value l t a))
     put store
     _ <- localCache (const dollar) (eval e)
     getCache)
@@ -99,44 +99,41 @@ mlfp a f = loop a
             loop x'
 
 
-askCache :: (Reader (Cache l t a) :< fs) => Eff fs (Cache l t a)
+askCache :: (Reader (Cache l t v) :< fs) => Eff fs (Cache l t v)
 askCache = ask
 
-localCache :: (Reader (Cache l t a) :< fs) => (Cache l t a -> Cache l t a) -> Eff fs b -> Eff fs b
+localCache :: (Reader (Cache l t v) :< fs) => (Cache l t v -> Cache l t v) -> Eff fs b -> Eff fs b
 localCache = local
 
 
-getCache :: (State (Cache l t a) :< fs) => Eff fs (Cache l t a)
+getCache :: (State (Cache l t v) :< fs) => Eff fs (Cache l t v)
 getCache = get
 
-putCache :: (State (Cache l t a) :< fs) => Cache l t a -> Eff fs ()
+putCache :: (State (Cache l t v) :< fs) => Cache l t v -> Eff fs ()
 putCache = put
 
-modifyCache :: (State (Cache l t a) :< fs) => (Cache l t a -> Cache l t a) -> Eff fs ()
+modifyCache :: (State (Cache l t v) :< fs) => (Cache l t v -> Cache l t v) -> Eff fs ()
 modifyCache f = fmap f getCache >>= putCache
 
 
 instance Address l => Eq2 (Cache l) where
-  liftEq2 eqT eqA (Cache a) (Cache b) = liftEq2 (liftEq2 eqT eqValue) (liftEq (liftEq2 eqValue (liftEq eqValue))) a b
-    where eqValue = liftEq2 eqT eqA
+  liftEq2 eqT eqV (Cache a) (Cache b) = liftEq2 (liftEq2 eqT eqV) (liftEq (liftEq2 eqV (liftEq eqV))) a b
 
 instance (Eq t, Address l) => Eq1 (Cache l t) where
   liftEq = liftEq2 (==)
 
-instance (Eq a, Eq t, Address l) => Eq (Cache l t a) where
+instance (Eq v, Eq t, Address l) => Eq (Cache l t v) where
   (==) = eq1
 
 
 instance Address l => Show2 (Cache l) where
-  liftShowsPrec2 spT slT spA slA d = showsUnaryWith (liftShowsPrec2 spKey slKey (liftShowsPrec spPair slPair) (liftShowList spPair slPair)) "Cache" d . unCache
-    where spKey = liftShowsPrec2 spT slT spValue slValue
-          slKey = liftShowList2 spT slT spValue slValue
-          spPair = liftShowsPrec2 spValue slValue spStore slStore
-          slPair = liftShowList2 spValue slValue spStore slStore
-          spStore = liftShowsPrec spValue slValue
-          slStore = liftShowList  spValue slValue
-          spValue = liftShowsPrec2 spT slT spA slA
-          slValue = liftShowList2 spT slT spA slA
+  liftShowsPrec2 spT slT spV slV d = showsUnaryWith (liftShowsPrec2 spKey slKey (liftShowsPrec spPair slPair) (liftShowList spPair slPair)) "Cache" d . unCache
+    where spKey = liftShowsPrec2 spT slT spV slV
+          slKey = liftShowList2 spT slT spV slV
+          spPair = liftShowsPrec2 spV slV spStore slStore
+          slPair = liftShowList2 spV slV spStore slStore
+          spStore = liftShowsPrec spV slV
+          slStore = liftShowList  spV slV
 
 instance (Show t, Address l) => Show1 (Cache l t) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList

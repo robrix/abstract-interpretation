@@ -12,7 +12,7 @@ import Control.Monad.Effect.State
 import Data.Function (fix)
 import qualified Data.Set as Set
 
-type DeadCodeInterpreter l a = State (Dead (Term a)) ': Interpreter l (Value l (Term a) a)
+type DeadCodeInterpreter l t v = State (Dead t) ': Interpreter l v
 
 newtype Dead a = Dead { unDead :: Set.Set a }
   deriving (Eq, Foldable, Monoid, Ord, Show)
@@ -25,15 +25,15 @@ type DeadCodeResult l a = (Either String (Value l (Term a) a, Dead (Term a)), St
 
 -- Dead code analysis
 
-evalDead :: forall l a. (Ord a, Address l, Context l (Value l (Term a) a) (DeadCodeInterpreter l a), AbstractNumber a (Eff (DeadCodeInterpreter l a))) => Term a -> DeadCodeResult l a
-evalDead = run @(DeadCodeInterpreter l a) . runDead
+evalDead :: forall l a. (Ord a, Address l, Context l (Value l (Term a) a) (DeadCodeInterpreter l (Term a) (Value l (Term a) a)), AbstractNumber a (Eff (DeadCodeInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> DeadCodeResult l a
+evalDead = run @(DeadCodeInterpreter l (Term a) (Value l (Term a) a)) . runDead
 
-runDead :: (Ord a, DeadCodeInterpreter l a :<: fs, Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs)) => Eval (Term a) fs (Value l (Term a) a)
+runDead :: (Ord a, DeadCodeInterpreter l (Term a) (Value l (Term a) a) :<: fs, Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs)) => Eval (Term a) fs (Value l (Term a) a)
 runDead e0 = do
   put (Dead (subterms e0))
   fix (evDead ev) e0
 
-evDead :: (Ord a, DeadCodeInterpreter l a :<: fs)
+evDead :: (Ord a, DeadCodeInterpreter l (Term a) (Value l (Term a) a) :<: fs)
        => (Eval (Term a) fs (Value l (Term a) a) -> Eval (Term a) fs (Value l (Term a) a))
        -> Eval (Term a) fs (Value l (Term a) a)
        -> Eval (Term a) fs (Value l (Term a) a)

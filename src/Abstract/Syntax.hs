@@ -196,6 +196,9 @@ instance Ord a => Ord1 (Syntax a) where
   liftCompare = liftCompare2 compare
 
 
+instance Show1 Term where
+  liftShowsPrec spA slA = go where go d t = showsUnaryWith (liftShowsPrec2 spA slA go (liftShowList spA slA)) "In" d (out t)
+
 instance Show2 Syntax where
   liftShowsPrec2 spV _ spA _ d s = case s of
     Var n -> showsUnaryWith showsPrec "Var" d n

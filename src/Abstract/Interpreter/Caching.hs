@@ -69,16 +69,16 @@ evCache ev0 ev e = do
       modifyCache (cacheInsert c (v, store'))
       return v
 
-fixCache :: forall l a fs
-         .  (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) fs, CachingInterpreter l (Term a) a :<: fs)
-         => Eval (Term a) l fs a
-         -> Eval (Term a) l fs a
+fixCache :: forall l t a fs
+         .  (Ord a, Ord t, Ord (l (Value l t a)), Ord (AddressStore l (Value l t a)), Address l, Context l (Value l t a) fs, CachingInterpreter l t a :<: fs)
+         => Eval t l fs a
+         -> Eval t l fs a
 fixCache eval e = do
   env <- ask
   store <- get
-  let c = Configuration e env store :: Configuration l (Term a) a
+  let c = Configuration e env store :: Configuration l t a
   pairs <- mlfp mempty (\ dollar -> do
-    putCache (mempty :: Cache l (Term a) a)
+    putCache (mempty :: Cache l t a)
     put store
     _ <- localCache (const dollar) (eval e)
     getCache)

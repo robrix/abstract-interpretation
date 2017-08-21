@@ -97,20 +97,20 @@ mlfp a f = loop a
             loop x'
 
 
-askCache :: (Reader (Cache l (Term a) a) :< fs) => Eff fs (Cache l (Term a) a)
+askCache :: (Reader (Cache l t a) :< fs) => Eff fs (Cache l t a)
 askCache = ask
 
-localCache :: (Reader (Cache l (Term a) a) :< fs) => (Cache l (Term a) a -> Cache l (Term a) a) -> Eff fs b -> Eff fs b
+localCache :: (Reader (Cache l t a) :< fs) => (Cache l t a -> Cache l t a) -> Eff fs b -> Eff fs b
 localCache = local
 
 
-getCache :: (State (Cache l (Term a) a) :< fs) => Eff fs (Cache l (Term a) a)
+getCache :: (State (Cache l t a) :< fs) => Eff fs (Cache l t a)
 getCache = get
 
-putCache :: (State (Cache l (Term a) a) :< fs) => Cache l (Term a) a -> Eff fs ()
+putCache :: (State (Cache l t a) :< fs) => Cache l t a -> Eff fs ()
 putCache = put
 
-modifyCache :: (State (Cache l (Term a) a) :< fs) => (Cache l (Term a) a -> Cache l (Term a) a) -> Eff fs ()
+modifyCache :: (State (Cache l t a) :< fs) => (Cache l t a -> Cache l t a) -> Eff fs ()
 modifyCache f = fmap f getCache >>= putCache
 
 

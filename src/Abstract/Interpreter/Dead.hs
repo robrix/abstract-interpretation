@@ -32,17 +32,18 @@ subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.sing
 -- Dead code analysis
 
 evalDead :: forall l a. (Ord a, Address l, Context l (Value l (Term a) a) (DeadCodeInterpreter l (Term a) (Value l (Term a) a)), AbstractNumber a (Eff (DeadCodeInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> DeadCodeResult l a
-evalDead = run @(DeadCodeInterpreter l (Term a) (Value l (Term a) a)) . runDead ev
+evalDead = run @(DeadCodeInterpreter l (Term a) (Value l (Term a) a)) . runDead (undefined :: proxy l) ev
 
-runDead :: (Ord a, Ord t, Recursive t, Foldable (Base t), DeadCodeInterpreter l t (Value l t a) :<: fs, Address l, Context l (Value l t a) fs, AbstractNumber a (Eff fs)) => (Eval t fs (Value l t a) -> Eval t fs (Value l t a)) -> Eval t fs (Value l t a)
-runDead ev e0 = do
+runDead :: (Ord t, Recursive t, Foldable (Base t), DeadCodeInterpreter l t v :<: fs) => proxy l -> (Eval t fs v -> Eval t fs v) -> Eval t fs v
+runDead proxy ev e0 = do
   put (Dead (subterms e0))
-  fix (evDead ev) e0
+  fix (evDead proxy ev) e0
 
-evDead :: (Ord a, Ord t, DeadCodeInterpreter l t (Value l t a) :<: fs)
-       => (Eval t fs (Value l t a) -> Eval t fs (Value l t a))
-       -> Eval t fs (Value l t a)
-       -> Eval t fs (Value l t a)
-evDead ev0 ev e = do
+evDead :: (Ord t, DeadCodeInterpreter l t v :<: fs)
+       => proxy l
+       -> (Eval t fs v -> Eval t fs v)
+       -> Eval t fs v
+       -> Eval t fs v
+evDead _ ev0 ev e = do
   modify (revive e)
   ev0 ev e

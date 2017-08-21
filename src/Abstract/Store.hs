@@ -19,14 +19,16 @@ import Data.Coerce
 import Data.Foldable (asum)
 import Data.Function (on)
 import Data.Functor.Classes
+import Data.Functor.Identity
 import qualified Data.IntMap as IntMap
 import Data.Kind
 import qualified Data.Map as Map
 import Data.Semigroup
 import Prelude hiding (fail)
 
-class (Eq1 l, Ord1 l, Show1 l, Eq1 (AddressStore l), Ord1 (AddressStore l), Show1 (AddressStore l)) => Address l where
+class (Eq1 l, Ord1 l, Show1 l, Eq1 (AddressStore l), Ord1 (AddressStore l), Show1 (AddressStore l), Eq1 (Cell l), Ord1 (Cell l), Show1 (Cell l)) => Address l where
   type AddressStore l :: * -> *
+  type Cell l :: * -> *
   type Context l a (fs :: [* -> *]) :: Constraint
   type instance Context l a fs = (State (AddressStore l a) :< fs, MonadFail (Eff fs))
 
@@ -45,6 +47,7 @@ allocPrecise = Precise . IntMap.size
 
 instance Address Precise where
   type AddressStore Precise = IntMap.IntMap
+  type Cell Precise = Identity
 
   deref = maybe uninitializedAddress pure <=< flip fmap get . IntMap.lookup . unPrecise
 
@@ -67,6 +70,7 @@ monovariantInsert = (((MonovariantStore .) . (. unMonovariantStore)) .) . (. pur
 
 instance Address Monovariant where
   type AddressStore Monovariant = MonovariantStore
+  type Cell Monovariant = []
   type Context Monovariant a fs = (Ord a, State (AddressStore Monovariant a) :< fs, Alternative (Eff fs), MonadFail (Eff fs))
 
   deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . monovariantLookup

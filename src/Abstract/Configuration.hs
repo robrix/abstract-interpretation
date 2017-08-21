@@ -9,9 +9,9 @@ import Data.Semigroup
 
 data Configuration l t v = Configuration { configurationTerm :: t, configurationEnvironment :: Environment (l v), configurationStore :: AddressStore l v }
 
-deriving instance (Address l, Foldable l, Foldable (AddressStore l)) => Foldable (Configuration l t)
-deriving instance (Address l, Functor l, Functor (AddressStore l)) => Functor (Configuration l t)
-deriving instance (Address l, Traversable l, Traversable (AddressStore l)) => Traversable (Configuration l t)
+deriving instance (Address l, Foldable l) => Foldable (Configuration l t)
+deriving instance (Address l, Functor l) => Functor (Configuration l t)
+deriving instance (Address l, Traversable l) => Traversable (Configuration l t)
 
 
 instance Address l => Eq2 (Configuration l) where

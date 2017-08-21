@@ -3,6 +3,8 @@ module Abstract.Store
 ( Precise(..)
 , Monovariant(..)
 , Address(..)
+, Store(..)
+, AddressStore
 , addressEq
 , addressCompare
 , addressShowsPrec
@@ -24,6 +26,8 @@ import Data.Semigroup
 import Prelude hiding (fail)
 import Text.Show
 
+type AddressStore = Store
+
 newtype Store l a = Store { unStore :: Map.Map (Key l a) (Cell l a) }
 
 newtype Key l a = Key { unKey :: l a }
@@ -38,11 +42,10 @@ storeSize :: Store l a -> Int
 storeSize = Map.size . unStore
 
 
-class (Traversable l, Eq1 l, Ord1 l, Show1 l, Eq1 (AddressStore l), Ord1 (AddressStore l), Show1 (AddressStore l), Eq1 (Cell l), Ord1 (Cell l), Show1 (Cell l), Traversable (Cell l), Applicative (Cell l)) => Address l where
-  type AddressStore l :: * -> *
+class (Traversable l, Eq1 l, Ord1 l, Show1 l, Eq1 (Cell l), Ord1 (Cell l), Show1 (Cell l), Traversable (Cell l), Applicative (Cell l)) => Address l where
   type Cell l :: * -> *
   type Context l a (fs :: [* -> *]) :: Constraint
-  type instance Context l a fs = (State (AddressStore l a) :< fs, MonadFail (Eff fs))
+  type instance Context l a fs = (State (Store l a) :< fs, MonadFail (Eff fs))
 
   deref :: Context l a fs => l a -> Eff fs a
 
@@ -56,14 +59,13 @@ class (Traversable l, Eq1 l, Ord1 l, Show1 l, Eq1 (AddressStore l), Ord1 (Addres
 newtype Precise a = Precise { unPrecise :: Int }
   deriving (Eq, Foldable, Functor, Ord, Show, Traversable)
 
-allocPrecise :: AddressStore Precise a -> Precise a
+allocPrecise :: Store Precise a -> Precise a
 allocPrecise = Precise . storeSize
 
 newtype I a = I { unI :: a }
   deriving (Eq, Ord, Show)
 
 instance Address Precise where
-  type AddressStore Precise = Store Precise
   type Cell Precise = I
 
   deref = maybe uninitializedAddress (pure . unI) <=< flip fmap get . storeLookup
@@ -79,9 +81,8 @@ newtype Monovariant a = Monovariant { unMonovariant :: Name }
   deriving (Eq, Foldable, Functor, Ord, Show, Traversable)
 
 instance Address Monovariant where
-  type AddressStore Monovariant = Store Monovariant
   type Cell Monovariant = []
-  type Context Monovariant a fs = (Ord a, State (AddressStore Monovariant a) :< fs, Alternative (Eff fs), MonadFail (Eff fs))
+  type Context Monovariant a fs = (Ord a, State (Store Monovariant a) :< fs, Alternative (Eff fs), MonadFail (Eff fs))
 
   deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . storeLookup
 

@@ -25,7 +25,7 @@ type DeadCodeResult l a = (Either String (Value l (Term a) a, Dead a), Store l (
 
 -- Dead code analysis
 
-evalDead :: forall l a. (Monoid (Store l (Value l (Term a) a)), Ord a, Address l, Context l (Value l (Term a) a) (DeadCodeInterpreter l a), AbstractNumber a (Eff (DeadCodeInterpreter l a))) => Term a -> DeadCodeResult l a
+evalDead :: forall l a. (Ord a, Address l, Context l (Value l (Term a) a) (DeadCodeInterpreter l a), AbstractNumber a (Eff (DeadCodeInterpreter l a))) => Term a -> DeadCodeResult l a
 evalDead = run @(DeadCodeInterpreter l a) . runDead
 
 runDead :: (Ord a, DeadCodeInterpreter l a :<: fs, Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs)) => Eval (Term a) fs (Value l (Term a) a)

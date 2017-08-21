@@ -20,22 +20,22 @@ import Data.Maybe
 import Data.Semigroup
 import qualified Data.Set as Set
 
-newtype Cache l a = Cache { unCache :: Map.Map (Configuration l (Term a) a) (Set.Set (Value l (Term a) a, AddressStore l (Value l (Term a) a))) }
+newtype Cache l t a = Cache { unCache :: Map.Map (Configuration l t a) (Set.Set (Value l t a, AddressStore l (Value l t a))) }
   deriving (Monoid)
 
-cacheLookup :: (Ord a, Address l) => Configuration l (Term a) a -> Cache l a -> Maybe (Set.Set (Value l (Term a) a, AddressStore l (Value l (Term a) a)))
+cacheLookup :: (Ord a, Address l) => Configuration l (Term a) a -> Cache l (Term a) a -> Maybe (Set.Set (Value l (Term a) a, AddressStore l (Value l (Term a) a)))
 cacheLookup = (. unCache) . Map.lookup
 
-cacheSet :: (Ord a, Ord (AddressStore l (Value l (Term a) a)), Address l) => Configuration l (Term a) a -> Set.Set (Value l (Term a) a, AddressStore l (Value l (Term a) a)) -> Cache l a -> Cache l a
+cacheSet :: (Ord a, Ord (AddressStore l (Value l (Term a) a)), Address l) => Configuration l (Term a) a -> Set.Set (Value l (Term a) a, AddressStore l (Value l (Term a) a)) -> Cache l (Term a) a -> Cache l (Term a) a
 cacheSet = (((Cache .) . (. unCache)) .) . Map.insert
 
-cacheInsert :: (Ord a, Ord (AddressStore l (Value l (Term a) a)), Address l) => Configuration l (Term a) a -> (Value l (Term a) a, AddressStore l (Value l (Term a) a)) -> Cache l a -> Cache l a
+cacheInsert :: (Ord a, Ord (AddressStore l (Value l (Term a) a)), Address l) => Configuration l (Term a) a -> (Value l (Term a) a, AddressStore l (Value l (Term a) a)) -> Cache l (Term a) a -> Cache l (Term a) a
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 
-type CachingInterpreter l a = Amb ': State (Cache l a) ': Reader (Cache l a) ': Interpreter l a
+type CachingInterpreter l a = Amb ': State (Cache l (Term a) a) ': Reader (Cache l (Term a) a) ': Interpreter l a
 
-type CachingResult l a = (Either String ([] (Value l (Term a) a), Cache l a), AddressStore l (Value l (Term a) a))
+type CachingResult l a = (Either String ([] (Value l (Term a) a), Cache l (Term a) a), AddressStore l (Value l (Term a) a))
 
 
 -- Coinductively-cached evaluation
@@ -78,7 +78,7 @@ fixCache eval e = do
   store <- get
   let c = Configuration e env store :: Configuration l (Term a) a
   pairs <- mlfp mempty (\ dollar -> do
-    putCache (mempty :: Cache l a)
+    putCache (mempty :: Cache l (Term a) a)
     put store
     _ <- localCache (const dollar) (eval e)
     getCache)
@@ -97,41 +97,47 @@ mlfp a f = loop a
             loop x'
 
 
-askCache :: (Reader (Cache l a) :< fs) => Eff fs (Cache l a)
+askCache :: (Reader (Cache l (Term a) a) :< fs) => Eff fs (Cache l (Term a) a)
 askCache = ask
 
-localCache :: (Reader (Cache l a) :< fs) => (Cache l a -> Cache l a) -> Eff fs b -> Eff fs b
+localCache :: (Reader (Cache l (Term a) a) :< fs) => (Cache l (Term a) a -> Cache l (Term a) a) -> Eff fs b -> Eff fs b
 localCache = local
 
 
-getCache :: (State (Cache l a) :< fs) => Eff fs (Cache l a)
+getCache :: (State (Cache l (Term a) a) :< fs) => Eff fs (Cache l (Term a) a)
 getCache = get
 
-putCache :: (State (Cache l a) :< fs) => Cache l a -> Eff fs ()
+putCache :: (State (Cache l (Term a) a) :< fs) => Cache l (Term a) a -> Eff fs ()
 putCache = put
 
-modifyCache :: (State (Cache l a) :< fs) => (Cache l a -> Cache l a) -> Eff fs ()
+modifyCache :: (State (Cache l (Term a) a) :< fs) => (Cache l (Term a) a -> Cache l (Term a) a) -> Eff fs ()
 modifyCache f = fmap f getCache >>= putCache
 
 
-instance Address l => Eq1 (Cache l) where
-  liftEq eq (Cache a) (Cache b) = liftEq2 (liftEq2 (liftEq eq) eq) (liftEq (liftEq2 eqValue (liftEq eqValue))) a b
-    where eqValue = liftEq2 (liftEq eq) eq
+instance Address l => Eq2 (Cache l) where
+  liftEq2 eqT eqA (Cache a) (Cache b) = liftEq2 (liftEq2 eqT eqA) (liftEq (liftEq2 eqValue (liftEq eqValue))) a b
+    where eqValue = liftEq2 eqT eqA
 
-instance (Eq a, Address l) => Eq (Cache l a) where
+instance (Eq t, Address l) => Eq1 (Cache l t) where
+  liftEq = liftEq2 (==)
+
+instance (Eq a, Eq t, Address l) => Eq (Cache l t a) where
   (==) = eq1
 
 
-instance Address l => Show1 (Cache l) where
-  liftShowsPrec sp sl d = showsUnaryWith (liftShowsPrec2 spKey slKey (liftShowsPrec spPair slPair) (liftShowList spPair slPair)) "Cache" d . unCache
-    where spKey = liftShowsPrec2 (liftShowsPrec sp sl) (liftShowList sp sl) sp sl
-          slKey = liftShowList2 (liftShowsPrec sp sl) (liftShowList sp sl) sp sl
+instance Address l => Show2 (Cache l) where
+  liftShowsPrec2 spT slT spA slA d = showsUnaryWith (liftShowsPrec2 spKey slKey (liftShowsPrec spPair slPair) (liftShowList spPair slPair)) "Cache" d . unCache
+    where spKey = liftShowsPrec2 spT slT spA slA
+          slKey = liftShowList2 spT slT spA slA
           spPair = liftShowsPrec2 spValue slValue spStore slStore
           slPair = liftShowList2 spValue slValue spStore slStore
           spStore = liftShowsPrec spValue slValue
           slStore = liftShowList  spValue slValue
-          spValue = liftShowsPrec2 (liftShowsPrec sp sl) (liftShowList sp sl) sp sl
-          slValue = liftShowList2 (liftShowsPrec sp sl) (liftShowList sp sl) sp sl
+          spValue = liftShowsPrec2 spT slT spA slA
+          slValue = liftShowList2 spT slT spA slA
 
-instance (Show a, Address l) => Show (Cache l a) where
+instance (Show t, Address l) => Show1 (Cache l t) where
+  liftShowsPrec = liftShowsPrec2 showsPrec showList
+
+instance (Show a, Show t, Address l) => Show (Cache l t a) where
   showsPrec = showsPrec1

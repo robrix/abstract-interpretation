@@ -41,13 +41,13 @@ type CachingResult l t v = (Either String ([] v, Cache l t v), Store l v)
 -- Coinductively-cached evaluation
 
 evalCache :: forall l a . (Ord a, Ord (Store l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l (Term a) (Value l (Term a) a)), AbstractNumber a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> CachingResult l (Term a) (Value l (Term a) a)
-evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache ev
+evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache (undefined :: proxy l) ev
 
-runCache :: forall a t l fs
-         .  (Ord a, Ord t, Ord (Store l (Value l t a)), Address l, Context l (Value l t a) fs, CachingInterpreter l t (Value l t a) :<: fs)
-         => (Eval t fs (Value l t a) -> Eval t fs (Value l t a))
-         -> Eval t fs (Value l t a)
-runCache ev = fixCache (fix (evCache (undefined :: proxy l) ev))
+runCache :: (Ord t, Ord v, Ord (Store l v), Address l, Context l v fs, CachingInterpreter l t v :<: fs)
+         => proxy l
+         -> (Eval t fs v -> Eval t fs v)
+         -> Eval t fs v
+runCache proxy ev = fixCache proxy (fix (evCache proxy ev))
 
 evCache :: forall l t v fs proxy
         .  (Ord t, Ord v, Ord (Store l v), Address l, Context l v fs, CachingInterpreter l t v :<: fs)
@@ -73,16 +73,17 @@ evCache _ ev0 ev e = do
       modifyCache (cacheInsert c (v, store'))
       return v
 
-fixCache :: forall l t a fs
-         .  (Ord a, Ord t, Address l, Context l (Value l t a) fs, CachingInterpreter l t (Value l t a) :<: fs)
-         => Eval t fs (Value l t a)
-         -> Eval t fs (Value l t a)
-fixCache eval e = do
+fixCache :: forall l t fs v proxy
+         .  (Ord t, Ord v, Address l, Context l v fs, CachingInterpreter l t v :<: fs)
+         => proxy l
+         -> Eval t fs v
+         -> Eval t fs v
+fixCache _ eval e = do
   env <- ask
   store <- get
-  let c = Configuration e env store :: Configuration l t (Value l t a)
+  let c = Configuration e env store :: Configuration l t v
   pairs <- mlfp mempty (\ dollar -> do
-    putCache (mempty :: Cache l t (Value l t a))
+    putCache (mempty :: Cache l t v)
     put store
     _ <- localCache (const dollar) (eval e)
     getCache)

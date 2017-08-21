@@ -43,9 +43,9 @@ type CachingResult l t a = (Either String ([] (Value l t a), Cache l t a), Addre
 evalCache :: forall l a . (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Monoid (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l (Term a) a), AbstractNumber a (Eff (CachingInterpreter l (Term a) a))) => Term a -> CachingResult l (Term a) a
 evalCache = run @(CachingInterpreter l (Term a) a) . runCache ev
 
-runCache :: (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), CachingInterpreter l (Term a) a :<: fs)
-         => (Eval (Term a) l fs a -> Eval (Term a) l fs a)
-         -> Eval (Term a) l fs a
+runCache :: (Ord a, Ord t, Ord (l (Value l t a)), Ord (AddressStore l (Value l t a)), Address l, Context l (Value l t a) fs, AbstractNumber a (Eff fs), CachingInterpreter l t a :<: fs)
+         => (Eval t l fs a -> Eval t l fs a)
+         -> Eval t l fs a
 runCache ev = fixCache (fix (evCache ev))
 
 evCache :: forall l t a fs

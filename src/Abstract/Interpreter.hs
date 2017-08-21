@@ -14,9 +14,9 @@ import Data.Function (fix)
 import Prelude hiding (fail)
 
 
-type Interpreter l t a = '[Failure, State (AddressStore l (Value l t a)), Reader (Environment (l (Value l t a)))]
+type Interpreter l t a = '[Failure, State (Store l (Value l t a)), Reader (Environment (l (Value l t a)))]
 
-type EvalResult l a = (Either String (Value l (Term a) a), AddressStore l (Value l (Term a) a))
+type EvalResult l a = (Either String (Value l (Term a) a), Store l (Value l (Term a) a))
 
 type Eval t fs v = t -> Eff fs v
 

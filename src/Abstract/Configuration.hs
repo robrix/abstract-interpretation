@@ -7,7 +7,7 @@ import Abstract.Value
 import Data.Functor.Classes
 import Data.Semigroup
 
-data Configuration l t v = Configuration { configurationTerm :: t, configurationEnvironment :: Environment (l v), configurationStore :: AddressStore l v }
+data Configuration l t v = Configuration { configurationTerm :: t, configurationEnvironment :: Environment (l v), configurationStore :: Store l v }
 
 deriving instance (Address l, Foldable l) => Foldable (Configuration l t)
 deriving instance (Address l, Functor l) => Functor (Configuration l t)

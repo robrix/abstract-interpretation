@@ -4,7 +4,6 @@ module Abstract.Store
 , Monovariant(..)
 , Address(..)
 , Store(..)
-, AddressStore
 , addressEq
 , addressCompare
 , addressShowsPrec
@@ -25,8 +24,6 @@ import qualified Data.Map as Map
 import Data.Semigroup
 import Prelude hiding (fail)
 import Text.Show
-
-type AddressStore = Store
 
 newtype Store l a = Store { unStore :: Map.Map (Key l a) (Cell l a) }
 

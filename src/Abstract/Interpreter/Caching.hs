@@ -43,14 +43,14 @@ type CachingResult l a = (Either String ([] (Value l (Term a) a), Cache l a), Ad
 evalCache :: forall l a . (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Monoid (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l a), AbstractNumber a (Eff (CachingInterpreter l a))) => Term a -> CachingResult l a
 evalCache = run @(CachingInterpreter l a) . runCache
 
-runCache :: (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), CachingInterpreter l a :<: fs) => Eval l (Term a) fs a
+runCache :: (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), CachingInterpreter l a :<: fs) => Eval (Term a) l fs a
 runCache = fixCache (fix (evCache ev))
 
 evCache :: forall l a fs
         .  (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) fs, CachingInterpreter l a :<: fs)
-        => (Eval l (Term a) fs a -> Eval l (Term a) fs a)
-        -> Eval l (Term a) fs a
-        -> Eval l (Term a) fs a
+        => (Eval (Term a) l fs a -> Eval (Term a) l fs a)
+        -> Eval (Term a) l fs a
+        -> Eval (Term a) l fs a
 evCache ev0 ev e = do
   env <- ask
   store <- get
@@ -71,8 +71,8 @@ evCache ev0 ev e = do
 
 fixCache :: forall l a fs
          .  (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) fs, CachingInterpreter l a :<: fs)
-         => Eval l (Term a) fs a
-         -> Eval l (Term a) fs a
+         => Eval (Term a) l fs a
+         -> Eval (Term a) l fs a
 fixCache eval e = do
   env <- ask
   store <- get

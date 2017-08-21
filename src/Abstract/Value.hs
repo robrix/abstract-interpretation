@@ -20,40 +20,49 @@ envInsert :: Name -> a -> Environment a -> Environment a
 envInsert = (((Environment .) . (. unEnvironment)) .) . Map.insert
 
 
-data Value l a = I a | Closure Name (Term a) (Environment (l (Value l a)))
+data Value l t a = I a | Closure Name t (Environment (l (Value l t a)))
   deriving (Foldable, Functor, Traversable)
 
 
-instance Address l => Eq1 (Value l) where
-  liftEq eq v1 v2 = case (v1, v2) of
-    (I a, I b) -> a `eq` b
-    (Closure s1 t1 e1, Closure s2 t2 e2) -> s1 == s2 && liftEqTerms eq t1 t2 && liftEq addressEq e1 e2
+instance Address l => Eq2 (Value l) where
+  liftEq2 eqT eqA v1 v2 = case (v1, v2) of
+    (I a, I b) -> a `eqA` b
+    (Closure s1 t1 e1, Closure s2 t2 e2) -> s1 == s2 && eqT t1 t2 && liftEq addressEq e1 e2
     _ -> False
 
-instance (Eq a, Address l) => Eq (Value l a) where
+instance (Address l, Eq t) => Eq1 (Value l t) where
+  liftEq = liftEq2 (==)
+
+instance (Eq a, Eq t, Address l) => Eq (Value l t a) where
   (==) = eq1
 
-instance Address l => Ord1 (Value l) where
-  liftCompare compareA v1 v2 = case (v1, v2) of
+instance Address l => Ord2 (Value l) where
+  liftCompare2 compareT compareA v1 v2 = case (v1, v2) of
     (I a, I b) -> compareA a b
-    (Closure s1 t1 e1, Closure s2 t2 e2) -> compare s1 s2 <> liftCompareTerms compareA t1 t2 <> liftCompare addressCompare e1 e2
+    (Closure s1 t1 e1, Closure s2 t2 e2) -> compare s1 s2 <> compareT t1 t2 <> liftCompare addressCompare e1 e2
     (I _, _) -> LT
     _ -> GT
 
-instance (Ord a, Address l) => Ord (Value l a) where
+instance (Address l, Ord t) => Ord1 (Value l t) where
+  liftCompare = liftCompare2 compare
+
+instance (Ord a, Ord t, Address l) => Ord (Value l t a) where
   compare = compare1
 
 
-instance Address l => Show1 (Value l) where
-  liftShowsPrec spA spL d v = case v of
+instance Address l => Show2 (Value l) where
+  liftShowsPrec2 spT _ spA _ d v = case v of
     I a -> showsUnaryWith spA "I" d a
-    Closure s t e -> showsTernaryWith showsPrec (liftShowsPrecTerm spA spL) (liftShowsPrec addressShowsPrec addressShowList) "Closure" d s t e
+    Closure s t e -> showsTernaryWith showsPrec spT (liftShowsPrec addressShowsPrec addressShowList) "Closure" d s t e
 
-instance (Show a, Address l) => Show (Value l a) where
+instance (Address l, Show t) => Show1 (Value l t) where
+  liftShowsPrec = liftShowsPrec2 showsPrec showList
+
+instance (Show a, Show t, Address l) => Show (Value l t a) where
   showsPrec = showsPrec1
 
 
-instance (MonadFail m, AbstractNumber a m) => AbstractNumber (Value l a) m where
+instance (MonadFail m, AbstractNumber a m) => AbstractNumber (Value l t a) m where
   delta1 o (I a) = fmap I (delta1 o a)
   delta1 _ _ = fail "non-numeric value"
 

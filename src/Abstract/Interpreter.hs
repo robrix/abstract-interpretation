@@ -14,30 +14,30 @@ import Data.Function (fix)
 import Prelude hiding (fail)
 
 
-type Interpreter l a = '[Failure, State (AddressStore l (Value l a)), Reader (Environment (l (Value l a)))]
+type Interpreter l a = '[Failure, State (AddressStore l (Value l (Term a) a)), Reader (Environment (l (Value l (Term a) a)))]
 
-type EvalResult l a = (Either String (Value l a), AddressStore l (Value l a))
+type EvalResult l a = (Either String (Value l (Term a) a), AddressStore l (Value l (Term a) a))
 
-type Eval l fs a = Term a -> Eff fs (Value l a)
+type Eval l fs a = Term a -> Eff fs (Value l (Term a) a)
 
 
 -- Evaluation
 
-eval :: forall l a . (Monoid (AddressStore l (Value l a)), Address l, Context l (Value l a) (Interpreter l a), AbstractNumber a (Eff (Interpreter l a))) => Term a -> EvalResult l a
+eval :: forall l a . (Monoid (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (Interpreter l a), AbstractNumber a (Eff (Interpreter l a))) => Term a -> EvalResult l a
 eval = run @(Interpreter l a) . runEval
 
-runEval :: (Address l, Context l (Value l a) fs, AbstractNumber a (Eff fs), Interpreter l a :<: fs) => Eval l fs a
+runEval :: (Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), Interpreter l a :<: fs) => Eval l fs a
 runEval = fix ev
 
 ev :: forall l a fs
-   .  (Address l, Context l (Value l a) fs, AbstractNumber a (Eff fs), Interpreter l a :<: fs)
+   .  (Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), Interpreter l a :<: fs)
    => Eval l fs a
    -> Eval l fs a
 ev ev term = case out term of
   Num n -> return (I n)
   Var x -> do
     p <- ask
-    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (l (Value l a))))
+    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (l (Value l (Term a) a))))
   If0 c t e -> do
     v <- ev c
     z <- isZero v
@@ -52,7 +52,7 @@ ev ev term = case out term of
   Rec f e -> do
     p <- ask
     a <- alloc f
-    v <- local (const (envInsert f a (p :: Environment (l (Value l a))))) (ev e)
+    v <- local (const (envInsert f a (p :: Environment (l (Value l (Term a) a))))) (ev e)
     assign a v
     return v
   Lam x e0 -> do

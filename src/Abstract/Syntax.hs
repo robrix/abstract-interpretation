@@ -164,6 +164,9 @@ instance Eq2 Syntax where
 instance Eq a => Eq1 (Syntax a) where
   liftEq = liftEq2 (==)
 
+instance Ord1 Term where
+  liftCompare compareA = go where go t1 t2 = liftCompare2 compareA go (out t1) (out t2)
+
 instance Ord2 Syntax where
   liftCompare2 compareV compareA s1 s2 = case (s1, s2) of
     (Var n1, Var n2) -> compare n1 n2

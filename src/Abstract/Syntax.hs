@@ -64,20 +64,6 @@ subterms :: Ord a => Term a -> Set.Set (Term a)
 subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.singleton term
 
 
-liftEqTerms :: (a -> b -> Bool) -> Term a -> Term b -> Bool
-liftEqTerms eq = go
-  where go t1 t2 = liftEq2 eq go (out t1) (out t2)
-
-liftCompareTerms :: (a -> b -> Ordering) -> Term a -> Term b -> Ordering
-liftCompareTerms compare = go
-  where go t1 t2 = liftCompare2 compare go (out t1) (out t2)
-
-liftShowsPrecTerm :: (Int -> a -> ShowS) -> ([a] -> ShowS) -> Int -> Term a -> ShowS
-liftShowsPrecTerm spA slA = go where go d = liftShowsPrec2 spA slA go (liftShowListTerm spA slA) d . out
-
-liftShowListTerm :: (Int -> a -> ShowS) -> ([a] -> ShowS) -> [Term a] -> ShowS
-liftShowListTerm spA slA = go where go = liftShowList2 spA slA (liftShowsPrecTerm spA slA) go . map out
-
 showsTernaryWith :: (Int -> a -> ShowS) -> (Int -> b -> ShowS) -> (Int -> c -> ShowS) -> String -> Int -> a -> b -> c -> ShowS
 showsTernaryWith sp1 sp2 sp3 name d x y z = showParen (d > 10) $ showString name . showChar ' ' . sp1 11 x . showChar ' ' . sp2 11 y . showChar ' ' . sp3 11 z
 

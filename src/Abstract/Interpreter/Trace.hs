@@ -16,35 +16,36 @@ import Data.Function (fix)
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
-type TracingInterpreter l a g = Writer (g (Configuration l (Term a) (Value l (Term a) a))) ': Interpreter l (Value l (Term a) a)
+type TracingInterpreter l t v g = Writer (g (Configuration l t v)) ': Interpreter l v
 
-type TraceInterpreter l a = TracingInterpreter l a []
-type ReachableStateInterpreter l a = TracingInterpreter l a Set.Set
+type TraceInterpreter l t v = TracingInterpreter l t v []
+type ReachableStateInterpreter l t v = TracingInterpreter l t v Set.Set
 
-type TraceResult l a f = (Either String (Value l (Term a) a, f (Configuration l (Term a) (Value l (Term a) a))), Store l (Value l (Term a) a))
+type TraceResult l t v f = (Either String (v, f (Configuration l t v)), Store l v)
 
 
 -- Tracing and reachable state analyses
 
-evalTrace :: forall a l. (Address l, Context l (Value l (Term a) a) (TraceInterpreter l a), AbstractNumber a (Eff (TraceInterpreter l a))) => Term a -> TraceResult l a []
-evalTrace = run @(TraceInterpreter l a) . runTrace
+evalTrace :: forall a l. (Address l, Context l (Value l (Term a) a) (TraceInterpreter l (Term a) (Value l (Term a) a)), AbstractNumber a (Eff (TraceInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> TraceResult l (Term a) (Value l (Term a) a) []
+evalTrace = run @(TraceInterpreter l (Term a) (Value l (Term a) a)) . runTrace (undefined :: proxy l) ev
 
-runTrace :: (TraceInterpreter l a :<: fs, Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs)) => Eval (Term a) fs (Value l (Term a) a)
-runTrace = fix (evTell [] ev)
+runTrace :: (TraceInterpreter l t v :<: fs, Address l) => proxy l -> (Eval t fs v -> Eval t fs v) -> Eval t fs v
+runTrace proxy ev = fix (evTell proxy [] ev)
 
-evalReach :: forall a l. (Ord a, Address l, Context l (Value l (Term a) a) (ReachableStateInterpreter l a), AbstractNumber a (Eff (ReachableStateInterpreter l a))) => Term a -> TraceResult l a Set.Set
-evalReach = run @(ReachableStateInterpreter l a) . runReach
+evalReach :: forall a l. (Ord a, Address l, Context l (Value l (Term a) a) (ReachableStateInterpreter l (Term a) (Value l (Term a) a)), AbstractNumber a (Eff (ReachableStateInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> TraceResult l (Term a) (Value l (Term a) a) Set.Set
+evalReach = run @(ReachableStateInterpreter l (Term a) (Value l (Term a) a)) . runReach (undefined :: proxy l) ev
 
-runReach :: (Ord a, ReachableStateInterpreter l a :<: fs, Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs)) => Eval (Term a) fs (Value l (Term a) a)
-runReach = fix (evTell Set.empty ev)
+runReach :: (Ord t, Ord v, ReachableStateInterpreter l t v :<: fs, Address l) => proxy l -> (Eval t fs v -> Eval t fs v) -> Eval t fs v
+runReach proxy ev = fix (evTell proxy Set.empty ev)
 
-evTell :: forall l a g fs . (TracingInterpreter l a g :<: fs, IsList (g (Configuration l (Term a) (Value l (Term a) a))), Item (g (Configuration l (Term a) (Value l (Term a) a))) ~ Configuration l (Term a) (Value l (Term a) a))
-       => g ()
-       -> (Eval (Term a) fs (Value l (Term a) a) -> Eval (Term a) fs (Value l (Term a) a))
-       -> Eval (Term a) fs (Value l (Term a) a)
-       -> Eval (Term a) fs (Value l (Term a) a)
-evTell _ ev0 ev e = do
+evTell :: forall l t v g fs proxy . (TracingInterpreter l t v g :<: fs, IsList (g (Configuration l t v)), Item (g (Configuration l t v)) ~ Configuration l t v)
+       => proxy l
+       -> g ()
+       -> (Eval t fs v -> Eval t fs v)
+       -> Eval t fs v
+       -> Eval t fs v
+evTell _ _ ev0 ev e = do
   env <- ask
   store <- get
-  tell (fromList [Configuration e env store] :: g (Configuration l (Term a) (Value l (Term a) a)))
+  tell (fromList [Configuration e env store] :: g (Configuration l t v))
   ev0 ev e

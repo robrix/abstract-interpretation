@@ -70,7 +70,7 @@ evCache ev0 ev e = do
       return v
 
 fixCache :: forall l t a fs
-         .  (Ord a, Ord t, Ord (l (Value l t a)), Ord (AddressStore l (Value l t a)), Address l, Context l (Value l t a) fs, CachingInterpreter l t a :<: fs)
+         .  (Ord a, Ord t, Ord (l (Value l t a)), Address l, Context l (Value l t a) fs, CachingInterpreter l t a :<: fs)
          => Eval t l fs a
          -> Eval t l fs a
 fixCache eval e = do

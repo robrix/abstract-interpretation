@@ -16,7 +16,7 @@ import Data.Function (fix)
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
-type TracingInterpreter l a g = Writer (g (Configuration l (Term a) a)) ': Interpreter l a
+type TracingInterpreter l a g = Writer (g (Configuration l (Term a) a)) ': Interpreter l (Term a) a
 
 type TraceInterpreter l a = TracingInterpreter l a []
 type ReachableStateInterpreter l a = TracingInterpreter l a Set.Set

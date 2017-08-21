@@ -33,7 +33,7 @@ cacheInsert :: (Ord a, Ord t, Ord (AddressStore l (Value l t a)), Address l) => 
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 
-type CachingInterpreter l a = Amb ': State (Cache l (Term a) a) ': Reader (Cache l (Term a) a) ': Interpreter l a
+type CachingInterpreter l a = Amb ': State (Cache l (Term a) a) ': Reader (Cache l (Term a) a) ': Interpreter l (Term a) a
 
 type CachingResult l a = (Either String ([] (Value l (Term a) a), Cache l (Term a) a), AddressStore l (Value l (Term a) a))
 

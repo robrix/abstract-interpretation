@@ -4,6 +4,7 @@ module Abstract.Interpreter.Symbolic where
 import Abstract.Interpreter
 import Abstract.Number
 import Abstract.Syntax
+import Abstract.Value
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Effect
@@ -24,7 +25,7 @@ sym2 _ g (Sym a) (Sym b) = pure (Sym (g a b))
 sym2 f g a (V b) = sym2 f g a (Sym (num b))
 sym2 f g (V a) b = sym2 f g (Sym (num a)) b
 
-evSymbolic :: (Eval t l fs (Sym a) -> Eval t l fs (Sym a)) -> Eval t l fs (Sym a) -> Eval t l fs (Sym a)
+evSymbolic :: (Eval t fs (Value l t (Sym a)) -> Eval t fs (Value l t (Sym a))) -> Eval t fs (Value l t (Sym a)) -> Eval t fs (Value l t (Sym a))
 evSymbolic ev0 ev e = ev0 ev e
 
 

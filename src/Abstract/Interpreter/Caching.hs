@@ -33,30 +33,30 @@ cacheInsert :: (Ord t, Ord v, Ord (Store l v), Address l) => Configuration l t v
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 
-type CachingInterpreter l t a = Amb ': State (Cache l t (Value l t a)) ': Reader (Cache l t (Value l t a)) ': Interpreter l (Value l t a)
+type CachingInterpreter l t v = Amb ': State (Cache l t v) ': Reader (Cache l t v) ': Interpreter l v
 
 type CachingResult l t v = (Either String ([] v, Cache l t v), Store l v)
 
 
 -- Coinductively-cached evaluation
 
-evalCache :: forall l a . (Ord a, Ord (Store l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l (Term a) a), AbstractNumber a (Eff (CachingInterpreter l (Term a) a))) => Term a -> CachingResult l (Term a) (Value l (Term a) a)
-evalCache = run @(CachingInterpreter l (Term a) a) . runCache ev
+evalCache :: forall l a . (Ord a, Ord (Store l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l (Term a) (Value l (Term a) a)), AbstractNumber a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> CachingResult l (Term a) (Value l (Term a) a)
+evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache ev
 
-runCache :: (Ord a, Ord t, Ord (Store l (Value l t a)), Address l, Context l (Value l t a) fs, AbstractNumber a (Eff fs), CachingInterpreter l t a :<: fs)
+runCache :: (Ord a, Ord t, Ord (Store l (Value l t a)), Address l, Context l (Value l t a) fs, AbstractNumber a (Eff fs), CachingInterpreter l t (Value l t a) :<: fs)
          => (Eval t fs (Value l t a) -> Eval t fs (Value l t a))
          -> Eval t fs (Value l t a)
 runCache ev = fixCache (fix (evCache ev))
 
 evCache :: forall l t a fs
-        .  (Ord a, Ord t, Ord (Store l (Value l t a)), Address l, Context l (Value l t a) fs, CachingInterpreter l t a :<: fs)
+        .  (Ord a, Ord t, Ord (Store l (Value l t a)), Address l, Context l (Value l t a) fs, CachingInterpreter l t (Value l t a) :<: fs)
         => (Eval t fs (Value l t a) -> Eval t fs (Value l t a))
         -> Eval t fs (Value l t a)
         -> Eval t fs (Value l t a)
 evCache ev0 ev e = do
   env <- ask
   store <- get
-  let c = Configuration e env store :: Configuration l t (Value l t a)
+  let c = Configuration e (env :: Environment (l (Value l t a))) store :: Configuration l t (Value l t a)
   out <- getCache
   case cacheLookup c out of
     Just pairs -> asum . flip map (toList pairs) $ \ (value, store') -> do
@@ -72,7 +72,7 @@ evCache ev0 ev e = do
       return v
 
 fixCache :: forall l t a fs
-         .  (Ord a, Ord t, Address l, Context l (Value l t a) fs, CachingInterpreter l t a :<: fs)
+         .  (Ord a, Ord t, Address l, Context l (Value l t a) fs, CachingInterpreter l t (Value l t a) :<: fs)
          => Eval t fs (Value l t a)
          -> Eval t fs (Value l t a)
 fixCache eval e = do

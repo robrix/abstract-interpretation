@@ -14,7 +14,7 @@ import Data.Function (fix)
 import Prelude hiding (fail)
 
 
-type Interpreter l t a = '[Failure, State (Store l (Value l t a)), Reader (Environment (l (Value l t a)))]
+type Interpreter l v = '[Failure, State (Store l v), Reader (Environment (l v))]
 
 type EvalResult l a = (Either String (Value l (Term a) a), Store l (Value l (Term a) a))
 
@@ -23,14 +23,14 @@ type Eval t fs v = t -> Eff fs v
 
 -- Evaluation
 
-eval :: forall l a . (Address l, Context l (Value l (Term a) a) (Interpreter l (Term a) a), AbstractNumber a (Eff (Interpreter l (Term a) a))) => Term a -> EvalResult l a
-eval = run @(Interpreter l (Term a) a) . runEval
+eval :: forall l a . (Address l, Context l (Value l (Term a) a) (Interpreter l (Value l (Term a) a)), AbstractNumber a (Eff (Interpreter l (Value l (Term a) a)))) => Term a -> EvalResult l a
+eval = run @(Interpreter l (Value l (Term a) a)) . runEval
 
-runEval :: (Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), Interpreter l (Term a) a :<: fs) => Eval (Term a) fs (Value l (Term a) a)
+runEval :: (Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), Interpreter l (Value l (Term a) a) :<: fs) => Eval (Term a) fs (Value l (Term a) a)
 runEval = fix ev
 
 ev :: forall l a fs
-   .  (Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), Interpreter l (Term a) a :<: fs)
+   .  (Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), Interpreter l (Value l (Term a) a) :<: fs)
    => Eval (Term a) fs (Value l (Term a) a)
    -> Eval (Term a) fs (Value l (Term a) a)
 ev ev term = case out term of

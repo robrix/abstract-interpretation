@@ -12,7 +12,7 @@ import Control.Monad.Effect.State
 import Data.Function (fix)
 import qualified Data.Set as Set
 
-type DeadCodeInterpreter l a = State (Dead a) ': Interpreter l (Term a) a
+type DeadCodeInterpreter l a = State (Dead a) ': Interpreter l (Value l (Term a) a)
 
 newtype Dead a = Dead { unDead :: Set.Set (Term a) }
   deriving (Eq, Foldable, Monoid, Ord, Show)

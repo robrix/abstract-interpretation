@@ -18,7 +18,7 @@ type Interpreter l a = '[Failure, State (AddressStore l (Value l (Term a) a)), R
 
 type EvalResult l a = (Either String (Value l (Term a) a), AddressStore l (Value l (Term a) a))
 
-type Eval l fs a = Term a -> Eff fs (Value l (Term a) a)
+type Eval l t fs a = t -> Eff fs (Value l t a)
 
 
 -- Evaluation
@@ -26,13 +26,13 @@ type Eval l fs a = Term a -> Eff fs (Value l (Term a) a)
 eval :: forall l a . (Monoid (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (Interpreter l a), AbstractNumber a (Eff (Interpreter l a))) => Term a -> EvalResult l a
 eval = run @(Interpreter l a) . runEval
 
-runEval :: (Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), Interpreter l a :<: fs) => Eval l fs a
+runEval :: (Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), Interpreter l a :<: fs) => Eval l (Term a) fs a
 runEval = fix ev
 
 ev :: forall l a fs
    .  (Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), Interpreter l a :<: fs)
-   => Eval l fs a
-   -> Eval l fs a
+   => Eval l (Term a) fs a
+   -> Eval l (Term a) fs a
 ev ev term = case out term of
   Num n -> return (I n)
   Var x -> do

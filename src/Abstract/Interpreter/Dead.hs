@@ -33,10 +33,10 @@ runDead e0 = do
   put (Dead (subterms e0))
   fix (evDead ev) e0
 
-evDead :: (Ord a, DeadCodeInterpreter l (Term a) (Value l (Term a) a) :<: fs)
-       => (Eval (Term a) fs (Value l (Term a) a) -> Eval (Term a) fs (Value l (Term a) a))
-       -> Eval (Term a) fs (Value l (Term a) a)
-       -> Eval (Term a) fs (Value l (Term a) a)
+evDead :: (Ord a, Ord t, DeadCodeInterpreter l t (Value l t a) :<: fs)
+       => (Eval t fs (Value l t a) -> Eval t fs (Value l t a))
+       -> Eval t fs (Value l t a)
+       -> Eval t fs (Value l t a)
 evDead ev0 ev e = do
   modify (revive e)
   ev0 ev e

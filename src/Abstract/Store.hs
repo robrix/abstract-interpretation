@@ -18,8 +18,6 @@ import Control.Monad.Fail
 import Data.Foldable (asum)
 import Data.Function (on)
 import Data.Functor.Classes
-import Data.Functor.Identity
-import qualified Data.IntMap as IntMap
 import Data.Kind
 import qualified Data.Map as Map
 import Data.Semigroup
@@ -33,8 +31,11 @@ newtype Key l a = Key { unKey :: l a }
 storeLookup :: Address l => l a -> Store l a -> Maybe (Cell l a)
 storeLookup = (. unStore) . Map.lookup . Key
 
-storeInsert :: (Ord a, Semigroup (Cell l a), Address l) => l a -> a -> Store l a -> Store l a
+storeInsert :: (Semigroup (Cell l a), Address l) => l a -> a -> Store l a -> Store l a
 storeInsert = (((Store .) . (. unStore)) .) . (. pure) . Map.insertWith (<>) . Key
+
+storeSize :: Store l a -> Int
+storeSize = Map.size . unStore
 
 
 class (Traversable l, Eq1 l, Ord1 l, Show1 l, Eq1 (AddressStore l), Ord1 (AddressStore l), Show1 (AddressStore l), Eq1 (Cell l), Ord1 (Cell l), Show1 (Cell l), Traversable (Cell l), Applicative (Cell l)) => Address l where
@@ -56,17 +57,20 @@ newtype Precise a = Precise { unPrecise :: Int }
   deriving (Eq, Foldable, Functor, Ord, Show, Traversable)
 
 allocPrecise :: AddressStore Precise a -> Precise a
-allocPrecise = Precise . IntMap.size
+allocPrecise = Precise . storeSize
+
+newtype I a = I { unI :: a }
+  deriving (Eq, Ord, Show)
 
 instance Address Precise where
-  type AddressStore Precise = IntMap.IntMap
-  type Cell Precise = Identity
+  type AddressStore Precise = Store Precise
+  type Cell Precise = I
 
-  deref = maybe uninitializedAddress pure <=< flip fmap get . IntMap.lookup . unPrecise
+  deref = maybe uninitializedAddress (pure . unI) <=< flip fmap get . storeLookup
 
   alloc _ = fmap allocPrecise get
 
-  assign = (modify .) . IntMap.insert . unPrecise
+  assign = (modify .) . storeInsert
 
   coerceAddress = Precise . unPrecise
 
@@ -111,6 +115,31 @@ hidesPrec _ _ = id
 hideList :: [a] -> ShowS
 hideList _ = id
 
+
+instance Semigroup (I a) where
+  (<>) = const
+
+instance Foldable I where
+  foldMap f = f . unI
+
+instance Functor I where
+  fmap f = I . f . unI
+
+instance Traversable I where
+  traverse f = fmap I . f . unI
+
+instance Applicative I where
+  pure = I
+  I f <*> I a = I (f a)
+
+instance Eq1 I where
+  liftEq eq (I a) (I b) = eq a b
+
+instance Ord1 I where
+  liftCompare compare (I a) (I b) = compare a b
+
+instance Show1 I where
+  liftShowsPrec sp _ d (I a) = sp d a
 
 instance Address l => Foldable (Key l) where
   foldMap _ = mempty

@@ -146,6 +146,9 @@ instance Traversable (Syntax a) where
   traverse = bitraverse pure
 
 
+instance Eq1 Term where
+  liftEq eqA = go where go t1 t2 = liftEq2 eqA go (out t1) (out t2)
+
 instance Eq2 Syntax where
   liftEq2 eqV eqA s1 s2 = case (s1, s2) of
     (Var n1, Var n2) -> n1 == n2

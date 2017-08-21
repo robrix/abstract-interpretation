@@ -23,13 +23,13 @@ import qualified Data.Set as Set
 newtype Cache l t a = Cache { unCache :: Map.Map (Configuration l t a) (Set.Set (Value l t a, AddressStore l (Value l t a))) }
   deriving (Monoid)
 
-cacheLookup :: (Ord a, Address l) => Configuration l (Term a) a -> Cache l (Term a) a -> Maybe (Set.Set (Value l (Term a) a, AddressStore l (Value l (Term a) a)))
+cacheLookup :: (Ord a, Ord t, Address l) => Configuration l t a -> Cache l t a -> Maybe (Set.Set (Value l t a, AddressStore l (Value l t a)))
 cacheLookup = (. unCache) . Map.lookup
 
-cacheSet :: (Ord a, Ord (AddressStore l (Value l (Term a) a)), Address l) => Configuration l (Term a) a -> Set.Set (Value l (Term a) a, AddressStore l (Value l (Term a) a)) -> Cache l (Term a) a -> Cache l (Term a) a
+cacheSet :: (Ord a, Ord t, Ord (AddressStore l (Value l t a)), Address l) => Configuration l t a -> Set.Set (Value l t a, AddressStore l (Value l t a)) -> Cache l t a -> Cache l t a
 cacheSet = (((Cache .) . (. unCache)) .) . Map.insert
 
-cacheInsert :: (Ord a, Ord (AddressStore l (Value l (Term a) a)), Address l) => Configuration l (Term a) a -> (Value l (Term a) a, AddressStore l (Value l (Term a) a)) -> Cache l (Term a) a -> Cache l (Term a) a
+cacheInsert :: (Ord a, Ord t, Ord (AddressStore l (Value l t a)), Address l) => Configuration l t a -> (Value l t a, AddressStore l (Value l t a)) -> Cache l t a -> Cache l t a
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 

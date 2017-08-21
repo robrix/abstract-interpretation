@@ -35,12 +35,12 @@ cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith
 
 type CachingInterpreter l a = Amb ': State (Cache l (Term a) a) ': Reader (Cache l (Term a) a) ': Interpreter l (Term a) a
 
-type CachingResult l a = (Either String ([] (Value l (Term a) a), Cache l (Term a) a), AddressStore l (Value l (Term a) a))
+type CachingResult l t a = (Either String ([] (Value l t a), Cache l t a), AddressStore l (Value l t a))
 
 
 -- Coinductively-cached evaluation
 
-evalCache :: forall l a . (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Monoid (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l a), AbstractNumber a (Eff (CachingInterpreter l a))) => Term a -> CachingResult l a
+evalCache :: forall l a . (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Monoid (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l a), AbstractNumber a (Eff (CachingInterpreter l a))) => Term a -> CachingResult l (Term a) a
 evalCache = run @(CachingInterpreter l a) . runCache
 
 runCache :: (Ord a, Ord (l (Value l (Term a) a)), Ord (AddressStore l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), CachingInterpreter l a :<: fs) => Eval (Term a) l fs a

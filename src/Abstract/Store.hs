@@ -1,4 +1,4 @@
-{-# LANGUAGE ConstraintKinds, DataKinds, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, GeneralizedNewtypeDeriving, ScopedTypeVariables, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE ConstraintKinds, DataKinds, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, GeneralizedNewtypeDeriving, ScopedTypeVariables, StandaloneDeriving, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Store
 ( Precise(..)
 , Monovariant(..)
@@ -26,6 +26,10 @@ import Prelude hiding (fail)
 import Text.Show
 
 newtype Store l a = Store { unStore :: Map.Map (Key l a) (Cell l a) }
+
+deriving instance (Eq a, Address l, Eq (Cell l a)) => Eq (Store l a)
+deriving instance (Ord a, Address l, Ord (Cell l a)) => Ord (Store l a)
+deriving instance (Show a, Address l, Show (Cell l a)) => Show (Store l a)
 
 newtype Key l a = Key { unKey :: l a }
 

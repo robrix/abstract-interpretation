@@ -19,7 +19,7 @@ data Prim
   | PBool Bool
   deriving (Eq, Ord, Show)
 
-data Abstract = N
+data Abstract = N | B
   deriving (Eq, Ord, Show)
 
 
@@ -57,13 +57,16 @@ instance MonadFail m => Primitive Prim m where
 
 instance (Alternative m, MonadFail m) => Primitive Abstract m where
   delta1 _ N = pure N
+  delta1 _ _ = nonNumeric
 
   delta2 DividedBy _ N = pure N <|> divisionByZero
   delta2 Quotient _ N = pure N <|> divisionByZero
   delta2 Remainder _ N = pure N <|> divisionByZero
-  delta2 _ _ _ = pure N
+  delta2 _ _ N = pure N
+  delta2 _ _ _ = nonNumeric
 
   isZero N = pure True <|> pure False
+  isZero _ = nonNumeric
 
 instance Num Prim where
   negate (PInt i) = PInt (negate i)
@@ -99,20 +102,27 @@ instance Integral Prim where
 
 instance Num Abstract where
   negate N = N
+  negate _ = error "negate of non-numeric primitive"
 
   signum N = N
+  signum _ = error "signum of non-numeric primitive"
 
   abs N = N
+  abs _ = error "abs of non-numeric primitive"
 
-  _ + _ = N
-  _ - _ = N
+  N + N = N
+  _ + _ = error "(+) of non-numeric primitive"
+  N - N = N
+  _ - _ = error "(-) of non-numeric primitive"
 
-  _ * _ = N
+  N * N = N
+  _ * _ = error "(*) of non-numeric primitive"
 
   fromInteger = const N
 
 instance Pretty Abstract where
   pretty N = pretty 'N'
+  pretty B = pretty 'B'
 
 instance Pretty Op1 where
   pretty Negate = pretty "negate"

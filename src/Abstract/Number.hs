@@ -14,6 +14,9 @@ data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder
   deriving (Eq, Ord, Show)
 
 
+newtype Prim = PInt Int
+  deriving (Eq, Ord, Show)
+
 data N = N
   deriving (Eq, Ord, Show)
 
@@ -28,7 +31,7 @@ divisionByZero :: MonadFail m => m a
 divisionByZero = fail "division by zero"
 
 
-instance MonadFail m => AbstractNumber Int m where
+instance MonadFail m => AbstractNumber Prim m where
   delta1 o a = pure $ case o of
     Negate -> negate a
     Abs -> abs a
@@ -53,6 +56,28 @@ instance (Alternative m, MonadFail m) => AbstractNumber N m where
   delta2 _ _ _ = pure N
 
   isZero N = pure True <|> pure False
+
+instance Num Prim where
+  negate (PInt i) = PInt (negate i)
+  signum (PInt i) = PInt (signum i)
+  abs (PInt i) = PInt (abs i)
+
+  PInt a + PInt b = PInt (a + b)
+  PInt a - PInt b = PInt (a - b)
+  PInt a * PInt b = PInt (a * b)
+
+  fromInteger = PInt . fromInteger
+
+instance Real Prim where
+  toRational (PInt a) = toRational a
+
+instance Enum Prim where
+  toEnum = PInt
+  fromEnum (PInt a) = a
+
+instance Integral Prim where
+  toInteger (PInt a) = toInteger a
+  PInt a `quotRem` PInt b = let (q, r) = a `quotRem` b in (PInt q, PInt r)
 
 instance Num N where
   negate N = N

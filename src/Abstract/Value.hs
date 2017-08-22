@@ -6,6 +6,7 @@ import Abstract.Store
 import Abstract.Syntax
 import Control.Monad.Fail
 import Data.Functor.Classes
+import Data.Functor.Classes.Pretty
 import qualified Data.Map as Map
 import Data.Semigroup
 import Prelude hiding (fail)
@@ -64,6 +65,10 @@ instance (Address l, Show t) => Show1 (Value l t) where
 
 instance (Show a, Show t, Address l) => Show (Value l t a) where
   showsPrec = showsPrec1
+
+
+instance Pretty1 Environment where
+  liftPretty p pl = list . map (liftPretty p pl) . Map.toList . unEnvironment
 
 
 instance (MonadFail m, AbstractNumber a m) => AbstractNumber (Value l t a) m where

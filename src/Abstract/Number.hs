@@ -62,6 +62,7 @@ instance Num N where
   abs N = N
 
   _ + _ = N
+  _ - _ = N
 
   _ * _ = N
 

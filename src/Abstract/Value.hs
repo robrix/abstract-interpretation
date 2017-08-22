@@ -68,7 +68,7 @@ instance (Show a, Show t, Address l) => Show (Value l t a) where
 
 
 instance Pretty1 Environment where
-  liftPretty p pl = list . map (liftPretty p pl) . Map.toList . unEnvironment
+  liftPretty p pl = liftPrettyList p pl . Map.toList . unEnvironment
 
 instance Pretty a => Pretty (Environment a) where
   pretty = pretty1

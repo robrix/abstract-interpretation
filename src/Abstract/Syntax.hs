@@ -8,9 +8,7 @@ import Data.Bitraversable
 import Data.Functor.Classes
 import Data.Functor.Classes.Pretty
 import Data.Functor.Foldable
-import Data.Semigroup
 import qualified Data.Set as Set
-import Data.Text.Prettyprint.Doc
 
 data Syntax a r
   = Var Name

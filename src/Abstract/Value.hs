@@ -9,6 +9,7 @@ import Data.Functor.Classes
 import qualified Data.Map as Map
 import Data.Semigroup
 import Prelude hiding (fail)
+import Text.Show
 
 newtype Environment a = Environment { unEnvironment :: Map.Map Name a }
   deriving (Eq, Eq1, Foldable, Functor, Monoid, Ord, Ord1, Show, Show1, Traversable)
@@ -25,10 +26,11 @@ data Value l t a = I a | Closure Name t (Environment (l (Value l t a)))
 
 
 instance Address l => Eq2 (Value l) where
-  liftEq2 eqT eqA v1 v2 = case (v1, v2) of
-    (I a, I b) -> a `eqA` b
-    (Closure s1 t1 e1, Closure s2 t2 e2) -> s1 == s2 && eqT t1 t2 && liftEq addressEq e1 e2
-    _ -> False
+  liftEq2 eqT eqA = go
+    where go v1 v2 = case (v1, v2) of
+            (I a, I b) -> a `eqA` b
+            (Closure s1 t1 e1, Closure s2 t2 e2) -> s1 == s2 && eqT t1 t2 && liftEq (liftEq go) e1 e2
+            _ -> False
 
 instance (Address l, Eq t) => Eq1 (Value l t) where
   liftEq = liftEq2 (==)
@@ -37,11 +39,12 @@ instance (Eq a, Eq t, Address l) => Eq (Value l t a) where
   (==) = eq1
 
 instance Address l => Ord2 (Value l) where
-  liftCompare2 compareT compareA v1 v2 = case (v1, v2) of
-    (I a, I b) -> compareA a b
-    (Closure s1 t1 e1, Closure s2 t2 e2) -> compare s1 s2 <> compareT t1 t2 <> liftCompare addressCompare e1 e2
-    (I _, _) -> LT
-    _ -> GT
+  liftCompare2 compareT compareA = go
+    where go v1 v2 = case (v1, v2) of
+            (I a, I b) -> compareA a b
+            (Closure s1 t1 e1, Closure s2 t2 e2) -> compare s1 s2 <> compareT t1 t2 <> liftCompare (liftCompare go) e1 e2
+            (I _, _) -> LT
+            _ -> GT
 
 instance (Address l, Ord t) => Ord1 (Value l t) where
   liftCompare = liftCompare2 compare
@@ -51,9 +54,10 @@ instance (Ord a, Ord t, Address l) => Ord (Value l t a) where
 
 
 instance Address l => Show2 (Value l) where
-  liftShowsPrec2 spT _ spA _ d v = case v of
-    I a -> showsUnaryWith spA "I" d a
-    Closure s t e -> showsTernaryWith showsPrec spT (liftShowsPrec addressShowsPrec addressShowList) "Closure" d s t e
+  liftShowsPrec2 spT _ spA _ = go
+    where go d v = case v of
+            I a -> showsUnaryWith spA "I" d a
+            Closure s t e -> showsTernaryWith showsPrec spT (liftShowsPrec (liftShowsPrec go (showListWith (go 0))) (liftShowList go (showListWith (go 0)))) "Closure" d s t e
 
 instance (Address l, Show t) => Show1 (Value l t) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList

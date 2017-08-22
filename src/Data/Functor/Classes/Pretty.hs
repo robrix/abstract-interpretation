@@ -31,6 +31,12 @@ instance Pretty1 [] where
 instance Pretty1 Set.Set where
   liftPretty _ pl xs = pretty "Set.fromList" <+> pl (toList xs)
 
+instance Pretty2 Either where
+  liftPretty2 pL _ _ _ (Left l)  = pL l
+  liftPretty2 _ _ pR _ (Right r) = pR r
+
+instance Pretty l => Pretty1 (Either l) where
+  liftPretty = liftPretty2 pretty prettyList
 
 pprint :: Pretty a => a -> IO ()
 pprint a = renderIO stdout (layoutPretty (LayoutOptions Unbounded) (pretty a <> pretty "\n"))

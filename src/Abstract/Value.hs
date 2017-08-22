@@ -70,6 +70,18 @@ instance (Show a, Show t, Address l) => Show (Value l t a) where
 instance Pretty1 Environment where
   liftPretty p pl = list . map (liftPretty p pl) . Map.toList . unEnvironment
 
+instance Pretty1 l => Pretty2 (Value l) where
+  liftPretty2 pT _ pA _ = go
+    where go (I a) = pA a
+          go (Closure n t e) = pretty n <> colon <+> pT t <> line
+                                <> liftPretty (liftPretty go (list . map go)) (liftPrettyList go (list . map go)) e
+
+instance (Pretty1 l, Pretty t) => Pretty1 (Value l t) where
+  liftPretty = liftPretty2 pretty prettyList
+
+instance (Pretty1 l, Pretty t, Pretty a) => Pretty (Value l t a) where
+  pretty = pretty1
+
 
 instance (MonadFail m, AbstractNumber a m) => AbstractNumber (Value l t a) m where
   delta1 o (I a) = fmap I (delta1 o a)

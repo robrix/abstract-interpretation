@@ -1,4 +1,4 @@
-{-# LANGUAGE ConstraintKinds, DataKinds, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, GeneralizedNewtypeDeriving, ScopedTypeVariables, StandaloneDeriving, TypeFamilies, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE ConstraintKinds, DataKinds, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, GeneralizedNewtypeDeriving, ScopedTypeVariables, TypeFamilies, TypeOperators #-}
 module Abstract.Store
 ( Precise(..)
 , Monovariant(..)
@@ -26,10 +26,6 @@ import Prelude hiding (fail)
 import Text.Show
 
 newtype Store l a = Store { unStore :: Map.Map (Key l a) (Cell l a) }
-
-deriving instance (Eq a, Address l, Eq (Cell l a)) => Eq (Store l a)
-deriving instance (Ord a, Address l, Ord (Cell l a)) => Ord (Store l a)
-deriving instance (Show a, Address l, Show (Cell l a)) => Show (Store l a)
 
 newtype Key l a = Key { unKey :: l a }
 
@@ -177,6 +173,9 @@ instance Eq1 Monovariant where
 instance Address l => Eq1 (Store l) where
   liftEq eq (Store m1) (Store m2) = liftEq2 (liftEq eq) (liftEq eq) m1 m2
 
+instance (Eq a, Address l) => Eq (Store l a) where
+  (==) = eq1
+
 instance Address l => Eq1 (Key l) where
   liftEq eq (Key a) (Key b) = liftEq eq a b
 
@@ -192,6 +191,9 @@ instance Ord1 Monovariant where
 instance Address l => Ord1 (Store l) where
   liftCompare compareA (Store m1) (Store m2) = liftCompare2 (liftCompare compareA) (liftCompare compareA) m1 m2
 
+instance (Ord a, Address l) => Ord (Store l a) where
+  compare = compare1
+
 instance Address l => Ord1 (Key l) where
   liftCompare compareA (Key a) (Key b) = liftCompare compareA a b
 
@@ -206,6 +208,9 @@ instance Show1 Monovariant where
 
 instance Address l => Show1 (Store l) where
   liftShowsPrec sp sl d (Store m) = showsUnaryWith (liftShowsPrec (liftShowsPrec sp sl) (liftShowList sp sl)) "Store" d m
+
+instance (Show a, Address l) => Show (Store l a) where
+  showsPrec = showsPrec1
 
 instance Address l => Show1 (Key l) where
   liftShowsPrec sp sl d = showsUnaryWith (liftShowsPrec sp sl) "Key" d . unKey

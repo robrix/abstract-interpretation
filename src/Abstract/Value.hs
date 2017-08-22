@@ -88,7 +88,7 @@ instance (Pretty1 l, Pretty t, Pretty a) => Pretty (Value l t a) where
   pretty = pretty1
 
 
-instance (MonadFail m, AbstractNumber a m) => AbstractNumber (Value l t a) m where
+instance (MonadFail m, Primitive a m) => Primitive (Value l t a) m where
   delta1 o (I a) = fmap I (delta1 o a)
   delta1 _ _ = fail "non-numeric value"
 

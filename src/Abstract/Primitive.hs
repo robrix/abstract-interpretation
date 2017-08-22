@@ -21,7 +21,7 @@ data N = N
   deriving (Eq, Ord, Show)
 
 
-class MonadFail m => AbstractNumber a m where
+class MonadFail m => Primitive a m where
   delta1 :: Op1 -> a -> m a
   delta2 :: Op2 -> a -> a -> m a
   isZero :: a -> m Bool
@@ -31,7 +31,7 @@ divisionByZero :: MonadFail m => m a
 divisionByZero = fail "division by zero"
 
 
-instance MonadFail m => AbstractNumber Prim m where
+instance MonadFail m => Primitive Prim m where
   delta1 o a = pure $ case o of
     Negate -> negate a
     Abs -> abs a
@@ -47,7 +47,7 @@ instance MonadFail m => AbstractNumber Prim m where
 
   isZero a = pure (a == 0)
 
-instance (Alternative m, MonadFail m) => AbstractNumber N m where
+instance (Alternative m, MonadFail m) => Primitive N m where
   delta1 _ N = pure N
 
   delta2 DividedBy _ N = pure N <|> divisionByZero

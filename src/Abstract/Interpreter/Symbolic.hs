@@ -55,12 +55,12 @@ instance (Num a, Ord a, Primitive a (Eff fs), State (PathCondition a) :< fs, Amb
     Signum -> sym signum a
 
   delta2 o a b = case o of
-    Plus  -> sym2 (delta2 Plus ) num (+) a b
-    Minus -> sym2 (delta2 Minus) num (-) a b
-    Times -> sym2 (delta2 Times) num (*) a b
-    DividedBy -> isZero b >>= flip when divisionByZero >> sym2 (delta2 DividedBy) num ((In .) . Op2 DividedBy) a b
-    Quotient  -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Quotient)  num ((In .) . Op2 Quotient)  a b
-    Remainder -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Remainder) num ((In .) . Op2 Remainder) a b
+    Plus  -> sym2 (delta2 Plus ) prim (+) a b
+    Minus -> sym2 (delta2 Minus) prim (-) a b
+    Times -> sym2 (delta2 Times) prim (*) a b
+    DividedBy -> isZero b >>= flip when divisionByZero >> sym2 (delta2 DividedBy) prim ((In .) . Op2 DividedBy) a b
+    Quotient  -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Quotient)  prim ((In .) . Op2 Quotient)  a b
+    Remainder -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Remainder) prim ((In .) . Op2 Remainder) a b
 
   isZero (V a) = isZero a
   isZero (Sym e) = do

@@ -12,7 +12,7 @@ import qualified Data.Set as Set
 
 data Syntax a r
   = Var Name
-  | Num a
+  | Prm a
   | Op1 Op1 r
   | Op2 Op2 r r
   | App r r
@@ -30,8 +30,8 @@ newtype Term a = In { out :: Syntax a (Term a) }
 var :: Name -> Term a
 var = In . Var
 
-num :: a -> Term a
-num = In . Num
+prim :: a -> Term a
+prim = In . Prm
 
 infixl 9 #
 (#) :: Term a -> Term a -> Term a
@@ -82,7 +82,7 @@ instance Foldable Term where
 instance Bifoldable Syntax where
   bifoldMap f g s = case s of
     Var _ -> mempty
-    Num i -> f i
+    Prm i -> f i
     Op1 _ a -> g a
     Op2 _ a b -> g a `mappend` g b
     App a b -> g a `mappend` g b
@@ -100,7 +100,7 @@ instance Functor Term where
 instance Bifunctor Syntax where
   bimap f g s = case s of
     Var n -> Var n
-    Num v -> Num (f v)
+    Prm v -> Prm (f v)
     Op1 o a -> Op1 o (g a)
     Op2 o a b -> Op2 o (g a) (g b)
     App a b -> App (g a) (g b)
@@ -118,7 +118,7 @@ instance Traversable Term where
 instance Bitraversable Syntax where
   bitraverse f g s = case s of
     Var n -> pure (Var n)
-    Num v -> Num <$> f v
+    Prm v -> Prm <$> f v
     Op1 o a -> Op1 o <$> g a
     Op2 o a b -> Op2 o <$> g a <*> g b
     App a b -> App <$> g a <*> g b
@@ -136,7 +136,7 @@ instance Eq1 Term where
 instance Eq2 Syntax where
   liftEq2 eqV eqA s1 s2 = case (s1, s2) of
     (Var n1, Var n2) -> n1 == n2
-    (Num v1, Num v2) -> eqV v1 v2
+    (Prm v1, Prm v2) -> eqV v1 v2
     (Op1 o1 a1, Op1 o2 a2) -> o1 == o2 && eqA a1 a2
     (Op2 o1 a1 b1, Op2 o2 a2 b2) -> o1 == o2 && eqA a1 a2 && eqA b1 b2
     (App a1 b1, App a2 b2) -> eqA a1 a2 && eqA b1 b2
@@ -156,9 +156,9 @@ instance Ord2 Syntax where
     (Var n1, Var n2) -> compare n1 n2
     (Var{}, _) -> LT
     (_, Var{}) -> GT
-    (Num v1, Num v2) -> compareV v1 v2
-    (Num{}, _) -> LT
-    (_, Num{}) -> GT
+    (Prm v1, Prm v2) -> compareV v1 v2
+    (Prm{}, _) -> LT
+    (_, Prm{}) -> GT
     (Op1 o1 a1, Op1 o2 a2) -> compare o1 o2 <> compareA a1 a2
     (Op1{}, _) -> LT
     (_, Op1{}) -> GT
@@ -186,7 +186,7 @@ instance Show1 Term where
 instance Show2 Syntax where
   liftShowsPrec2 spV _ spA _ d s = case s of
     Var n -> showsUnaryWith showsPrec "Var" d n
-    Num v -> showsUnaryWith spV "Num" d v
+    Prm v -> showsUnaryWith spV "Prm" d v
     Op1 o a -> showsBinaryWith showsPrec spA "Op1" d o a
     Op2 o a b -> showsTernaryWith showsPrec spA spA "Op2" d o a b
     App a b -> showsBinaryWith spA spA "App" d a b
@@ -199,7 +199,7 @@ instance Show a => Show1 (Syntax a) where
 
 
 instance Num a => Num (Term a) where
-  fromInteger = In . Num . fromInteger
+  fromInteger = In . Prm . fromInteger
 
   signum = In . Op1 Signum
   abs = In . Op1 Abs
@@ -218,7 +218,7 @@ instance Pretty a => Pretty (Term a) where
 instance Pretty2 Syntax where
   liftPretty2 pv _ pr _ s = case s of
     Var n -> pretty n
-    Num v -> pv v
+    Prm v -> pv v
     Op1 o a -> pretty o <+> pr a
     Op2 o a b -> pr a <+> pretty o <+> pr b
     App a b -> pr a <+> parens (pr b)

@@ -42,6 +42,9 @@ instance Pretty l => Pretty1 (Either l) where
 instance Pretty2 (,) where
   liftPretty2 pA _ pB _ (a, b) = tupled [ pA a, pB b ]
 
+instance Pretty a => Pretty1 ((,) a) where
+  liftPretty = liftPretty2 pretty prettyList
+
 pprint :: Pretty a => a -> IO ()
 pprint a = renderIO stdout (layoutPretty (LayoutOptions Unbounded) (pretty a <> pretty "\n"))
 

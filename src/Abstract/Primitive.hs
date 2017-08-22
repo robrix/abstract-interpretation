@@ -10,7 +10,7 @@ import Prelude hiding (fail)
 data Op1 = Negate | Abs | Signum | Not
   deriving (Eq, Ord, Show)
 
-data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder | Modulus | And | Or
+data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder | Modulus | And | Or | XOr
   deriving (Eq, Ord, Show)
 
 
@@ -54,15 +54,18 @@ instance MonadFail m => Primitive Prim m where
     Minus -> pure (PInt (a - b))
     Times -> pure (PInt (a * b))
     DividedBy -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `div` b))
-    Quotient ->  isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `quot` b))
+    Quotient  -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `quot` b))
     Remainder -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `rem` b))
-    Modulus -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `mod` b))
+    Modulus   -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `mod` b))
     And -> nonBoolean
-    Or -> nonBoolean
+    Or  -> nonBoolean
+    XOr -> nonBoolean
   delta2 And (PBool a) (PBool b) = pure (PBool (a && b))
   delta2 And _         _         = nonBoolean
   delta2 Or  (PBool a) (PBool b) = pure (PBool (a || b))
   delta2 Or  _         _         = nonBoolean
+  delta2 XOr (PBool a) (PBool b) = pure (PBool ((a || b) && not (a && b)))
+  delta2 XOr _         _         = nonBoolean
   delta2 _ _ _ = nonNumeric
 
   isZero (PInt a) = pure (a == 0)
@@ -77,15 +80,17 @@ instance (Alternative m, MonadFail m) => Primitive Abstract m where
   delta1 _   N = pure N
   delta1 _   _ = nonNumeric
 
-  delta2 And       _ B = pure B
+  delta2 And       B B = pure B
   delta2 And       _ _ = nonBoolean
-  delta2 Or        _ B = pure B
+  delta2 Or        B B = pure B
   delta2 Or        _ _ = nonBoolean
-  delta2 DividedBy _ N = pure N <|> divisionByZero
-  delta2 Quotient  _ N = pure N <|> divisionByZero
-  delta2 Remainder _ N = pure N <|> divisionByZero
-  delta2 Modulus   _ N = pure N <|> divisionByZero
-  delta2 _         _ N = pure N
+  delta2 XOr       B B = pure B
+  delta2 XOr       _ _ = nonBoolean
+  delta2 DividedBy N N = pure N <|> divisionByZero
+  delta2 Quotient  N N = pure N <|> divisionByZero
+  delta2 Remainder N N = pure N <|> divisionByZero
+  delta2 Modulus   N N = pure N <|> divisionByZero
+  delta2 _         N N = pure N
   delta2 _         _ _ = nonNumeric
 
   isZero N = pure True <|> pure False
@@ -166,3 +171,4 @@ instance Pretty Op2 where
   pretty Modulus = pretty "`mod`"
   pretty And = pretty "&&"
   pretty Or  = pretty "||"
+  pretty XOr = pretty "`xor`"

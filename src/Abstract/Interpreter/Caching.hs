@@ -17,6 +17,7 @@ import Data.Function (fix)
 import Data.Functor.Classes
 import qualified Data.Map as Map
 import Data.Maybe
+import Data.Proxy
 import Data.Semigroup
 import qualified Data.Set as Set
 
@@ -41,7 +42,7 @@ type CachingResult l t v = (Either String ([] v, Cache l t v), Store l v)
 -- Coinductively-cached evaluation
 
 evalCache :: forall l a . (Ord a, Ord (Store l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l (Term a) (Value l (Term a) a)), AbstractNumber a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> CachingResult l (Term a) (Value l (Term a) a)
-evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache (undefined :: proxy l) ev
+evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache (Proxy :: Proxy l) ev
 
 runCache :: (Ord t, Ord v, Ord (Store l v), Address l, Context l v fs, CachingInterpreter l t v :<: fs)
          => proxy l

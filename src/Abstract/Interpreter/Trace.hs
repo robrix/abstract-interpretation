@@ -13,6 +13,7 @@ import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Control.Monad.Effect.Writer
 import Data.Function (fix)
+import Data.Proxy
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
@@ -27,13 +28,13 @@ type TraceResult l t v f = (Either String (v, f (Configuration l t v)), Store l 
 -- Tracing and reachable state analyses
 
 evalTrace :: forall a l. (Address l, Context l (Value l (Term a) a) (TraceInterpreter l (Term a) (Value l (Term a) a)), AbstractNumber a (Eff (TraceInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> TraceResult l (Term a) (Value l (Term a) a) []
-evalTrace = run @(TraceInterpreter l (Term a) (Value l (Term a) a)) . runTrace (undefined :: proxy l) ev
+evalTrace = run @(TraceInterpreter l (Term a) (Value l (Term a) a)) . runTrace (Proxy :: Proxy l) ev
 
 runTrace :: (TraceInterpreter l t v :<: fs, Address l) => proxy l -> (Eval t fs v -> Eval t fs v) -> Eval t fs v
 runTrace proxy ev = fix (evTell proxy [] ev)
 
 evalReach :: forall a l. (Ord a, Address l, Context l (Value l (Term a) a) (ReachableStateInterpreter l (Term a) (Value l (Term a) a)), AbstractNumber a (Eff (ReachableStateInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> TraceResult l (Term a) (Value l (Term a) a) Set.Set
-evalReach = run @(ReachableStateInterpreter l (Term a) (Value l (Term a) a)) . runReach (undefined :: proxy l) ev
+evalReach = run @(ReachableStateInterpreter l (Term a) (Value l (Term a) a)) . runReach (Proxy :: Proxy l) ev
 
 runReach :: (Ord t, Ord v, ReachableStateInterpreter l t v :<: fs, Address l) => proxy l -> (Eval t fs v -> Eval t fs v) -> Eval t fs v
 runReach proxy ev = fix (evTell proxy Set.empty ev)

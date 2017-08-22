@@ -2,7 +2,7 @@
 module Abstract.Interpreter.Dead where
 
 import Abstract.Interpreter
-import Abstract.Number
+import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax hiding (subterms)
 import Abstract.Value

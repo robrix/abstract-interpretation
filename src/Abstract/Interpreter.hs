@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeOperators #-}
 module Abstract.Interpreter where
 
-import Abstract.Number
+import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value

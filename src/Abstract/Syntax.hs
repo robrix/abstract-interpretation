@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving, TypeFamilies #-}
 module Abstract.Syntax where
 
-import Abstract.Number
+import Abstract.Primitive
 import Data.Bifoldable
 import Data.Bifunctor
 import Data.Bitraversable

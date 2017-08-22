@@ -2,7 +2,7 @@
 module Abstract.Interpreter.Symbolic where
 
 import Abstract.Interpreter
-import Abstract.Number
+import Abstract.Primitive
 import Abstract.Syntax
 import Abstract.Value
 import Control.Applicative

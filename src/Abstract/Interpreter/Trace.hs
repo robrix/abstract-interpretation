@@ -3,7 +3,7 @@ module Abstract.Interpreter.Trace where
 
 import Abstract.Configuration
 import Abstract.Interpreter
-import Abstract.Number
+import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value

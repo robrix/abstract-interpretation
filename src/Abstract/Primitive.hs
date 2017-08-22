@@ -59,7 +59,7 @@ instance MonadFail m => Primitive Prim m where
   delta2 _ _ _ = nonNumeric
 
   isZero (PInt a) = pure (a == 0)
-  isZero _ = nonNumeric
+  isZero _        = nonNumeric
 
 instance (Alternative m, MonadFail m) => Primitive Abstract m where
   delta1 Not B = pure B

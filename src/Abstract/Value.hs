@@ -89,11 +89,11 @@ instance (Pretty1 l, Pretty t, Pretty a) => Pretty (Value l t a) where
 
 
 instance (MonadFail m, Primitive a m) => Primitive (Value l t a) m where
-  delta1 o (I a) = fmap I (delta1 o a)
-  delta1 _ _ = nonNumeric
+  delta1 o   (I a) = fmap I (delta1 o a)
+  delta1 _   _     = nonNumeric
 
   delta2 o (I a) (I b) = fmap I (delta2 o a b)
-  delta2 _ _ _ = nonNumeric
+  delta2 _ _     _     = nonNumeric
 
   isZero (I a) = isZero a
-  isZero _ = nonNumeric
+  isZero _     = nonNumeric

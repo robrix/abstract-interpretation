@@ -1,3 +1,6 @@
 [submodule "vendor/effects"]
 	path = vendor/effects
 	url = https://github.com/joshvera/effects.git
+[submodule "vendor/prettyprinter"]
+	path = vendor/prettyprinter
+	url = https://github.com/robrix/prettyprinter.git

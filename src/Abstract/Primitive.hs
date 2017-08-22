@@ -7,7 +7,7 @@ import Control.Monad.Fail
 import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 
-data Op1 = Negate | Abs | Signum
+data Op1 = Negate | Abs | Signum | Not
   deriving (Eq, Ord, Show)
 
 data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder | Modulus
@@ -35,13 +35,18 @@ divisionByZero = fail "division by zero"
 nonNumeric :: MonadFail m => m a
 nonNumeric = fail "numeric operation on non-numeric value"
 
+nonBoolean :: MonadFail m => m a
+nonBoolean = fail "boolean operation on non-boolean value"
+
 
 instance MonadFail m => Primitive Prim m where
-  delta1 o (PInt a) = pure . PInt $ case o of
-    Negate -> negate a
-    Abs -> abs a
-    Signum -> signum a
-  delta1 _ _ = nonNumeric
+  delta1 o a = case (o, a) of
+    (Negate, PInt a)  -> pure (PInt (negate a))
+    (Abs,    PInt a)  -> pure (PInt (abs a))
+    (Signum, PInt a)  -> pure (PInt (signum a))
+    (Not,    PBool a) -> pure (PBool (not a))
+    (Not,    _)       -> nonBoolean
+    _                 -> nonNumeric
 
   delta2 o (PInt a) (PInt b) = case o of
     Plus -> pure (PInt (a + b))
@@ -57,8 +62,10 @@ instance MonadFail m => Primitive Prim m where
   isZero _ = nonNumeric
 
 instance (Alternative m, MonadFail m) => Primitive Abstract m where
-  delta1 _ N = pure N
-  delta1 _ _ = nonNumeric
+  delta1 Not B = pure B
+  delta1 Not _ = nonBoolean
+  delta1 _   N = pure N
+  delta1 _   _ = nonNumeric
 
   delta2 DividedBy _ N = pure N <|> divisionByZero
   delta2 Quotient  _ N = pure N <|> divisionByZero
@@ -130,6 +137,7 @@ instance Pretty Op1 where
   pretty Negate = pretty "negate"
   pretty Abs = pretty "abs"
   pretty Signum = pretty "signum"
+  pretty Not = pretty "not"
 
 instance Pretty Op2 where
   pretty Plus = pretty '+'

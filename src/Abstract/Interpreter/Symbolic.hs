@@ -49,10 +49,13 @@ pathConditionInsert = ((PathCondition .) . (. unPathCondition)) . Set.insert
 
 
 instance (Num a, Ord a, Primitive a (Eff fs), State (PathCondition a) :< fs, Amb :< fs) => Primitive (Sym (Term a) a) (Eff fs) where
-  delta1 o a = pure $ case o of
-    Negate -> sym negate a
-    Abs    -> sym abs    a
-    Signum -> sym signum a
+  delta1 o a = case o of
+    Negate -> pure (sym negate a)
+    Abs    -> pure (sym abs    a)
+    Signum -> pure (sym signum a)
+    Not    -> case a of
+      Sym t -> pure (Sym (In (Op1 Not t)))
+      V a -> V <$> delta1 Not a
 
   delta2 o a b = case o of
     Plus  -> sym2 (delta2 Plus ) prim (+) a b

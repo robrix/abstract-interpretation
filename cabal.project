@@ -1,4 +1,4 @@
 packages: ./
-optional-packages: vendor/*/
+optional-packages: vendor/*/ vendor/prettyprinter/*/
 
 jobs: $ncpus

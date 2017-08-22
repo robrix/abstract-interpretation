@@ -61,6 +61,7 @@ instance (Num a, Ord a, Primitive a (Eff fs), State (PathCondition a) :< fs, Amb
     DividedBy -> isZero b >>= flip when divisionByZero >> sym2 (delta2 DividedBy) prim ((In .) . Op2 DividedBy) a b
     Quotient  -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Quotient)  prim ((In .) . Op2 Quotient)  a b
     Remainder -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Remainder) prim ((In .) . Op2 Remainder) a b
+    Modulus   -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Modulus)   prim ((In .) . Op2 Modulus)   a b
 
   isZero (V a) = isZero a
   isZero (Sym e) = do

@@ -10,7 +10,7 @@ import Prelude hiding (fail)
 data Op1 = Negate | Abs | Signum
   deriving (Eq, Ord, Show)
 
-data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder
+data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder | Modulus
   deriving (Eq, Ord, Show)
 
 
@@ -50,6 +50,7 @@ instance MonadFail m => Primitive Prim m where
     DividedBy -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `div` b))
     Quotient ->  isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `quot` b))
     Remainder -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `rem` b))
+    Modulus -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `mod` b))
   delta2 _ _ _ = nonNumeric
 
   isZero (PInt a) = pure (a == 0)
@@ -62,6 +63,7 @@ instance (Alternative m, MonadFail m) => Primitive Abstract m where
   delta2 DividedBy _ N = pure N <|> divisionByZero
   delta2 Quotient _ N = pure N <|> divisionByZero
   delta2 Remainder _ N = pure N <|> divisionByZero
+  delta2 Modulus _ N = pure N <|> divisionByZero
   delta2 _ _ N = pure N
   delta2 _ _ _ = nonNumeric
 
@@ -136,3 +138,4 @@ instance Pretty Op2 where
   pretty DividedBy = pretty '/'
   pretty Quotient = pretty "`quot`"
   pretty Remainder = pretty "`rem`"
+  pretty Modulus = pretty "`mod`"

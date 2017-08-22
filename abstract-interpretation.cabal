@@ -26,7 +26,6 @@ library
                      , Control.Effect
                      , Control.Monad.Effect.Amb
                      , Control.Monad.Effect.Failure
-                     , Data.Functor.Classes.Pretty
   build-depends:       base >=4.10 && <4.11
                      , containers
                      , effects

@@ -76,3 +76,14 @@ instance (Num a, Ord a, Primitive a (Eff fs), State (PathCondition a) :< fs, Amb
     else
         ((refine (E e)    >> return True)
      <|> (refine (NotE e) >> return False))
+
+  truthy (V a) = truthy a
+  truthy (Sym e) = do
+    phi <- getPathCondition
+    if E e `pathConditionMember` phi then
+      return True
+    else if NotE e `pathConditionMember` phi then
+      return False
+    else
+        ((refine (E e)    >> return True)
+     <|> (refine (NotE e) >> return False))

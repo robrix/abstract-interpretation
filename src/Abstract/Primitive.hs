@@ -27,6 +27,7 @@ class MonadFail m => Primitive a m where
   delta1 :: Op1 -> a -> m a
   delta2 :: Op2 -> a -> a -> m a
   isZero :: a -> m Bool
+  truthy :: a -> m Bool
 
 
 divisionByZero :: MonadFail m => m a
@@ -61,6 +62,9 @@ instance MonadFail m => Primitive Prim m where
   isZero (PInt a) = pure (a == 0)
   isZero _        = nonNumeric
 
+  truthy (PBool a) = pure a
+  truthy _         = nonBoolean
+
 instance (Alternative m, MonadFail m) => Primitive Abstract m where
   delta1 Not B = pure B
   delta1 Not _ = nonBoolean
@@ -76,6 +80,9 @@ instance (Alternative m, MonadFail m) => Primitive Abstract m where
 
   isZero N = pure True <|> pure False
   isZero _ = nonNumeric
+
+  truthy B = pure True <|> pure False
+  truthy _ = nonBoolean
 
 instance Num Prim where
   negate (PInt i) = PInt (negate i)

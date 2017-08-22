@@ -98,3 +98,6 @@ instance (MonadFail m, Primitive a m) => Primitive (Value l t a) m where
 
   isZero (I a) = isZero a
   isZero _     = nonNumeric
+
+  truthy (I a) = truthy a
+  truthy _     = nonBoolean

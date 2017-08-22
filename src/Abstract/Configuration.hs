@@ -12,7 +12,7 @@ data Configuration l t v = Configuration { configurationTerm :: t, configuration
 
 
 instance Address l => Eq2 (Configuration l) where
-  liftEq2 eqT eqV (Configuration t1 e1 s1) (Configuration t2 e2 s2) = eqT t1 t2 && liftEq addressEq e1 e2 && liftEq eqV s1 s2
+  liftEq2 eqT eqV (Configuration t1 e1 s1) (Configuration t2 e2 s2) = eqT t1 t2 && liftEq (liftEq eqV) e1 e2 && liftEq eqV s1 s2
 
 instance (Address l, Eq t) => Eq1 (Configuration l t) where
   liftEq = liftEq2 (==)
@@ -21,7 +21,7 @@ instance (Eq v, Eq t, Address l) => Eq (Configuration l t v) where
   (==) = eq1
 
 instance Address l => Ord2 (Configuration l) where
-  liftCompare2 compareT compareV (Configuration t1 e1 s1) (Configuration t2 e2 s2) = compareT t1 t2 <> liftCompare addressCompare e1 e2 <> liftCompare compareV s1 s2
+  liftCompare2 compareT compareV (Configuration t1 e1 s1) (Configuration t2 e2 s2) = compareT t1 t2 <> liftCompare (liftCompare compareV) e1 e2 <> liftCompare compareV s1 s2
 
 instance (Address l, Ord t) => Ord1 (Configuration l t) where
   liftCompare = liftCompare2 compare
@@ -31,7 +31,7 @@ instance (Ord v, Ord t, Address l) => Ord (Configuration l t v) where
 
 
 instance Address l => Show2 (Configuration l) where
-  liftShowsPrec2 spT _ spV slV d (Configuration t1 e1 s1) = showsTernaryWith spT (liftShowsPrec addressShowsPrec addressShowList) (liftShowsPrec spV slV) "Configuration" d t1 e1 s1
+  liftShowsPrec2 spT _ spV slV d (Configuration t1 e1 s1) = showsTernaryWith spT (liftShowsPrec (liftShowsPrec spV slV) (liftShowList spV slV)) (liftShowsPrec spV slV) "Configuration" d t1 e1 s1
 
 instance (Address l, Show t) => Show1 (Configuration l t) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList

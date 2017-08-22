@@ -32,22 +32,28 @@ class MonadFail m => Primitive a m where
 divisionByZero :: MonadFail m => m a
 divisionByZero = fail "division by zero"
 
+nonNumeric :: MonadFail m => m a
+nonNumeric = fail "numeric operation on non-numeric value"
+
 
 instance MonadFail m => Primitive Prim m where
-  delta1 o a = pure $ case o of
+  delta1 o (PInt a) = pure . PInt $ case o of
     Negate -> negate a
     Abs -> abs a
     Signum -> signum a
+  delta1 _ _ = nonNumeric
 
-  delta2 o a b = case o of
-    Plus -> return $ a + b
-    Minus -> return $ a - b
-    Times -> return $ a * b
-    DividedBy -> isZero b >>= flip when divisionByZero >> return (a `div` b)
-    Quotient ->  isZero b >>= flip when divisionByZero >> return (a `quot` b)
-    Remainder -> isZero b >>= flip when divisionByZero >> return (a `rem` b)
+  delta2 o (PInt a) (PInt b) = case o of
+    Plus -> pure (PInt (a + b))
+    Minus -> pure (PInt (a - b))
+    Times -> pure (PInt (a * b))
+    DividedBy -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `div` b))
+    Quotient ->  isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `quot` b))
+    Remainder -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `rem` b))
+  delta2 _ _ _ = nonNumeric
 
-  isZero a = pure (a == 0)
+  isZero (PInt a) = pure (a == 0)
+  isZero _ = nonNumeric
 
 instance (Alternative m, MonadFail m) => Primitive Abstract m where
   delta1 _ N = pure N

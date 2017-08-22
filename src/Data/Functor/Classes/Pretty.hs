@@ -4,14 +4,11 @@ module Data.Functor.Classes.Pretty
 , module Pretty
 , pretty1
 , prettyC
-, pprint
 , Pretty1Of(..)
 , Pretty2Of(..)
 ) where
 
 import Data.Text.Prettyprint.Doc as Pretty
-import Data.Text.Prettyprint.Doc.Render.Terminal
-import System.IO (stdout)
 
 class Pretty1 f where
   liftPretty :: (a -> Doc ann) -> ([a] -> Doc ann) -> f a -> Doc ann
@@ -41,9 +38,6 @@ instance Pretty2 (,) where
 
 instance Pretty a => Pretty1 ((,) a) where
   liftPretty = liftPretty2 pretty prettyList
-
-pprint :: Pretty a => a -> IO ()
-pprint a = renderIO stdout (layoutPretty (LayoutOptions Unbounded) (pretty a <> pretty "\n"))
 
 prettyC :: String -> [Doc ann] -> Doc ann
 prettyC s fs = group (pretty s <> flatAlt (nest 2 (line <> vsep (map parens fs))) (space <> hsep (map parens fs)))

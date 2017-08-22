@@ -207,5 +207,8 @@ instance Show1 Monovariant where
 instance Address l => Show1 (Store l) where
   liftShowsPrec sp sl d (Store m) = showsUnaryWith (liftShowsPrec (liftShowsPrec sp sl) (liftShowList sp sl)) "Store" d m
 
+instance Address l => Show1 (Key l) where
+  liftShowsPrec sp sl d = showsUnaryWith (liftShowsPrec sp sl) "Key" d . unKey
+
 instance Address l => Show (Key l a) where
-  showsPrec d = showsUnaryWith (liftShowsPrec (const (const id)) (showListWith (const id))) "Key" d . unKey
+  showsPrec = liftShowsPrec (const (const id)) (showListWith (const id))

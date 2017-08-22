@@ -19,7 +19,7 @@ data Prim
   | PBool Bool
   deriving (Eq, Ord, Show)
 
-data N = N
+data Abstract = N
   deriving (Eq, Ord, Show)
 
 
@@ -49,7 +49,7 @@ instance MonadFail m => Primitive Prim m where
 
   isZero a = pure (a == 0)
 
-instance (Alternative m, MonadFail m) => Primitive N m where
+instance (Alternative m, MonadFail m) => Primitive Abstract m where
   delta1 _ N = pure N
 
   delta2 DividedBy _ N = pure N <|> divisionByZero
@@ -91,7 +91,7 @@ instance Integral Prim where
   PInt a `quotRem` PInt b = let (q, r) = a `quotRem` b in (PInt q, PInt r)
   _ `quotRem` _ = error "quotRem of non-numeric primitive"
 
-instance Num N where
+instance Num Abstract where
   negate N = N
 
   signum N = N
@@ -105,7 +105,7 @@ instance Num N where
 
   fromInteger = const N
 
-instance Pretty N where
+instance Pretty Abstract where
   pretty N = pretty 'N'
 
 instance Pretty Op1 where

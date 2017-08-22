@@ -9,8 +9,6 @@ module Data.Functor.Classes.Pretty
 , Pretty2Of(..)
 ) where
 
-import Data.Foldable
-import qualified Data.Set as Set
 import Data.Text.Prettyprint.Doc as Pretty
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import System.IO (stdout)
@@ -30,9 +28,6 @@ pretty1 = liftPretty pretty prettyList
 
 instance Pretty1 [] where
   liftPretty _ pl = pl
-
-instance Pretty1 Set.Set where
-  liftPretty _ pl xs = pretty "Set.fromList" <+> pl (toList xs)
 
 instance Pretty2 Either where
   liftPretty2 pL _ _ _ (Left l)  = pL l

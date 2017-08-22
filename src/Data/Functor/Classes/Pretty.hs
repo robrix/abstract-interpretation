@@ -4,6 +4,7 @@ module Data.Functor.Classes.Pretty
 , pretty1
 , prettyC
 , pprint
+, Pretty1Of(..)
 ) where
 
 import Data.Foldable
@@ -43,3 +44,13 @@ pprint a = renderIO stdout (layoutPretty (LayoutOptions Unbounded) (pretty a <> 
 
 prettyC :: String -> [Doc ann] -> Doc ann
 prettyC s fs = group (pretty s <> flatAlt (nest 2 (line <> vsep (map parens fs))) (space <> hsep (map parens fs)))
+
+
+newtype Pretty1Of f a = Pretty1Of { unPretty1Of :: f a }
+  deriving (Eq, Ord, Show)
+
+instance Pretty1 f => Pretty1 (Pretty1Of f) where
+  liftPretty p pl = liftPretty p pl . unPretty1Of
+
+instance (Pretty1 f, Pretty a) => Pretty (Pretty1Of f a) where
+  pretty = pretty1

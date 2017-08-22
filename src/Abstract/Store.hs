@@ -4,10 +4,6 @@ module Abstract.Store
 , Monovariant(..)
 , Address(..)
 , Store(..)
-, addressEq
-, addressCompare
-, addressShowsPrec
-, addressShowList
 ) where
 
 import Abstract.Syntax
@@ -90,28 +86,8 @@ instance Address Monovariant where
   coerceAddress = Monovariant . unMonovariant
 
 
-addressEq :: Address l => l a -> l b -> Bool
-addressEq = liftEq (const (const True))
-
-addressCompare :: Address l => l a -> l b -> Ordering
-addressCompare = liftCompare (const (const EQ))
-
-addressShowsPrec :: Address l => Int -> l a -> ShowS
-addressShowsPrec = liftShowsPrec hidesPrec hideList
-
-addressShowList :: Address l => [l a] -> ShowS
-addressShowList = liftShowList hidesPrec hideList
-
-
 uninitializedAddress :: MonadFail m => m a
 uninitializedAddress = fail "uninitialized address"
-
-
-hidesPrec :: Int -> a -> ShowS
-hidesPrec _ _ = id
-
-hideList :: [a] -> ShowS
-hideList _ = id
 
 
 instance Semigroup (I a) where

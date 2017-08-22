@@ -22,7 +22,9 @@ envInsert :: Name -> a -> Environment a -> Environment a
 envInsert = (((Environment .) . (. unEnvironment)) .) . Map.insert
 
 
-data Value l t a = I a | Closure Name t (Environment (l (Value l t a)))
+data Value l t a
+  = I a
+  | Closure Name t (Environment (l (Value l t a)))
   deriving (Foldable, Functor, Traversable)
 
 

@@ -200,3 +200,6 @@ instance Pretty1 Precise where
 
 instance Pretty1 Monovariant where
   liftPretty _ _ (Monovariant n) = pretty "Monovariant" <+> pretty n
+
+instance Pretty1 l => Pretty1 (Key l) where
+  liftPretty _ _ (Key l) = liftPretty (const emptyDoc) (const emptyDoc) l

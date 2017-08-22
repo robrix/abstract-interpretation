@@ -13,8 +13,7 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Abstract.Boolean
-                     , Abstract.Configuration
+  exposed-modules:     Abstract.Configuration
                      , Abstract.Interpreter
                      , Abstract.Interpreter.Caching
                      , Abstract.Interpreter.Dead

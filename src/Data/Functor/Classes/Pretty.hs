@@ -5,6 +5,7 @@ module Data.Functor.Classes.Pretty
 , prettyC
 , pprint
 , Pretty1Of(..)
+, Pretty2Of(..)
 ) where
 
 import Data.Foldable

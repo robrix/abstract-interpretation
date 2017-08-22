@@ -198,8 +198,17 @@ instance Address l => Show (Key l a) where
 instance Pretty1 Precise where
   liftPretty _ _ (Precise n) = pretty "Precise" <+> pretty n
 
+instance Pretty (Precise a) where
+  pretty = liftPretty (const emptyDoc) (const emptyDoc)
+
 instance Pretty1 Monovariant where
   liftPretty _ _ (Monovariant n) = pretty "Monovariant" <+> pretty n
 
+instance Pretty (Monovariant a) where
+  pretty = liftPretty (const emptyDoc) (const emptyDoc)
+
 instance Pretty1 l => Pretty1 (Key l) where
   liftPretty _ _ (Key l) = liftPretty (const emptyDoc) (const emptyDoc) l
+
+instance Pretty1 l => Pretty (Key l a) where
+  pretty = liftPretty (const emptyDoc) (const emptyDoc)

@@ -54,3 +54,16 @@ instance Pretty1 f => Pretty1 (Pretty1Of f) where
 
 instance (Pretty1 f, Pretty a) => Pretty (Pretty1Of f a) where
   pretty = pretty1
+
+
+newtype Pretty2Of f a b = Pretty2Of { unPretty2Of :: f a b }
+  deriving (Eq, Ord, Show)
+
+instance Pretty2 f => Pretty2 (Pretty2Of f) where
+  liftPretty2 pA plA pB plB = liftPretty2 pA plA pB plB . unPretty2Of
+
+instance (Pretty2 f, Pretty a) => Pretty1 (Pretty2Of f a) where
+  liftPretty = liftPretty2 pretty prettyList
+
+instance (Pretty2 f, Pretty a, Pretty b) => Pretty (Pretty2Of f a b) where
+  pretty = pretty1

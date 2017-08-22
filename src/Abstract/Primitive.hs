@@ -14,7 +14,9 @@ data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder
   deriving (Eq, Ord, Show)
 
 
-newtype Prim = PInt Int
+data Prim
+  = PInt Int
+  | PBool Bool
   deriving (Eq, Ord, Show)
 
 data N = N
@@ -59,25 +61,35 @@ instance (Alternative m, MonadFail m) => Primitive N m where
 
 instance Num Prim where
   negate (PInt i) = PInt (negate i)
+  negate _ = error "negate of non-numeric primitive"
   signum (PInt i) = PInt (signum i)
+  signum _ = error "signum of non-numeric primitive"
   abs (PInt i) = PInt (abs i)
+  abs _ = error "abs of non-numeric primitive"
 
   PInt a + PInt b = PInt (a + b)
+  _ + _ = error "(+) of non-numeric primitive"
   PInt a - PInt b = PInt (a - b)
+  _ - _ = error "(-) of non-numeric primitive"
   PInt a * PInt b = PInt (a * b)
+  _ * _ = error "(*) of non-numeric primitive"
 
   fromInteger = PInt . fromInteger
 
 instance Real Prim where
   toRational (PInt a) = toRational a
+  toRational _ = error "toRational of non-numeric primitive"
 
 instance Enum Prim where
   toEnum = PInt
   fromEnum (PInt a) = a
+  fromEnum _ = error "fromEnum of non-numeric primitive"
 
 instance Integral Prim where
   toInteger (PInt a) = toInteger a
+  toInteger _ = error "toInteger of non-numeric primitive"
   PInt a `quotRem` PInt b = let (q, r) = a `quotRem` b in (PInt q, PInt r)
+  _ `quotRem` _ = error "quotRem of non-numeric primitive"
 
 instance Num N where
   negate N = N

@@ -15,6 +15,7 @@ import Control.Monad.Fail
 import Data.Foldable (asum)
 import Data.Function (on)
 import Data.Functor.Classes
+import Data.Functor.Classes.Pretty
 import Data.Kind
 import qualified Data.Map as Map
 import Data.Semigroup
@@ -193,3 +194,9 @@ instance Address l => Show1 (Key l) where
 
 instance Address l => Show (Key l a) where
   showsPrec = liftShowsPrec (const (const id)) (showListWith (const id))
+
+instance Pretty1 Precise where
+  liftPretty _ _ (Precise n) = pretty "Precise" <+> pretty n
+
+instance Pretty1 Monovariant where
+  liftPretty _ _ (Monovariant n) = pretty "Monovariant" <+> pretty n

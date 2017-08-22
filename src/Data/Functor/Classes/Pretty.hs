@@ -3,7 +3,6 @@ module Data.Functor.Classes.Pretty
 , Pretty2(..)
 , module Pretty
 , pretty1
-, prettyC
 , Pretty1Of(..)
 , Pretty2Of(..)
 ) where
@@ -38,9 +37,6 @@ instance Pretty2 (,) where
 
 instance Pretty a => Pretty1 ((,) a) where
   liftPretty = liftPretty2 pretty prettyList
-
-prettyC :: String -> [Doc ann] -> Doc ann
-prettyC s fs = group (pretty s <> flatAlt (nest 2 (line <> vsep (map parens fs))) (space <> hsep (map parens fs)))
 
 
 newtype Pretty1Of f a = Pretty1Of { unPretty1Of :: f a }

@@ -15,8 +15,8 @@ data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder | Modulus
 
 
 data Prim
-  = PInt Int
-  | PBool Bool
+  = PInt  {-# UNPACK #-} !Int
+  | PBool {-# UNPACK #-} !Bool
   deriving (Eq, Ord, Show)
 
 data Abstract = N | B

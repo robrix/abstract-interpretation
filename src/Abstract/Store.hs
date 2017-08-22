@@ -1,4 +1,4 @@
-{-# LANGUAGE ConstraintKinds, DataKinds, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, GeneralizedNewtypeDeriving, ScopedTypeVariables, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE ConstraintKinds, DataKinds, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, GeneralizedNewtypeDeriving, ScopedTypeVariables, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Store
 ( Precise(..)
 , Monovariant(..)
@@ -206,6 +206,12 @@ instance Pretty1 Monovariant where
 
 instance Pretty (Monovariant a) where
   pretty = liftPretty (const emptyDoc) (const emptyDoc)
+
+instance (Pretty1 l, Pretty1 (Cell l)) => Pretty1 (Store l) where
+  liftPretty p pl = liftPrettyList (liftPretty p pl) (liftPrettyList p pl) . Map.toList . unStore
+
+instance (Pretty1 l, Pretty1 (Cell l), Pretty a) => Pretty (Store l a) where
+  pretty = pretty1
 
 instance Pretty1 l => Pretty1 (Key l) where
   liftPretty _ _ (Key l) = liftPretty (const emptyDoc) (const emptyDoc) l

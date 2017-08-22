@@ -10,7 +10,7 @@ import Prelude hiding (fail)
 data Op1 = Negate | Abs | Signum | Not
   deriving (Eq, Ord, Show)
 
-data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder | Modulus | And | Or | XOr
+data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder | Modulus | And | Or | XOr | Eq
   deriving (Eq, Ord, Show)
 
 
@@ -39,6 +39,9 @@ nonNumeric = fail "numeric operation on non-numeric value"
 nonBoolean :: MonadFail m => m a
 nonBoolean = fail "boolean operation on non-boolean value"
 
+disjointEq :: MonadFail m => m a
+disjointEq = fail "equating values of disjoint types"
+
 
 instance MonadFail m => Primitive Prim m where
   delta1 o a = case (o, a) of
@@ -60,12 +63,15 @@ instance MonadFail m => Primitive Prim m where
     And -> nonBoolean
     Or  -> nonBoolean
     XOr -> nonBoolean
+    Eq  -> pure (PBool (a == b))
   delta2 And (PBool a) (PBool b) = pure (PBool (a && b))
   delta2 And _         _         = nonBoolean
   delta2 Or  (PBool a) (PBool b) = pure (PBool (a || b))
   delta2 Or  _         _         = nonBoolean
   delta2 XOr (PBool a) (PBool b) = pure (PBool ((a || b) && not (a && b)))
   delta2 XOr _         _         = nonBoolean
+  delta2 Eq  (PBool a) (PBool b) = pure (PBool (a == b))
+  delta2 Eq  _         _         = disjointEq
   delta2 _ _ _ = nonNumeric
 
   isZero (PInt a) = pure (a == 0)
@@ -86,6 +92,9 @@ instance (Alternative m, MonadFail m) => Primitive Abstract m where
   delta2 Or        _ _ = nonBoolean
   delta2 XOr       B B = pure B
   delta2 XOr       _ _ = nonBoolean
+  delta2 Eq        B B = pure B
+  delta2 Eq        N N = pure B
+  delta2 Eq        _ _ = disjointEq
   delta2 DividedBy N N = pure N <|> divisionByZero
   delta2 Quotient  N N = pure N <|> divisionByZero
   delta2 Remainder N N = pure N <|> divisionByZero
@@ -172,3 +181,4 @@ instance Pretty Op2 where
   pretty And = pretty "&&"
   pretty Or  = pretty "||"
   pretty XOr = pretty "`xor`"
+  pretty Eq = pretty "=="

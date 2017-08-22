@@ -93,11 +93,12 @@ instance (MonadFail m, Primitive a m) => Primitive (Value l t a) m where
   delta1 Not _     = nonBoolean
   delta1 _   _     = nonNumeric
 
-  delta2 o   (I a) (I b) = fmap I (delta2 o a b)
-  delta2 And _     _     = nonBoolean
-  delta2 Or  _     _     = nonBoolean
-  delta2 XOr _     _     = nonBoolean
-  delta2 _   _     _     = nonNumeric
+  delta2 o   (I a)     (I b)     = fmap I (delta2 o a b)
+  delta2 And _         _         = nonBoolean
+  delta2 Or  _         _         = nonBoolean
+  delta2 XOr _         _         = nonBoolean
+  delta2 Eq  Closure{} Closure{} = fail "equality on closures is undefined"
+  delta2 _   _         _         = nonNumeric
 
   isZero (I a) = isZero a
   isZero _     = nonNumeric

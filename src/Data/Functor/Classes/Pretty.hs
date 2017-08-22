@@ -1,6 +1,7 @@
 module Data.Functor.Classes.Pretty
 ( Pretty1(..)
 , Pretty2(..)
+, module Pretty
 , pretty1
 , prettyC
 , pprint
@@ -10,7 +11,7 @@ module Data.Functor.Classes.Pretty
 
 import Data.Foldable
 import qualified Data.Set as Set
-import Data.Text.Prettyprint.Doc
+import Data.Text.Prettyprint.Doc as Pretty
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import System.IO (stdout)
 

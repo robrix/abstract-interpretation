@@ -74,8 +74,8 @@ instance (Num a, Ord a, Primitive a (Eff fs), State (PathCondition a) :< fs, Amb
     Gt  -> sym2 (delta2 Eq)  prim (binary Gt)  a b
     GtE -> sym2 (delta2 Eq)  prim (binary GtE) a b
 
-  isZero (V a) = isZero a
-  isZero (Sym e) = do
+  truthy (V a) = truthy a
+  truthy (Sym e) = do
     phi <- getPathCondition
     if E e `pathConditionMember` phi then
       return True
@@ -106,14 +106,3 @@ instance (Num a, AbstractNum a t) => Num (Sym t a) where
   Sym a * V   b = Sym (     a * prim b)
   V   a * Sym b = Sym (prim a *      b)
   Sym a * Sym b = Sym (     a *      b)
-
-  truthy (V a) = truthy a
-  truthy (Sym e) = do
-    phi <- getPathCondition
-    if E e `pathConditionMember` phi then
-      return True
-    else if NotE e `pathConditionMember` phi then
-      return False
-    else
-        ((refine (E e)    >> return True)
-     <|> (refine (NotE e) >> return False))

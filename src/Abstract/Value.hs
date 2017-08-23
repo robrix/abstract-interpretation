@@ -109,8 +109,5 @@ instance (MonadFail m, Primitive a m) => Primitive (Value l t a) m where
   delta2 GtE _         _         = disjointComparison
   delta2 _   _         _         = nonNumeric
 
-  isZero (I a) = isZero a
-  isZero _     = nonNumeric
-
   truthy (I a) = truthy a
   truthy _     = nonBoolean

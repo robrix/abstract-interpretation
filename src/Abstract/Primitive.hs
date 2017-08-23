@@ -30,7 +30,6 @@ class (Num a, Num t) => AbstractNum a t | t -> a where
 class MonadFail m => Primitive a m where
   delta1 :: Op1 -> a -> m a
   delta2 :: Op2 -> a -> a -> m a
-  isZero :: a -> m Bool
   truthy :: a -> m Bool
 
 
@@ -49,6 +48,9 @@ disjointComparison = fail "comparison of disjoint values"
 undefinedComparison :: MonadFail m => m a
 undefinedComparison = fail "undefined comparison"
 
+
+isZero :: (Num a, Primitive a m) => a -> m Bool
+isZero = truthy <=< delta2 Eq 0
 
 instance MonadFail m => Primitive Prim m where
   delta1 o a = case (o, a) of
@@ -93,9 +95,6 @@ instance MonadFail m => Primitive Prim m where
   delta2 GtE _         _         = disjointComparison
   delta2 _ _ _ = nonNumeric
 
-  isZero (PInt a) = pure (a == 0)
-  isZero _        = nonNumeric
-
   truthy (PBool a) = pure a
   truthy _         = nonBoolean
 
@@ -132,9 +131,6 @@ instance (Alternative m, MonadFail m) => Primitive Abstract m where
   delta2 Modulus   N N = pure N <|> divisionByZero
   delta2 _         N N = pure N
   delta2 _         _ _ = nonNumeric
-
-  isZero N = pure True <|> pure False
-  isZero _ = nonNumeric
 
   truthy B = pure True <|> pure False
   truthy _ = nonBoolean

@@ -38,7 +38,7 @@ ev ev term = case out term of
   Var x -> do
     p <- ask
     maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (l (Value l (Term a) a))))
-  If0 c t e -> do
+  If c t e -> do
     v <- ev c
     z <- isZero v
     ev (if z then t else e)

@@ -18,7 +18,7 @@ data Syntax a r
   | App r r
   | Lam Name r
   | Rec Name r
-  | If0 r r r
+  | If r r r
   deriving (Eq, Ord, Show)
 
 type Name = String
@@ -49,8 +49,8 @@ rec f x b = makeRec f (lam x (b (var "f")))
 makeRec :: Name -> Term a -> Term a
 makeRec = (In .) . Rec
 
-if0 :: Term a -> Term a -> Term a -> Term a
-if0 c t e = In (If0 c t e)
+if' :: Term a -> Term a -> Term a -> Term a
+if' c t e = In (If c t e)
 
 let' :: Name -> Term a -> (Term a -> Term a) -> Term a
 let' var val body = lam var body # val
@@ -88,7 +88,7 @@ instance Bifoldable Syntax where
     App a b -> g a `mappend` g b
     Lam _ a -> g a
     Rec _ a -> g a
-    If0 c t e -> g c `mappend` g t `mappend` g e
+    If c t e -> g c `mappend` g t `mappend` g e
 
 instance Foldable (Syntax a) where
   foldMap = bifoldMap (const mempty)
@@ -106,7 +106,7 @@ instance Bifunctor Syntax where
     App a b -> App (g a) (g b)
     Lam n a -> Lam n (g a)
     Rec n a -> Rec n (g a)
-    If0 c t e -> If0 (g c) (g t) (g e)
+    If c t e -> If (g c) (g t) (g e)
 
 instance Functor (Syntax a) where
   fmap = second
@@ -124,7 +124,7 @@ instance Bitraversable Syntax where
     App a b -> App <$> g a <*> g b
     Lam n a -> Lam n <$> g a
     Rec n a -> Rec n <$> g a
-    If0 c t e -> If0 <$> g c <*> g t <*> g e
+    If c t e -> If <$> g c <*> g t <*> g e
 
 instance Traversable (Syntax a) where
   traverse = bitraverse pure
@@ -142,7 +142,7 @@ instance Eq2 Syntax where
     (App a1 b1, App a2 b2) -> eqA a1 a2 && eqA b1 b2
     (Lam n1 a1, Lam n2 a2) -> n1 == n2 && eqA a1 a2
     (Rec n1 a1, Rec n2 a2) -> n1 == n2 && eqA a1 a2
-    (If0 c1 t1 e1, If0 c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
+    (If c1 t1 e1, If c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
     _ -> False
 
 instance Eq a => Eq1 (Syntax a) where
@@ -174,7 +174,7 @@ instance Ord2 Syntax where
     (Rec n1 a1, Rec n2 a2) -> compare n1 n2 <> compareA a1 a2
     (Rec{}, _) -> LT
     (_, Rec{}) -> GT
-    (If0 c1 t1 e1, If0 c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
+    (If c1 t1 e1, If c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
 
 instance Ord a => Ord1 (Syntax a) where
   liftCompare = liftCompare2 compare
@@ -192,7 +192,7 @@ instance Show2 Syntax where
     App a b -> showsBinaryWith spA spA "App" d a b
     Lam n a -> showsBinaryWith showsPrec spA "Lam" d n a
     Rec n a -> showsBinaryWith showsPrec spA "Rec" d n a
-    If0 c t e -> showsTernaryWith spA spA spA "If0" d c t e
+    If c t e -> showsTernaryWith spA spA spA "If" d c t e
 
 instance Show a => Show1 (Syntax a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
@@ -224,7 +224,7 @@ instance Pretty2 Syntax where
     App a b -> pr a <+> parens (pr b)
     Lam n a -> parens (pretty '\\' <+> pretty n <+> pretty "->" <> nest 2 (line <> pr a))
     Rec n a -> pretty "fix" <+> parens (pretty '\\' <+> pretty n <+> pretty "->" <> nest 2 (line <> pr a))
-    If0 c t e -> pretty "if0" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
+    If c t e -> pretty "if" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
 
 instance Pretty a => Pretty1 (Syntax a) where
   liftPretty = liftPretty2 pretty prettyList

@@ -37,7 +37,7 @@ ev ev term = case out term of
   Prim n -> return (I n)
   Var x -> do
     p <- ask
-    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (l (Value l (Term a) a))))
+    maybe (fail ("free variable: " ++ x)) (deref . snd) (envLookup x (p :: Environment (l (Value l (Term a) a))))
   If c t e -> do
     v <- ev c
     c' <- truthy v
@@ -49,10 +49,10 @@ ev ev term = case out term of
     va <- ev a
     vb <- ev b
     delta2 o va vb
-  Rec f _ e -> do
+  Rec f ty e -> do
     p <- ask
     a <- alloc f
-    v <- local (const (envInsert f a (p :: Environment (l (Value l (Term a) a))))) (ev e)
+    v <- local (const (envInsert f ty a (p :: Environment (l (Value l (Term a) a))))) (ev e)
     assign a v
     return v
   Lam x ty e0 -> do
@@ -61,9 +61,9 @@ ev ev term = case out term of
   App e0 e1 -> do
     closure <- ev e0
     case closure of
-      Closure x _ e2 p -> do
+      Closure x ty e2 p -> do
         v1 <- ev e1
         a <- alloc x
         assign a v1
-        local (const (envInsert x a p)) (ev e2)
+        local (const (envInsert x ty a p)) (ev e2)
       _ -> fail "non-closure operator"

@@ -85,6 +85,28 @@ instance (Num a, Ord a, Primitive a (Eff fs), State (PathCondition a) :< fs, Amb
         ((refine (E e)    >> return True)
      <|> (refine (NotE e) >> return False))
 
+instance (Num a, AbstractNum a t) => Num (Sym t a) where
+  fromInteger = V . fromInteger
+
+  signum (V a)   = V   (signum a)
+  signum (Sym t) = Sym (signum t)
+  abs (V a)      = V   (abs    a)
+  abs (Sym t)    = Sym (abs    t)
+  negate (V a)   = V   (negate a)
+  negate (Sym t) = Sym (negate t)
+  V   a + V   b = V   (     a +      b)
+  Sym a + V   b = Sym (     a + prim b)
+  V   a + Sym b = Sym (prim a +      b)
+  Sym a + Sym b = Sym (     a +      b)
+  V   a - V   b = V   (     a -      b)
+  Sym a - V   b = Sym (     a - prim b)
+  V   a - Sym b = Sym (prim a -      b)
+  Sym a - Sym b = Sym (     a -      b)
+  V   a * V   b = V   (     a *      b)
+  Sym a * V   b = Sym (     a * prim b)
+  V   a * Sym b = Sym (prim a *      b)
+  Sym a * Sym b = Sym (     a *      b)
+
   truthy (V a) = truthy a
   truthy (Sym e) = do
     phi <- getPathCondition

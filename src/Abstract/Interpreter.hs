@@ -50,9 +50,8 @@ ev ev term = case out term of
     vb <- ev b
     delta2 o va vb
   Rec f ty e -> do
-    p <- ask
     a <- alloc f
-    v <- local (const (envInsert f ty a (p :: Environment (l (Value l (Term a) a))))) (ev e)
+    v <- local (envInsert f ty (a :: l (Value l (Term a) a))) (ev e)
     assign a v
     return v
   Lam x ty e0 -> do

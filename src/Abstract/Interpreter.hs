@@ -55,7 +55,7 @@ ev ev term = case out term of
     v <- local (const (envInsert f a (p :: Environment (l (Value l (Term a) a))))) (ev e)
     assign a v
     return v
-  Lam x e0 -> do
+  Lam x _ e0 -> do
     p <- ask
     return (Closure x e0 p)
   App e0 e1 -> do

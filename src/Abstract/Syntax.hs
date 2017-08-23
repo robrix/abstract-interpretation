@@ -2,6 +2,7 @@
 module Abstract.Syntax where
 
 import Abstract.Primitive
+import Abstract.Type
 import Data.Bifoldable
 import Data.Bifunctor
 import Data.Bitraversable
@@ -16,7 +17,7 @@ data Syntax a r
   | Op1 Op1 r
   | Op2 Op2 r r
   | App r r
-  | Lam Name r
+  | Lam Name Type r
   | Rec Name r
   | If r r r
   deriving (Eq, Ord, Show)
@@ -34,14 +35,14 @@ infixl 9 #
 (#) :: Term a -> Term a -> Term a
 (#) = (In .) . App
 
-lam :: Name -> (Term a -> Term a) -> Term a
-lam s f = makeLam s (f (var s))
+lam :: Name -> Type -> (Term a -> Term a) -> Term a
+lam s ty f = makeLam s ty (f (var s))
 
-makeLam :: Name -> Term a -> Term a
-makeLam = (In .) . Lam
+makeLam :: Name -> Type -> Term a -> Term a
+makeLam name ty body = In (Lam name ty body)
 
-rec :: Name -> Name -> (Term a -> Term a -> Term a) -> Term a
-rec f x b = makeRec f (lam x (b (var "f")))
+rec :: Name -> Name -> Type -> (Term a -> Term a -> Term a) -> Term a
+rec f x ty b = makeRec f (lam x ty (b (var "f")))
 
 makeRec :: Name -> Term a -> Term a
 makeRec = (In .) . Rec
@@ -49,8 +50,8 @@ makeRec = (In .) . Rec
 if' :: Term a -> Term a -> Term a -> Term a
 if' c t e = In (If c t e)
 
-let' :: Name -> Term a -> (Term a -> Term a) -> Term a
-let' var val body = lam var body # val
+let' :: Name -> Term a -> Type -> (Term a -> Term a) -> Term a
+let' var val ty body = lam var ty body # val
 
 immediateSubterms :: Ord a => Term a -> Set.Set (Term a)
 immediateSubterms = foldMap Set.singleton . out
@@ -83,7 +84,7 @@ instance Bifoldable Syntax where
     Op1 _ a -> g a
     Op2 _ a b -> g a `mappend` g b
     App a b -> g a `mappend` g b
-    Lam _ a -> g a
+    Lam _ _ a -> g a
     Rec _ a -> g a
     If c t e -> g c `mappend` g t `mappend` g e
 
@@ -101,7 +102,7 @@ instance Bifunctor Syntax where
     Op1 o a -> Op1 o (g a)
     Op2 o a b -> Op2 o (g a) (g b)
     App a b -> App (g a) (g b)
-    Lam n a -> Lam n (g a)
+    Lam n t a -> Lam n t (g a)
     Rec n a -> Rec n (g a)
     If c t e -> If (g c) (g t) (g e)
 
@@ -119,7 +120,7 @@ instance Bitraversable Syntax where
     Op1 o a -> Op1 o <$> g a
     Op2 o a b -> Op2 o <$> g a <*> g b
     App a b -> App <$> g a <*> g b
-    Lam n a -> Lam n <$> g a
+    Lam n t a -> Lam n t <$> g a
     Rec n a -> Rec n <$> g a
     If c t e -> If <$> g c <*> g t <*> g e
 
@@ -137,7 +138,7 @@ instance Eq2 Syntax where
     (Op1 o1 a1, Op1 o2 a2) -> o1 == o2 && eqA a1 a2
     (Op2 o1 a1 b1, Op2 o2 a2 b2) -> o1 == o2 && eqA a1 a2 && eqA b1 b2
     (App a1 b1, App a2 b2) -> eqA a1 a2 && eqA b1 b2
-    (Lam n1 a1, Lam n2 a2) -> n1 == n2 && eqA a1 a2
+    (Lam n1 t1 a1, Lam n2 t2 a2) -> n1 == n2 && t1 == t2 && eqA a1 a2
     (Rec n1 a1, Rec n2 a2) -> n1 == n2 && eqA a1 a2
     (If c1 t1 e1, If c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
     _ -> False
@@ -165,7 +166,7 @@ instance Ord2 Syntax where
     (App a1 b1, App a2 b2) -> compareA a1 a2 <> compareA b1 b2
     (App{}, _) -> LT
     (_, App{}) -> GT
-    (Lam n1 a1, Lam n2 a2) -> compare n1 n2 <> compareA a1 a2
+    (Lam n1 t1 a1, Lam n2 t2 a2) -> compare n1 n2 <> compare t1 t2 <> compareA a1 a2
     (Lam{}, _) -> LT
     (_, Lam{}) -> GT
     (Rec n1 a1, Rec n2 a2) -> compare n1 n2 <> compareA a1 a2
@@ -187,7 +188,7 @@ instance Show2 Syntax where
     Op1 o a -> showsBinaryWith showsPrec spA "Op1" d o a
     Op2 o a b -> showsTernaryWith showsPrec spA spA "Op2" d o a b
     App a b -> showsBinaryWith spA spA "App" d a b
-    Lam n a -> showsBinaryWith showsPrec spA "Lam" d n a
+    Lam n t a -> showsTernaryWith showsPrec showsPrec spA "Lam" d n t a
     Rec n a -> showsBinaryWith showsPrec spA "Rec" d n a
     If c t e -> showsTernaryWith spA spA spA "If" d c t e
 
@@ -230,7 +231,7 @@ instance Pretty2 Syntax where
     Op1 o a -> pretty o <+> pr a
     Op2 o a b -> pr a <+> pretty o <+> pr b
     App a b -> pr a <+> parens (pr b)
-    Lam n a -> parens (pretty '\\' <+> pretty n <+> pretty "->" <> nest 2 (line <> pr a))
+    Lam n t a -> parens (pretty '\\' <+> pretty n <+> colon <+> pretty t <+> pretty "->" <> nest 2 (line <> pr a))
     Rec n a -> pretty "fix" <+> parens (pretty '\\' <+> pretty n <+> pretty "->" <> nest 2 (line <> pr a))
     If c t e -> pretty "if" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
 

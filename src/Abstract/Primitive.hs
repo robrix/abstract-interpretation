@@ -23,7 +23,7 @@ data Abstract = N | B
   deriving (Eq, Ord, Show)
 
 
-class (Num a, Num t) => AbstractNum a t | t -> a where
+class AbstractNum a t | t -> a where
   prim :: a -> t
 
 

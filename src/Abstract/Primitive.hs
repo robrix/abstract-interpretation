@@ -31,7 +31,7 @@ class AbstractPrimitive a t | t -> a where
   binary :: Op2 -> t -> t -> t
 
 
-class MonadFail m => Primitive a m where
+class MonadFail m => PrimitiveOperations a m where
   delta1 :: Op1 -> a -> m a
   delta2 :: Op2 -> a -> a -> m a
   truthy :: a -> m Bool
@@ -53,10 +53,10 @@ undefinedComparison :: MonadFail m => m a
 undefinedComparison = fail "undefined comparison"
 
 
-isZero :: (Num a, Primitive a m) => a -> m Bool
+isZero :: (Num a, PrimitiveOperations a m) => a -> m Bool
 isZero = truthy <=< delta2 Eq 0
 
-instance MonadFail m => Primitive Prim m where
+instance MonadFail m => PrimitiveOperations Prim m where
   delta1 o a = case (o, a) of
     (Negate, PInt a)  -> pure (PInt (negate a))
     (Abs,    PInt a)  -> pure (PInt (abs a))
@@ -102,7 +102,7 @@ instance MonadFail m => Primitive Prim m where
   truthy (PBool a) = pure a
   truthy _         = nonBoolean
 
-instance (Alternative m, MonadFail m) => Primitive Abstract m where
+instance (Alternative m, MonadFail m) => PrimitiveOperations Abstract m where
   delta1 Not B = pure B
   delta1 Not _ = nonBoolean
   delta1 _   N = pure N

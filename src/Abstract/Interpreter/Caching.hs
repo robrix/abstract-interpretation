@@ -41,7 +41,7 @@ type CachingResult l t v = (Either String ([] v, Cache l t v), Store l v)
 
 -- Coinductively-cached evaluation
 
-evalCache :: forall l a . (Ord a, Ord (Store l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l (Term a) (Value l (Term a) a)), Primitive a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> CachingResult l (Term a) (Value l (Term a) a)
+evalCache :: forall l a . (Ord a, Ord (Store l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l (Term a) (Value l (Term a) a)), PrimitiveOperations a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> CachingResult l (Term a) (Value l (Term a) a)
 evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache (Proxy :: Proxy l) ev
 
 runCache :: (Ord t, Ord v, Ord (Store l v), Address l, Context l v fs, CachingInterpreter l t v :<: fs)

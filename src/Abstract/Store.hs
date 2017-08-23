@@ -15,10 +15,10 @@ import Control.Monad.Fail
 import Data.Foldable (asum)
 import Data.Function (on)
 import Data.Functor.Classes
-import Data.Functor.Classes.Pretty
 import Data.Kind
 import qualified Data.Map as Map
 import Data.Semigroup
+import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 import Text.Show
 
@@ -208,10 +208,10 @@ instance Pretty (Monovariant a) where
   pretty = liftPretty (const emptyDoc) (const emptyDoc)
 
 instance (Pretty1 l, Pretty1 (Cell l)) => Pretty1 (Store l) where
-  liftPretty p pl = liftPrettyList (liftPretty p pl) (liftPrettyList p pl) . Map.toList . unStore
+  liftPretty p pl = list . map (liftPretty (liftPretty p pl) (list . map (liftPretty p pl))) . Map.toList . unStore
 
 instance (Pretty1 l, Pretty1 (Cell l), Pretty a) => Pretty (Store l a) where
-  pretty = pretty1
+  pretty = liftPretty pretty prettyList
 
 instance Pretty1 l => Pretty1 (Key l) where
   liftPretty _ _ (Key l) = liftPretty (const emptyDoc) (const emptyDoc) l

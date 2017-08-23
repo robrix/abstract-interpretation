@@ -19,7 +19,7 @@ library
                      , Abstract.Interpreter.Dead
                      , Abstract.Interpreter.Symbolic
                      , Abstract.Interpreter.Trace
-                     , Abstract.Number
+                     , Abstract.Primitive
                      , Abstract.Store
                      , Abstract.Syntax
                      , Abstract.Value

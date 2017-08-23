@@ -1,14 +1,14 @@
 {-# LANGUAGE DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
 module Abstract.Value where
 
-import Abstract.Number
+import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax
 import Control.Monad.Fail
 import Data.Functor.Classes
-import Data.Functor.Classes.Pretty
 import qualified Data.Map as Map
 import Data.Semigroup
+import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 import Text.Show
 
@@ -22,7 +22,9 @@ envInsert :: Name -> a -> Environment a -> Environment a
 envInsert = (((Environment .) . (. unEnvironment)) .) . Map.insert
 
 
-data Value l t a = I a | Closure Name t (Environment (l (Value l t a)))
+data Value l t a
+  = I a
+  | Closure Name t (Environment (l (Value l t a)))
   deriving (Foldable, Functor, Traversable)
 
 
@@ -68,30 +70,44 @@ instance (Show a, Show t, Address l) => Show (Value l t a) where
 
 
 instance Pretty1 Environment where
-  liftPretty p pl = liftPrettyList p pl . Map.toList . unEnvironment
+  liftPretty p pl = list . map (liftPretty p pl) . Map.toList . unEnvironment
 
 instance Pretty a => Pretty (Environment a) where
-  pretty = pretty1
+  pretty = liftPretty pretty prettyList
 
 instance Pretty1 l => Pretty2 (Value l) where
   liftPretty2 pT _ pA _ = go
     where go (I a) = pA a
           go (Closure n t e) = pretty n <> colon <+> pT t <> line
-                                <> liftPretty (liftPretty go (list . map go)) (liftPrettyList go (list . map go)) e
+                                <> liftPretty (liftPretty go (list . map go)) (list . map (liftPretty go (list . map go))) e
 
 instance (Pretty1 l, Pretty t) => Pretty1 (Value l t) where
   liftPretty = liftPretty2 pretty prettyList
 
 instance (Pretty1 l, Pretty t, Pretty a) => Pretty (Value l t a) where
-  pretty = pretty1
+  pretty = liftPretty pretty prettyList
 
 
-instance (MonadFail m, AbstractNumber a m) => AbstractNumber (Value l t a) m where
-  delta1 o (I a) = fmap I (delta1 o a)
-  delta1 _ _ = fail "non-numeric value"
+instance (MonadFail m, PrimitiveOperations a m) => PrimitiveOperations (Value l t a) m where
+  delta1 o   (I a) = fmap I (delta1 o a)
+  delta1 Not _     = nonBoolean
+  delta1 _   _     = nonNumeric
 
-  delta2 o (I a) (I b) = fmap I (delta2 o a b)
-  delta2 _ _ _ = fail "non-numeric value"
+  delta2 o   (I a)     (I b)     = fmap I (delta2 o a b)
+  delta2 And _         _         = nonBoolean
+  delta2 Or  _         _         = nonBoolean
+  delta2 XOr _         _         = nonBoolean
+  delta2 Eq  Closure{} Closure{} = undefinedComparison
+  delta2 Eq  _         _         = disjointComparison
+  delta2 Lt  Closure{} Closure{} = undefinedComparison
+  delta2 Lt  _         _         = disjointComparison
+  delta2 LtE Closure{} Closure{} = undefinedComparison
+  delta2 LtE _         _         = disjointComparison
+  delta2 Gt  Closure{} Closure{} = undefinedComparison
+  delta2 Gt  _         _         = disjointComparison
+  delta2 GtE Closure{} Closure{} = undefinedComparison
+  delta2 GtE _         _         = disjointComparison
+  delta2 _   _         _         = nonNumeric
 
-  isZero (I a) = isZero a
-  isZero _ = fail "non-numeric value"
+  truthy (I a) = truthy a
+  truthy _     = nonBoolean

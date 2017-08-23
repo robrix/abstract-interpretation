@@ -5,7 +5,7 @@ import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value
 import Data.Functor.Classes
-import Data.Functor.Classes.Pretty
+import Data.Text.Prettyprint.Doc
 
 data Configuration l t v = Configuration { configurationTerm :: t, configurationEnvironment :: Environment (l v), configurationStore :: Store l v }
   deriving (Foldable, Functor, Traversable)
@@ -41,10 +41,10 @@ instance (Show v, Show t, Address l) => Show (Configuration l t v) where
 
 
 instance (Address l, Pretty1 l, Pretty1 (Cell l)) => Pretty2 (Configuration l) where
-  liftPretty2 pT _ pV plV (Configuration t e s) = tupled [ pT t, liftPretty (liftPretty pV plV) (liftPrettyList pV plV) e, liftPretty pV plV s ]
+  liftPretty2 pT _ pV plV (Configuration t e s) = tupled [ pT t, liftPretty (liftPretty pV plV) (list . map (liftPretty pV plV)) e, liftPretty pV plV s ]
 
 instance (Address l, Pretty1 l, Pretty1 (Cell l), Pretty t) => Pretty1 (Configuration l t) where
   liftPretty = liftPretty2 pretty prettyList
 
 instance (Address l, Pretty1 l, Pretty1 (Cell l), Pretty t, Pretty v) => Pretty (Configuration l t v) where
-  pretty = pretty1
+  pretty = liftPretty pretty prettyList

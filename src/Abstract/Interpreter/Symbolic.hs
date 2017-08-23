@@ -2,7 +2,7 @@
 module Abstract.Interpreter.Symbolic where
 
 import Abstract.Interpreter
-import Abstract.Number
+import Abstract.Primitive
 import Abstract.Syntax
 import Abstract.Value
 import Control.Applicative
@@ -48,22 +48,34 @@ pathConditionInsert :: Ord a => PathExpression a -> PathCondition a -> PathCondi
 pathConditionInsert = ((PathCondition .) . (. unPathCondition)) . Set.insert
 
 
-instance (Num a, Ord a, AbstractNumber a (Eff fs), State (PathCondition a) :< fs, Amb :< fs) => AbstractNumber (Sym (Term a) a) (Eff fs) where
-  delta1 o a = pure $ case o of
-    Negate -> sym negate a
-    Abs    -> sym abs    a
-    Signum -> sym signum a
+instance (Num a, Primitive a, Ord a, PrimitiveOperations a (Eff fs), State (PathCondition a) :< fs, Amb :< fs) => PrimitiveOperations (Sym (Term a) a) (Eff fs) where
+  delta1 o a = case o of
+    Negate -> pure (negate a)
+    Abs    -> pure (abs a)
+    Signum -> pure (signum a)
+    Not    -> case a of
+      Sym t -> pure (Sym (unary Not t))
+      V a -> V <$> delta1 Not a
 
   delta2 o a b = case o of
-    Plus  -> sym2 (delta2 Plus ) num (+) a b
-    Minus -> sym2 (delta2 Minus) num (-) a b
-    Times -> sym2 (delta2 Times) num (*) a b
-    DividedBy -> isZero b >>= flip when divisionByZero >> sym2 (delta2 DividedBy) num ((In .) . Op2 DividedBy) a b
-    Quotient  -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Quotient)  num ((In .) . Op2 Quotient)  a b
-    Remainder -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Remainder) num ((In .) . Op2 Remainder) a b
+    Plus  -> pure (a + b)
+    Minus -> pure (a - b)
+    Times -> pure (a * b)
+    DividedBy -> isZero b >>= flip when divisionByZero >> sym2 (delta2 DividedBy) prim (binary DividedBy) a b
+    Quotient  -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Quotient)  prim (binary Quotient)  a b
+    Remainder -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Remainder) prim (binary Remainder) a b
+    Modulus   -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Modulus)   prim (binary Modulus)   a b
+    And -> sym2 (delta2 And) prim (binary And) a b
+    Or  -> sym2 (delta2 Or)  prim (binary Or)  a b
+    XOr -> sym2 (delta2 XOr) prim (binary XOr) a b
+    Eq  -> sym2 (delta2 Eq)  prim (binary Eq)  a b
+    Lt  -> sym2 (delta2 Eq)  prim (binary Lt)  a b
+    LtE -> sym2 (delta2 Eq)  prim (binary LtE) a b
+    Gt  -> sym2 (delta2 Eq)  prim (binary Gt)  a b
+    GtE -> sym2 (delta2 Eq)  prim (binary GtE) a b
 
-  isZero (V a) = isZero a
-  isZero (Sym e) = do
+  truthy (V a) = truthy a
+  truthy (Sym e) = do
     phi <- getPathCondition
     if E e `pathConditionMember` phi then
       return True
@@ -72,3 +84,25 @@ instance (Num a, Ord a, AbstractNumber a (Eff fs), State (PathCondition a) :< fs
     else
         ((refine (E e)    >> return True)
      <|> (refine (NotE e) >> return False))
+
+instance (Num a, Num t, AbstractPrimitive a t) => Num (Sym t a) where
+  fromInteger = V . fromInteger
+
+  signum (V a)   = V   (signum a)
+  signum (Sym t) = Sym (signum t)
+  abs (V a)      = V   (abs    a)
+  abs (Sym t)    = Sym (abs    t)
+  negate (V a)   = V   (negate a)
+  negate (Sym t) = Sym (negate t)
+  V   a + V   b = V   (     a +      b)
+  Sym a + V   b = Sym (     a + prim b)
+  V   a + Sym b = Sym (prim a +      b)
+  Sym a + Sym b = Sym (     a +      b)
+  V   a - V   b = V   (     a -      b)
+  Sym a - V   b = Sym (     a - prim b)
+  V   a - Sym b = Sym (prim a -      b)
+  Sym a - Sym b = Sym (     a -      b)
+  V   a * V   b = V   (     a *      b)
+  Sym a * V   b = Sym (     a * prim b)
+  V   a * Sym b = Sym (prim a *      b)
+  Sym a * Sym b = Sym (     a *      b)

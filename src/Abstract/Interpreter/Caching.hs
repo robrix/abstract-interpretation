@@ -3,7 +3,7 @@ module Abstract.Interpreter.Caching where
 
 import Abstract.Configuration
 import Abstract.Interpreter
-import Abstract.Number
+import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value
@@ -15,11 +15,11 @@ import Control.Monad.Effect.State
 import Data.Foldable
 import Data.Function (fix)
 import Data.Functor.Classes
-import Data.Functor.Classes.Pretty
 import qualified Data.Map as Map
 import Data.Maybe
 import Data.Proxy
 import qualified Data.Set as Set
+import Data.Text.Prettyprint.Doc
 
 newtype Cache l t v = Cache { unCache :: Map.Map (Configuration l t v) (Set.Set (v, Store l v)) }
   deriving (Monoid)
@@ -41,7 +41,7 @@ type CachingResult l t v = (Either String ([] v, Cache l t v), Store l v)
 
 -- Coinductively-cached evaluation
 
-evalCache :: forall l a . (Ord a, Ord (Store l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l (Term a) (Value l (Term a) a)), AbstractNumber a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> CachingResult l (Term a) (Value l (Term a) a)
+evalCache :: forall l a . (Ord a, Ord (Store l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l (Term a) (Value l (Term a) a)), PrimitiveOperations a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> CachingResult l (Term a) (Value l (Term a) a)
 evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache (Proxy :: Proxy l) ev
 
 runCache :: (Ord t, Ord v, Ord (Store l v), Address l, Context l v fs, CachingInterpreter l t v :<: fs)
@@ -147,16 +147,16 @@ instance (Show a, Show t, Address l) => Show (Cache l t a) where
 
 
 instance (Address l, Pretty1 l, Pretty1 (Cell l)) => Pretty2 (Cache l) where
-  liftPretty2 pT plT pV plV = liftPrettyList2 prettyConfiguration prettyListConfiguration prettySet prettyListSet . Map.toList . unCache
+  liftPretty2 pT plT pV plV = list . map (liftPretty2 prettyConfiguration prettyListConfiguration prettySet prettyListSet) . Map.toList . unCache
     where prettyConfiguration = liftPretty2 pT plT pV plV
-          prettyListConfiguration = liftPrettyList2 pT plT pV plV
-          prettySet = liftPrettyList2 pV plV prettyStore prettyListStore . Set.toList
+          prettyListConfiguration = list . map (liftPretty2 pT plT pV plV)
+          prettySet = list . map (liftPretty2 pV plV prettyStore prettyListStore) . Set.toList
           prettyListSet = list . map prettySet
           prettyStore = liftPretty pV plV
-          prettyListStore = liftPrettyList pV plV
+          prettyListStore = list . map (liftPretty pV plV)
 
 instance (Address l, Pretty1 l, Pretty1 (Cell l), Pretty t) => Pretty1 (Cache l t) where
   liftPretty = liftPretty2 pretty prettyList
 
 instance (Address l, Pretty1 l, Pretty1 (Cell l), Pretty t, Pretty v) => Pretty (Cache l t v) where
-  pretty = pretty1
+  pretty = liftPretty pretty prettyList

@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeOperators #-}
 module Abstract.Interpreter where
 
-import Abstract.Number
+import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value
@@ -23,25 +23,25 @@ type Eval t fs v = t -> Eff fs v
 
 -- Evaluation
 
-eval :: forall l a . (Address l, Context l (Value l (Term a) a) (Interpreter l (Value l (Term a) a)), AbstractNumber a (Eff (Interpreter l (Value l (Term a) a)))) => Term a -> EvalResult l a
+eval :: forall l a . (Address l, Context l (Value l (Term a) a) (Interpreter l (Value l (Term a) a)), PrimitiveOperations a (Eff (Interpreter l (Value l (Term a) a)))) => Term a -> EvalResult l a
 eval = run @(Interpreter l (Value l (Term a) a)) . runEval
 
-runEval :: (Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), Interpreter l (Value l (Term a) a) :<: fs) => Eval (Term a) fs (Value l (Term a) a)
+runEval :: (Address l, Context l (Value l (Term a) a) fs, PrimitiveOperations a (Eff fs), Interpreter l (Value l (Term a) a) :<: fs) => Eval (Term a) fs (Value l (Term a) a)
 runEval = fix ev
 
 ev :: forall l a fs
-   .  (Address l, Context l (Value l (Term a) a) fs, AbstractNumber a (Eff fs), Interpreter l (Value l (Term a) a) :<: fs)
+   .  (Address l, Context l (Value l (Term a) a) fs, PrimitiveOperations a (Eff fs), Interpreter l (Value l (Term a) a) :<: fs)
    => Eval (Term a) fs (Value l (Term a) a)
    -> Eval (Term a) fs (Value l (Term a) a)
 ev ev term = case out term of
-  Num n -> return (I n)
+  Prim n -> return (I n)
   Var x -> do
     p <- ask
     maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (l (Value l (Term a) a))))
-  If0 c t e -> do
+  If c t e -> do
     v <- ev c
-    z <- isZero v
-    ev (if z then t else e)
+    c' <- truthy v
+    ev (if c' then t else e)
   Op1 o a -> do
     va <- ev a
     delta1 o va

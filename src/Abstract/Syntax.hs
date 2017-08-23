@@ -1,24 +1,24 @@
-{-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving, TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeFamilies #-}
 module Abstract.Syntax where
 
-import Abstract.Number
+import Abstract.Primitive
 import Data.Bifoldable
 import Data.Bifunctor
 import Data.Bitraversable
 import Data.Functor.Classes
-import Data.Functor.Classes.Pretty
 import Data.Functor.Foldable
 import qualified Data.Set as Set
+import Data.Text.Prettyprint.Doc
 
 data Syntax a r
   = Var Name
-  | Num a
+  | Prim a
   | Op1 Op1 r
   | Op2 Op2 r r
   | App r r
   | Lam Name r
   | Rec Name r
-  | If0 r r r
+  | If r r r
   deriving (Eq, Ord, Show)
 
 type Name = String
@@ -29,9 +29,6 @@ newtype Term a = In { out :: Syntax a (Term a) }
 
 var :: Name -> Term a
 var = In . Var
-
-num :: a -> Term a
-num = In . Num
 
 infixl 9 #
 (#) :: Term a -> Term a -> Term a
@@ -49,8 +46,8 @@ rec f x b = makeRec f (lam x (b (var "f")))
 makeRec :: Name -> Term a -> Term a
 makeRec = (In .) . Rec
 
-if0 :: Term a -> Term a -> Term a -> Term a
-if0 c t e = In (If0 c t e)
+if' :: Term a -> Term a -> Term a -> Term a
+if' c t e = In (If c t e)
 
 let' :: Name -> Term a -> (Term a -> Term a) -> Term a
 let' var val body = lam var body # val
@@ -82,13 +79,13 @@ instance Foldable Term where
 instance Bifoldable Syntax where
   bifoldMap f g s = case s of
     Var _ -> mempty
-    Num i -> f i
+    Prim i -> f i
     Op1 _ a -> g a
     Op2 _ a b -> g a `mappend` g b
     App a b -> g a `mappend` g b
     Lam _ a -> g a
     Rec _ a -> g a
-    If0 c t e -> g c `mappend` g t `mappend` g e
+    If c t e -> g c `mappend` g t `mappend` g e
 
 instance Foldable (Syntax a) where
   foldMap = bifoldMap (const mempty)
@@ -100,13 +97,13 @@ instance Functor Term where
 instance Bifunctor Syntax where
   bimap f g s = case s of
     Var n -> Var n
-    Num v -> Num (f v)
+    Prim v -> Prim (f v)
     Op1 o a -> Op1 o (g a)
     Op2 o a b -> Op2 o (g a) (g b)
     App a b -> App (g a) (g b)
     Lam n a -> Lam n (g a)
     Rec n a -> Rec n (g a)
-    If0 c t e -> If0 (g c) (g t) (g e)
+    If c t e -> If (g c) (g t) (g e)
 
 instance Functor (Syntax a) where
   fmap = second
@@ -118,13 +115,13 @@ instance Traversable Term where
 instance Bitraversable Syntax where
   bitraverse f g s = case s of
     Var n -> pure (Var n)
-    Num v -> Num <$> f v
+    Prim v -> Prim <$> f v
     Op1 o a -> Op1 o <$> g a
     Op2 o a b -> Op2 o <$> g a <*> g b
     App a b -> App <$> g a <*> g b
     Lam n a -> Lam n <$> g a
     Rec n a -> Rec n <$> g a
-    If0 c t e -> If0 <$> g c <*> g t <*> g e
+    If c t e -> If <$> g c <*> g t <*> g e
 
 instance Traversable (Syntax a) where
   traverse = bitraverse pure
@@ -136,13 +133,13 @@ instance Eq1 Term where
 instance Eq2 Syntax where
   liftEq2 eqV eqA s1 s2 = case (s1, s2) of
     (Var n1, Var n2) -> n1 == n2
-    (Num v1, Num v2) -> eqV v1 v2
+    (Prim v1, Prim v2) -> eqV v1 v2
     (Op1 o1 a1, Op1 o2 a2) -> o1 == o2 && eqA a1 a2
     (Op2 o1 a1 b1, Op2 o2 a2 b2) -> o1 == o2 && eqA a1 a2 && eqA b1 b2
     (App a1 b1, App a2 b2) -> eqA a1 a2 && eqA b1 b2
     (Lam n1 a1, Lam n2 a2) -> n1 == n2 && eqA a1 a2
     (Rec n1 a1, Rec n2 a2) -> n1 == n2 && eqA a1 a2
-    (If0 c1 t1 e1, If0 c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
+    (If c1 t1 e1, If c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
     _ -> False
 
 instance Eq a => Eq1 (Syntax a) where
@@ -156,9 +153,9 @@ instance Ord2 Syntax where
     (Var n1, Var n2) -> compare n1 n2
     (Var{}, _) -> LT
     (_, Var{}) -> GT
-    (Num v1, Num v2) -> compareV v1 v2
-    (Num{}, _) -> LT
-    (_, Num{}) -> GT
+    (Prim v1, Prim v2) -> compareV v1 v2
+    (Prim{}, _) -> LT
+    (_, Prim{}) -> GT
     (Op1 o1 a1, Op1 o2 a2) -> compare o1 o2 <> compareA a1 a2
     (Op1{}, _) -> LT
     (_, Op1{}) -> GT
@@ -174,7 +171,7 @@ instance Ord2 Syntax where
     (Rec n1 a1, Rec n2 a2) -> compare n1 n2 <> compareA a1 a2
     (Rec{}, _) -> LT
     (_, Rec{}) -> GT
-    (If0 c1 t1 e1, If0 c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
+    (If c1 t1 e1, If c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
 
 instance Ord a => Ord1 (Syntax a) where
   liftCompare = liftCompare2 compare
@@ -186,45 +183,63 @@ instance Show1 Term where
 instance Show2 Syntax where
   liftShowsPrec2 spV _ spA _ d s = case s of
     Var n -> showsUnaryWith showsPrec "Var" d n
-    Num v -> showsUnaryWith spV "Num" d v
+    Prim v -> showsUnaryWith spV "Prim" d v
     Op1 o a -> showsBinaryWith showsPrec spA "Op1" d o a
     Op2 o a b -> showsTernaryWith showsPrec spA spA "Op2" d o a b
     App a b -> showsBinaryWith spA spA "App" d a b
     Lam n a -> showsBinaryWith showsPrec spA "Lam" d n a
     Rec n a -> showsBinaryWith showsPrec spA "Rec" d n a
-    If0 c t e -> showsTernaryWith spA spA spA "If0" d c t e
+    If c t e -> showsTernaryWith spA spA spA "If" d c t e
 
 instance Show a => Show1 (Syntax a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
 
 
-instance Num a => Num (Term a) where
-  fromInteger = In . Num . fromInteger
+instance Primitive a => Num (Term a) where
+  fromInteger = fromIntegerPrim
 
-  signum = In . Op1 Signum
-  abs = In . Op1 Abs
-  negate = In . Op1 Negate
-  (+) = (In .) . Op2 Plus
-  (-) = (In .) . Op2 Minus
-  (*) = (In .) . Op2 Times
+  signum = unary Signum
+  abs = unary Abs
+  negate = unary Negate
+  (+) = binary Plus
+  (-) = binary Minus
+  (*) = binary Times
+
+instance Primitive a => Primitive (Term a) where
+  unary o a = In (Op1 o a)
+
+  binary o a b = In (Op2 o a b)
+
+  fromIntegerPrim = prim . fromIntegerPrim
+
+
+instance Primitive a => AbstractPrimitive a (Term a) where
+  prim = In . Prim
 
 
 instance Pretty1 Term where
-  liftPretty p pl = go where go = liftPretty2 p pl go (liftPrettyList p pl) . out
+  liftPretty p pl = go where go = liftPretty2 p pl go (list . map (liftPretty p pl)) . out
 
 instance Pretty a => Pretty (Term a) where
-  pretty = pretty1
+  pretty = liftPretty pretty prettyList
 
 instance Pretty2 Syntax where
   liftPretty2 pv _ pr _ s = case s of
     Var n -> pretty n
-    Num v -> pv v
+    Prim v -> pv v
     Op1 o a -> pretty o <+> pr a
     Op2 o a b -> pr a <+> pretty o <+> pr b
     App a b -> pr a <+> parens (pr b)
     Lam n a -> parens (pretty '\\' <+> pretty n <+> pretty "->" <> nest 2 (line <> pr a))
     Rec n a -> pretty "fix" <+> parens (pretty '\\' <+> pretty n <+> pretty "->" <> nest 2 (line <> pr a))
-    If0 c t e -> pretty "if0" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
+    If c t e -> pretty "if" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
 
 instance Pretty a => Pretty1 (Syntax a) where
   liftPretty = liftPretty2 pretty prettyList
+
+instance (Primitive a, PrimitiveOperations a m) => PrimitiveOperations (Term a) m where
+  delta1 op = pure . unary op
+  delta2 op = (pure .) . binary op
+
+  truthy (In (Prim a)) = truthy a
+  truthy _ = fail "testing truthiness of unevaluated term"

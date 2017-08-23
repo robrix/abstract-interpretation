@@ -6,9 +6,9 @@ import Data.Bifoldable
 import Data.Bifunctor
 import Data.Bitraversable
 import Data.Functor.Classes
-import Data.Functor.Classes.Pretty
 import Data.Functor.Foldable
 import qualified Data.Set as Set
+import Data.Text.Prettyprint.Doc
 
 data Syntax a r
   = Var Name
@@ -218,10 +218,10 @@ instance Primitive a => AbstractPrimitive a (Term a) where
 
 
 instance Pretty1 Term where
-  liftPretty p pl = go where go = liftPretty2 p pl go (liftPrettyList p pl) . out
+  liftPretty p pl = go where go = liftPretty2 p pl go (list . map (liftPretty p pl)) . out
 
 instance Pretty a => Pretty (Term a) where
-  pretty = pretty1
+  pretty = liftPretty pretty prettyList
 
 instance Pretty2 Syntax where
   liftPretty2 pv _ pr _ s = case s of

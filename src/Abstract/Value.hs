@@ -6,9 +6,9 @@ import Abstract.Store
 import Abstract.Syntax
 import Control.Monad.Fail
 import Data.Functor.Classes
-import Data.Functor.Classes.Pretty
 import qualified Data.Map as Map
 import Data.Semigroup
+import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 import Text.Show
 
@@ -70,22 +70,22 @@ instance (Show a, Show t, Address l) => Show (Value l t a) where
 
 
 instance Pretty1 Environment where
-  liftPretty p pl = liftPrettyList p pl . Map.toList . unEnvironment
+  liftPretty p pl = list . map (liftPretty p pl) . Map.toList . unEnvironment
 
 instance Pretty a => Pretty (Environment a) where
-  pretty = pretty1
+  pretty = liftPretty pretty prettyList
 
 instance Pretty1 l => Pretty2 (Value l) where
   liftPretty2 pT _ pA _ = go
     where go (I a) = pA a
           go (Closure n t e) = pretty n <> colon <+> pT t <> line
-                                <> liftPretty (liftPretty go (list . map go)) (liftPrettyList go (list . map go)) e
+                                <> liftPretty (liftPretty go (list . map go)) (list . map (liftPretty go (list . map go))) e
 
 instance (Pretty1 l, Pretty t) => Pretty1 (Value l t) where
   liftPretty = liftPretty2 pretty prettyList
 
 instance (Pretty1 l, Pretty t, Pretty a) => Pretty (Value l t a) where
-  pretty = pretty1
+  pretty = liftPretty pretty prettyList
 
 
 instance (MonadFail m, PrimitiveOperations a m) => PrimitiveOperations (Value l t a) m where

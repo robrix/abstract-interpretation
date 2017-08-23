@@ -18,7 +18,7 @@ data Syntax a r
   | Op2 Op2 r r
   | App r r
   | Lam Name Type r
-  | Rec Name r
+  | Rec Name Type r
   | If r r r
   deriving (Eq, Ord, Show)
 
@@ -41,11 +41,11 @@ lam s ty f = makeLam s ty (f (var s))
 makeLam :: Name -> Type -> Term a -> Term a
 makeLam name ty body = In (Lam name ty body)
 
-rec :: Name -> Name -> Type -> (Term a -> Term a -> Term a) -> Term a
-rec f x ty b = makeRec f (lam x ty (b (var "f")))
+rec :: Name -> Type -> Name -> Type -> (Term a -> Term a -> Term a) -> Term a
+rec f ty1 x ty2 b = makeRec f ty1 (lam x ty2 (b (var "f")))
 
-makeRec :: Name -> Term a -> Term a
-makeRec = (In .) . Rec
+makeRec :: Name -> Type -> Term a -> Term a
+makeRec name ty body = In (Rec name ty body)
 
 if' :: Term a -> Term a -> Term a -> Term a
 if' c t e = In (If c t e)
@@ -85,7 +85,7 @@ instance Bifoldable Syntax where
     Op2 _ a b -> g a `mappend` g b
     App a b -> g a `mappend` g b
     Lam _ _ a -> g a
-    Rec _ a -> g a
+    Rec _ _ a -> g a
     If c t e -> g c `mappend` g t `mappend` g e
 
 instance Foldable (Syntax a) where
@@ -103,7 +103,7 @@ instance Bifunctor Syntax where
     Op2 o a b -> Op2 o (g a) (g b)
     App a b -> App (g a) (g b)
     Lam n t a -> Lam n t (g a)
-    Rec n a -> Rec n (g a)
+    Rec n t a -> Rec n t (g a)
     If c t e -> If (g c) (g t) (g e)
 
 instance Functor (Syntax a) where
@@ -121,7 +121,7 @@ instance Bitraversable Syntax where
     Op2 o a b -> Op2 o <$> g a <*> g b
     App a b -> App <$> g a <*> g b
     Lam n t a -> Lam n t <$> g a
-    Rec n a -> Rec n <$> g a
+    Rec n t a -> Rec n t <$> g a
     If c t e -> If <$> g c <*> g t <*> g e
 
 instance Traversable (Syntax a) where
@@ -139,7 +139,7 @@ instance Eq2 Syntax where
     (Op2 o1 a1 b1, Op2 o2 a2 b2) -> o1 == o2 && eqA a1 a2 && eqA b1 b2
     (App a1 b1, App a2 b2) -> eqA a1 a2 && eqA b1 b2
     (Lam n1 t1 a1, Lam n2 t2 a2) -> n1 == n2 && t1 == t2 && eqA a1 a2
-    (Rec n1 a1, Rec n2 a2) -> n1 == n2 && eqA a1 a2
+    (Rec n1 t1 a1, Rec n2 t2 a2) -> n1 == n2 && t1 == t2 && eqA a1 a2
     (If c1 t1 e1, If c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
     _ -> False
 
@@ -169,7 +169,7 @@ instance Ord2 Syntax where
     (Lam n1 t1 a1, Lam n2 t2 a2) -> compare n1 n2 <> compare t1 t2 <> compareA a1 a2
     (Lam{}, _) -> LT
     (_, Lam{}) -> GT
-    (Rec n1 a1, Rec n2 a2) -> compare n1 n2 <> compareA a1 a2
+    (Rec n1 t1 a1, Rec n2 t2 a2) -> compare n1 n2 <> compare t1 t2 <> compareA a1 a2
     (Rec{}, _) -> LT
     (_, Rec{}) -> GT
     (If c1 t1 e1, If c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
@@ -189,7 +189,7 @@ instance Show2 Syntax where
     Op2 o a b -> showsTernaryWith showsPrec spA spA "Op2" d o a b
     App a b -> showsBinaryWith spA spA "App" d a b
     Lam n t a -> showsTernaryWith showsPrec showsPrec spA "Lam" d n t a
-    Rec n a -> showsBinaryWith showsPrec spA "Rec" d n a
+    Rec n t a -> showsTernaryWith showsPrec showsPrec spA "Rec" d n t a
     If c t e -> showsTernaryWith spA spA spA "If" d c t e
 
 instance Show a => Show1 (Syntax a) where
@@ -231,8 +231,8 @@ instance Pretty2 Syntax where
     Op1 o a -> pretty o <+> pr a
     Op2 o a b -> pr a <+> pretty o <+> pr b
     App a b -> pr a <+> parens (pr b)
-    Lam n t a -> parens (pretty '\\' <+> pretty n <+> colon <+> pretty t <+> pretty "->" <> nest 2 (line <> pr a))
-    Rec n a -> pretty "fix" <+> parens (pretty '\\' <+> pretty n <+> pretty "->" <> nest 2 (line <> pr a))
+    Lam n t a -> parens (pretty '\\' <+> pretty n <+> colon <+> pretty t <+> pretty "." <> nest 2 (line <> pr a))
+    Rec n t a -> pretty "fix" <+> parens (pretty '\\' <+> pretty n <+> colon <+> pretty t <+> pretty "." <> nest 2 (line <> pr a))
     If c t e -> pretty "if" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
 
 instance Pretty a => Pretty1 (Syntax a) where

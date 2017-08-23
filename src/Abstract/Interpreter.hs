@@ -34,7 +34,7 @@ ev :: forall l a fs
    => Eval (Term a) fs (Value l (Term a) a)
    -> Eval (Term a) fs (Value l (Term a) a)
 ev ev term = case out term of
-  Prm n -> return (I n)
+  Prim n -> return (I n)
   Var x -> do
     p <- ask
     maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (l (Value l (Term a) a))))

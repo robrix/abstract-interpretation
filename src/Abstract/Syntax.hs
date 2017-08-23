@@ -59,19 +59,19 @@ binary :: Op2 -> Term a -> Term a -> Term a
 binary o a b = In (Op2 o a b)
 
 eq :: Term a -> Term a -> Term a
-eq a b = binary Eq a b
+eq = binary Eq
 
 lt :: Term a -> Term a -> Term a
-lt a b = binary Lt a b
+lt = binary Lt
 
 lte :: Term a -> Term a -> Term a
-lte a b = binary LtE a b
+lte = binary LtE
 
 gt :: Term a -> Term a -> Term a
-gt a b = binary Gt a b
+gt = binary Gt
 
 gte :: Term a -> Term a -> Term a
-gte a b = binary GtE a b
+gte = binary GtE
 
 let' :: Name -> Term a -> (Term a -> Term a) -> Term a
 let' var val body = lam var body # val

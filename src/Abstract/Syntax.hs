@@ -73,6 +73,9 @@ gt = binary Gt
 gte :: Term a -> Term a -> Term a
 gte = binary GtE
 
+and' :: Term a -> Term a -> Term a
+and' = binary And
+
 let' :: Name -> Term a -> (Term a -> Term a) -> Term a
 let' var val body = lam var body # val
 

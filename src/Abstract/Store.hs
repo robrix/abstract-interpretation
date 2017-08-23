@@ -116,6 +116,9 @@ instance Ord1 I where
 instance Show1 I where
   liftShowsPrec sp _ d (I a) = sp d a
 
+instance Pretty1 I where
+  liftPretty p _ (I a) = p a
+
 instance Address l => Foldable (Key l) where
   foldMap _ = mempty
 

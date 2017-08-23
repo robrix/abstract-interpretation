@@ -55,13 +55,13 @@ ev ev term = case out term of
     v <- local (const (envInsert f a (p :: Environment (l (Value l (Term a) a))))) (ev e)
     assign a v
     return v
-  Lam x _ e0 -> do
+  Lam x ty e0 -> do
     p <- ask
-    return (Closure x e0 p)
+    return (Closure x ty e0 p)
   App e0 e1 -> do
     closure <- ev e0
     case closure of
-      Closure x e2 p -> do
+      Closure x _ e2 p -> do
         v1 <- ev e1
         a <- alloc x
         assign a v1

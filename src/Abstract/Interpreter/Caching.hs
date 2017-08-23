@@ -27,10 +27,10 @@ newtype Cache l t v = Cache { unCache :: Map.Map (Configuration l t v) (Set.Set 
 cacheLookup :: (Ord t, Ord v, Address l) => Configuration l t v -> Cache l t v -> Maybe (Set.Set (v, Store l v))
 cacheLookup = (. unCache) . Map.lookup
 
-cacheSet :: (Ord t, Ord v, Ord (Store l v), Address l) => Configuration l t v -> Set.Set (v, Store l v) -> Cache l t v -> Cache l t v
+cacheSet :: (Ord t, Ord v, Address l) => Configuration l t v -> Set.Set (v, Store l v) -> Cache l t v -> Cache l t v
 cacheSet = (((Cache .) . (. unCache)) .) . Map.insert
 
-cacheInsert :: (Ord t, Ord v, Ord (Store l v), Address l) => Configuration l t v -> (v, Store l v) -> Cache l t v -> Cache l t v
+cacheInsert :: (Ord t, Ord v, Address l) => Configuration l t v -> (v, Store l v) -> Cache l t v -> Cache l t v
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 
@@ -41,17 +41,17 @@ type CachingResult l t v = (Either String ([] v, Cache l t v), Store l v)
 
 -- Coinductively-cached evaluation
 
-evalCache :: forall l a . (Ord a, Ord (Store l (Value l (Term a) a)), Address l, Context l (Value l (Term a) a) (CachingInterpreter l (Term a) (Value l (Term a) a)), PrimitiveOperations a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> CachingResult l (Term a) (Value l (Term a) a)
+evalCache :: forall l a . (Ord a, Address l, Context l (Value l (Term a) a) (CachingInterpreter l (Term a) (Value l (Term a) a)), PrimitiveOperations a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> CachingResult l (Term a) (Value l (Term a) a)
 evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache (Proxy :: Proxy l) ev
 
-runCache :: (Ord t, Ord v, Ord (Store l v), Address l, Context l v fs, CachingInterpreter l t v :<: fs)
+runCache :: (Ord t, Ord v, Address l, Context l v fs, CachingInterpreter l t v :<: fs)
          => proxy l
          -> (Eval t fs v -> Eval t fs v)
          -> Eval t fs v
 runCache proxy ev = fixCache proxy (fix (evCache proxy ev))
 
 evCache :: forall l t v fs proxy
-        .  (Ord t, Ord v, Ord (Store l v), Address l, Context l v fs, CachingInterpreter l t v :<: fs)
+        .  (Ord t, Ord v, Address l, Context l v fs, CachingInterpreter l t v :<: fs)
         => proxy l
         -> (Eval t fs v -> Eval t fs v)
         -> Eval t fs v

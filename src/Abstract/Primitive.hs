@@ -26,6 +26,10 @@ data Abstract = N | B
 class AbstractPrimitive a t | t -> a where
   prim :: a -> t
 
+  unary :: Op1 -> t -> t
+
+  binary :: Op2 -> t -> t -> t
+
 
 class MonadFail m => Primitive a m where
   delta1 :: Op1 -> a -> m a

@@ -49,12 +49,6 @@ makeRec = (In .) . Rec
 if' :: Term a -> Term a -> Term a -> Term a
 if' c t e = In (If c t e)
 
-unary :: Op1 -> Term a -> Term a
-unary o a = In (Op1 o a)
-
-binary :: Op2 -> Term a -> Term a -> Term a
-binary o a b = In (Op2 o a b)
-
 eq :: Term a -> Term a -> Term a
 eq = binary Eq
 
@@ -237,6 +231,10 @@ instance Num a => Num (Term a) where
 
 instance AbstractPrimitive a (Term a) where
   prim = In . Prim
+
+  unary o a = In (Op1 o a)
+
+  binary o a b = In (Op2 o a b)
 
 
 instance Pretty1 Term where

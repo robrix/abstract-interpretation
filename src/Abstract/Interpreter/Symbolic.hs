@@ -3,7 +3,6 @@ module Abstract.Interpreter.Symbolic where
 
 import Abstract.Interpreter
 import Abstract.Primitive
-import Abstract.Syntax
 import Abstract.Value
 import Control.Applicative
 import Control.Monad
@@ -29,26 +28,26 @@ evSymbolic :: (Eval t fs (Value l t (Sym t a)) -> Eval t fs (Value l t (Sym t a)
 evSymbolic ev0 ev e = ev0 ev e
 
 
-data PathExpression a = E (Term a) | NotE (Term a)
+data PathExpression t = E t | NotE t
   deriving (Eq, Ord, Show)
 
-newtype PathCondition a = PathCondition { unPathCondition :: Set.Set (PathExpression a) }
+newtype PathCondition t = PathCondition { unPathCondition :: Set.Set (PathExpression t) }
   deriving (Eq, Ord, Show)
 
-getPathCondition :: State (PathCondition a) :< fs => Eff fs (PathCondition a)
+getPathCondition :: State (PathCondition t) :< fs => Eff fs (PathCondition t)
 getPathCondition = get
 
-refine :: (Ord a, State (PathCondition a) :< fs) => PathExpression a -> Eff fs ()
+refine :: (Ord t, State (PathCondition t) :< fs) => PathExpression t -> Eff fs ()
 refine = modify . pathConditionInsert
 
-pathConditionMember :: Ord a => PathExpression a -> PathCondition a -> Bool
+pathConditionMember :: Ord t => PathExpression t -> PathCondition t -> Bool
 pathConditionMember = (. unPathCondition) . Set.member
 
-pathConditionInsert :: Ord a => PathExpression a -> PathCondition a -> PathCondition a
+pathConditionInsert :: Ord t => PathExpression t -> PathCondition t -> PathCondition t
 pathConditionInsert = ((PathCondition .) . (. unPathCondition)) . Set.insert
 
 
-instance (Num a, Primitive a, Ord a, PrimitiveOperations a (Eff fs), State (PathCondition a) :< fs, Amb :< fs) => PrimitiveOperations (Sym (Term a) a) (Eff fs) where
+instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, PrimitiveOperations a (Eff fs), State (PathCondition t) :< fs, Amb :< fs) => PrimitiveOperations (Sym t a) (Eff fs) where
   delta1 o a = case o of
     Negate -> pure (negate a)
     Abs    -> pure (abs a)

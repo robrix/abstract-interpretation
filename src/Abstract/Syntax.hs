@@ -232,7 +232,7 @@ instance Num a => Num (Term a) where
   (-) = binary Minus
   (*) = binary Times
 
-instance AbstractNum a (Term a) where
+instance AbstractPrimitive a (Term a) where
   prim = In . Prim
 
 

@@ -85,7 +85,7 @@ instance (Num a, Ord a, Primitive a (Eff fs), State (PathCondition a) :< fs, Amb
         ((refine (E e)    >> return True)
      <|> (refine (NotE e) >> return False))
 
-instance (Num a, Num t, AbstractNum a t) => Num (Sym t a) where
+instance (Num a, Num t, AbstractPrimitive a t) => Num (Sym t a) where
   fromInteger = V . fromInteger
 
   signum (V a)   = V   (signum a)

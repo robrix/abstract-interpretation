@@ -219,21 +219,15 @@ instance Primitive Prim where
   fromIntegerPrim = PInt . fromInteger
 
 instance Num Prim where
-  negate (PInt i) = PInt (negate i)
-  negate _ = error "negate of non-numeric primitive"
-  signum (PInt i) = PInt (signum i)
-  signum _ = error "signum of non-numeric primitive"
-  abs (PInt i) = PInt (abs i)
-  abs _ = error "abs of non-numeric primitive"
+  negate = unary Negate
+  signum = unary Signum
+  abs = unary Abs
 
-  PInt a + PInt b = PInt (a + b)
-  _ + _ = error "(+) of non-numeric primitive"
-  PInt a - PInt b = PInt (a - b)
-  _ - _ = error "(-) of non-numeric primitive"
-  PInt a * PInt b = PInt (a * b)
-  _ * _ = error "(*) of non-numeric primitive"
+  (+) = binary Plus
+  (-) = binary Minus
+  (*) = binary Times
 
-  fromInteger = PInt . fromInteger
+  fromInteger = fromIntegerPrim
 
 instance Real Prim where
   toRational (PInt a) = toRational a

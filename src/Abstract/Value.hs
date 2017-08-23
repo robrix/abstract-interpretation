@@ -78,7 +78,7 @@ instance Pretty a => Pretty (Environment a) where
 instance Pretty1 l => Pretty2 (Value l) where
   liftPretty2 pT _ pA _ = go
     where go (I a) = pA a
-          go (Closure n t e) = pretty n <> colon <+> pT t <> line
+          go (Closure n t e) = pretty "Closure" <+> pretty n <+> dot <+> pT t <> line
                                 <> liftPretty (liftPretty go (list . map go)) (list . map (liftPretty go (list . map go))) e
 
 instance (Pretty1 l, Pretty t) => Pretty1 (Value l t) where

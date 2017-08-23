@@ -97,7 +97,16 @@ instance (MonadFail m, Primitive a m) => Primitive (Value l t a) m where
   delta2 And _         _         = nonBoolean
   delta2 Or  _         _         = nonBoolean
   delta2 XOr _         _         = nonBoolean
-  delta2 Eq  Closure{} Closure{} = fail "equality on closures is undefined"
+  delta2 Eq  Closure{} Closure{} = undefinedComparison
+  delta2 Eq  _         _         = disjointComparison
+  delta2 Lt  Closure{} Closure{} = undefinedComparison
+  delta2 Lt  _         _         = disjointComparison
+  delta2 LtE Closure{} Closure{} = undefinedComparison
+  delta2 LtE _         _         = disjointComparison
+  delta2 Gt  Closure{} Closure{} = undefinedComparison
+  delta2 Gt  _         _         = disjointComparison
+  delta2 GtE Closure{} Closure{} = undefinedComparison
+  delta2 GtE _         _         = disjointComparison
   delta2 _   _         _         = nonNumeric
 
   isZero (I a) = isZero a

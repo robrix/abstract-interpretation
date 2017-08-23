@@ -10,7 +10,7 @@ import Prelude hiding (fail)
 data Op1 = Negate | Abs | Signum | Not
   deriving (Eq, Ord, Show)
 
-data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder | Modulus | And | Or | XOr | Eq
+data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder | Modulus | And | Or | XOr | Eq | Lt | LtE | Gt | GtE
   deriving (Eq, Ord, Show)
 
 
@@ -39,8 +39,11 @@ nonNumeric = fail "numeric operation on non-numeric value"
 nonBoolean :: MonadFail m => m a
 nonBoolean = fail "boolean operation on non-boolean value"
 
-disjointEq :: MonadFail m => m a
-disjointEq = fail "equating values of disjoint types"
+disjointComparison :: MonadFail m => m a
+disjointComparison = fail "comparison of disjoint values"
+
+undefinedComparison :: MonadFail m => m a
+undefinedComparison = fail "undefined comparison"
 
 
 instance MonadFail m => Primitive Prim m where
@@ -53,17 +56,21 @@ instance MonadFail m => Primitive Prim m where
     _                 -> nonNumeric
 
   delta2 o (PInt a) (PInt b) = case o of
-    Plus -> pure (PInt (a + b))
-    Minus -> pure (PInt (a - b))
-    Times -> pure (PInt (a * b))
+    Plus      -> pure (PInt (a + b))
+    Minus     -> pure (PInt (a - b))
+    Times     -> pure (PInt (a * b))
     DividedBy -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `div` b))
     Quotient  -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `quot` b))
     Remainder -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `rem` b))
     Modulus   -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `mod` b))
-    And -> nonBoolean
-    Or  -> nonBoolean
-    XOr -> nonBoolean
-    Eq  -> pure (PBool (a == b))
+    And       -> nonBoolean
+    Or        -> nonBoolean
+    XOr       -> nonBoolean
+    Eq        -> pure (PBool (a == b))
+    Lt        -> pure (PBool (a < b))
+    LtE       -> pure (PBool (a <= b))
+    Gt        -> pure (PBool (a > b))
+    GtE       -> pure (PBool (a >= b))
   delta2 And (PBool a) (PBool b) = pure (PBool (a && b))
   delta2 And _         _         = nonBoolean
   delta2 Or  (PBool a) (PBool b) = pure (PBool (a || b))
@@ -71,7 +78,15 @@ instance MonadFail m => Primitive Prim m where
   delta2 XOr (PBool a) (PBool b) = pure (PBool ((a || b) && not (a && b)))
   delta2 XOr _         _         = nonBoolean
   delta2 Eq  (PBool a) (PBool b) = pure (PBool (a == b))
-  delta2 Eq  _         _         = disjointEq
+  delta2 Eq  _         _         = disjointComparison
+  delta2 Lt  (PBool a) (PBool b) = pure (PBool (a < b))
+  delta2 Lt  _         _         = disjointComparison
+  delta2 LtE (PBool a) (PBool b) = pure (PBool (a <= b))
+  delta2 LtE _         _         = disjointComparison
+  delta2 Gt  (PBool a) (PBool b) = pure (PBool (a > b))
+  delta2 Gt  _         _         = disjointComparison
+  delta2 GtE (PBool a) (PBool b) = pure (PBool (a >= b))
+  delta2 GtE _         _         = disjointComparison
   delta2 _ _ _ = nonNumeric
 
   isZero (PInt a) = pure (a == 0)
@@ -94,7 +109,19 @@ instance (Alternative m, MonadFail m) => Primitive Abstract m where
   delta2 XOr       _ _ = nonBoolean
   delta2 Eq        B B = pure B
   delta2 Eq        N N = pure B
-  delta2 Eq        _ _ = disjointEq
+  delta2 Eq        _ _ = disjointComparison
+  delta2 Lt        B B = pure B
+  delta2 Lt        N N = pure B
+  delta2 Lt        _ _ = disjointComparison
+  delta2 LtE       B B = pure B
+  delta2 LtE       N N = pure B
+  delta2 LtE       _ _ = disjointComparison
+  delta2 Gt        B B = pure B
+  delta2 Gt        N N = pure B
+  delta2 Gt        _ _ = disjointComparison
+  delta2 GtE       B B = pure B
+  delta2 GtE       N N = pure B
+  delta2 GtE       _ _ = disjointComparison
   delta2 DividedBy N N = pure N <|> divisionByZero
   delta2 Quotient  N N = pure N <|> divisionByZero
   delta2 Remainder N N = pure N <|> divisionByZero
@@ -182,3 +209,7 @@ instance Pretty Op2 where
   pretty Or  = pretty "||"
   pretty XOr = pretty "`xor`"
   pretty Eq = pretty "=="
+  pretty Lt = pretty "<"
+  pretty LtE = pretty "<="
+  pretty Gt = pretty ">"
+  pretty GtE = pretty ">="

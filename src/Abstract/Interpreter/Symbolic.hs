@@ -68,7 +68,11 @@ instance (Num a, Ord a, Primitive a (Eff fs), State (PathCondition a) :< fs, Amb
     And -> sym2 (delta2 And) prim ((In .) . Op2 And) a b
     Or  -> sym2 (delta2 Or)  prim ((In .) . Op2 Or)  a b
     XOr -> sym2 (delta2 XOr) prim ((In .) . Op2 XOr) a b
-    Eq  -> sym2 (delta2 Eq)  prim ((In .) . Op2 Eq) a b
+    Eq  -> sym2 (delta2 Eq)  prim ((In .) . Op2 Eq)  a b
+    Lt  -> sym2 (delta2 Eq)  prim ((In .) . Op2 Lt)  a b
+    LtE -> sym2 (delta2 Eq)  prim ((In .) . Op2 LtE) a b
+    Gt  -> sym2 (delta2 Eq)  prim ((In .) . Op2 Gt)  a b
+    GtE -> sym2 (delta2 Eq)  prim ((In .) . Op2 GtE) a b
 
   isZero (V a) = isZero a
   isZero (Sym e) = do

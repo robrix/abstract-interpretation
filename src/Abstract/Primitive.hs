@@ -296,24 +296,15 @@ instance Integral Prim where
   _ `quotRem` _ = error "quotRem of non-numeric primitive"
 
 instance Num Abstract where
-  negate N = N
-  negate _ = error "negate of non-numeric primitive"
+  negate = unary Negate
+  signum = unary Signum
+  abs = unary Abs
 
-  signum N = N
-  signum _ = error "signum of non-numeric primitive"
+  (+) = binary Plus
+  (-) = binary Minus
+  (*) = binary Times
 
-  abs N = N
-  abs _ = error "abs of non-numeric primitive"
-
-  N + N = N
-  _ + _ = error "(+) of non-numeric primitive"
-  N - N = N
-  _ - _ = error "(-) of non-numeric primitive"
-
-  N * N = N
-  _ * _ = error "(*) of non-numeric primitive"
-
-  fromInteger = const N
+  fromInteger = fromIntegerPrim
 
 instance Pretty Prim where
   pretty (PBool a) = pretty a

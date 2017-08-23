@@ -271,6 +271,9 @@ instance Pretty Prim where
   pretty (PBool a) = pretty a
   pretty (PInt a) = pretty a
 
+instance Pretty PrimType where
+  pretty = pretty . show
+
 instance Pretty Abstract where
   pretty N = pretty 'N'
   pretty B = pretty 'B'

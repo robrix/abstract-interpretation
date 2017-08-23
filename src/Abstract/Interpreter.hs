@@ -40,8 +40,8 @@ ev ev term = case out term of
     maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (l (Value l (Term a) a))))
   If c t e -> do
     v <- ev c
-    z <- isZero v
-    ev (if z then t else e)
+    c' <- truthy v
+    ev (if c' then t else e)
   Op1 o a -> do
     va <- ev a
     delta1 o va

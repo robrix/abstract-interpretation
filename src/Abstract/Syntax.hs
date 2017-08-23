@@ -195,8 +195,8 @@ instance Show a => Show1 (Syntax a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
 
 
-instance Num a => Num (Term a) where
-  fromInteger = prim . fromInteger
+instance Primitive a => Num (Term a) where
+  fromInteger = fromIntegerPrim
 
   signum = unary Signum
   abs = unary Abs
@@ -205,13 +205,15 @@ instance Num a => Num (Term a) where
   (-) = binary Minus
   (*) = binary Times
 
-instance Primitive (Term a) where
+instance Primitive a => Primitive (Term a) where
   unary o a = In (Op1 o a)
 
   binary o a b = In (Op2 o a b)
 
+  fromIntegerPrim = prim . fromIntegerPrim
 
-instance AbstractPrimitive a (Term a) where
+
+instance Primitive a => AbstractPrimitive a (Term a) where
   prim = In . Prim
 
 
@@ -235,7 +237,7 @@ instance Pretty2 Syntax where
 instance Pretty a => Pretty1 (Syntax a) where
   liftPretty = liftPretty2 pretty prettyList
 
-instance PrimitiveOperations a m => PrimitiveOperations (Term a) m where
+instance (Primitive a, PrimitiveOperations a m) => PrimitiveOperations (Term a) m where
   delta1 op = pure . unary op
   delta2 op = (pure .) . binary op
 

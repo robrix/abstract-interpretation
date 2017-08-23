@@ -28,6 +28,8 @@ class Primitive t where
 
   binary :: Op2 -> t -> t -> t
 
+  fromIntegerPrim :: Integer -> t
+
 eq :: Primitive t => t -> t -> t
 eq = binary Eq
 
@@ -213,6 +215,8 @@ instance Primitive Prim where
   binary GtE (PInt a)  (PInt b)  = PBool (a >= b)
   binary GtE (PBool a) (PBool b) = PBool (a >= b)
   binary GtE _         _         = error "(>=) of disjoint primitives"
+
+  fromIntegerPrim = PInt . fromInteger
 
 instance Num Prim where
   negate (PInt i) = PInt (negate i)

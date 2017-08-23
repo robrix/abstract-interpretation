@@ -76,6 +76,9 @@ and' = binary And
 or' :: Term a -> Term a -> Term a
 or' = binary Or
 
+not' :: Term a -> Term a
+not' = unary Not
+
 let' :: Name -> Term a -> (Term a -> Term a) -> Term a
 let' var val body = lam var body # val
 

@@ -28,10 +28,6 @@ class Primitive t where
 
   binary :: Op2 -> t -> t -> t
 
-
-class Primitive t => AbstractPrimitive a t | t -> a where
-  prim :: a -> t
-
 eq :: Primitive t => t -> t -> t
 eq = binary Eq
 
@@ -55,6 +51,10 @@ or' = binary Or
 
 not' :: Primitive t => t -> t
 not' = unary Not
+
+
+class Primitive t => AbstractPrimitive a t | t -> a where
+  prim :: a -> t
 
 
 class MonadFail m => PrimitiveOperations a m where

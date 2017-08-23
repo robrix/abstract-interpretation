@@ -50,17 +50,17 @@ pathConditionInsert = ((PathCondition .) . (. unPathCondition)) . Set.insert
 
 instance (Num a, Ord a, Primitive a (Eff fs), State (PathCondition a) :< fs, Amb :< fs) => Primitive (Sym (Term a) a) (Eff fs) where
   delta1 o a = case o of
-    Negate -> pure (sym negate a)
-    Abs    -> pure (sym abs    a)
-    Signum -> pure (sym signum a)
+    Negate -> pure (negate a)
+    Abs    -> pure (abs a)
+    Signum -> pure (signum a)
     Not    -> case a of
       Sym t -> pure (Sym (unary Not t))
       V a -> V <$> delta1 Not a
 
   delta2 o a b = case o of
-    Plus  -> sym2 (delta2 Plus ) prim (+) a b
-    Minus -> sym2 (delta2 Minus) prim (-) a b
-    Times -> sym2 (delta2 Times) prim (*) a b
+    Plus  -> pure (a + b)
+    Minus -> pure (a - b)
+    Times -> pure (a * b)
     DividedBy -> isZero b >>= flip when divisionByZero >> sym2 (delta2 DividedBy) prim (binary DividedBy) a b
     Quotient  -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Quotient)  prim (binary Quotient)  a b
     Remainder -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Remainder) prim (binary Remainder) a b

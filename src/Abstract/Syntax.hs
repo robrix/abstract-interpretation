@@ -226,14 +226,14 @@ instance Show a => Show1 (Syntax a) where
 
 
 instance Num a => Num (Term a) where
-  fromInteger = In . Prim . fromInteger
+  fromInteger = prim . fromInteger
 
-  signum = In . Op1 Signum
-  abs = In . Op1 Abs
-  negate = In . Op1 Negate
-  (+) = (In .) . Op2 Plus
-  (-) = (In .) . Op2 Minus
-  (*) = (In .) . Op2 Times
+  signum = unary Signum
+  abs = unary Abs
+  negate = unary Negate
+  (+) = binary Plus
+  (-) = binary Minus
+  (*) = binary Times
 
 
 instance Pretty1 Term where

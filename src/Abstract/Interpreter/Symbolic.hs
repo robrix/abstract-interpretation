@@ -54,25 +54,25 @@ instance (Num a, Ord a, Primitive a (Eff fs), State (PathCondition a) :< fs, Amb
     Abs    -> pure (sym abs    a)
     Signum -> pure (sym signum a)
     Not    -> case a of
-      Sym t -> pure (Sym (In (Op1 Not t)))
+      Sym t -> pure (Sym (unary Not t))
       V a -> V <$> delta1 Not a
 
   delta2 o a b = case o of
     Plus  -> sym2 (delta2 Plus ) prim (+) a b
     Minus -> sym2 (delta2 Minus) prim (-) a b
     Times -> sym2 (delta2 Times) prim (*) a b
-    DividedBy -> isZero b >>= flip when divisionByZero >> sym2 (delta2 DividedBy) prim ((In .) . Op2 DividedBy) a b
-    Quotient  -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Quotient)  prim ((In .) . Op2 Quotient)  a b
-    Remainder -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Remainder) prim ((In .) . Op2 Remainder) a b
-    Modulus   -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Modulus)   prim ((In .) . Op2 Modulus)   a b
-    And -> sym2 (delta2 And) prim ((In .) . Op2 And) a b
-    Or  -> sym2 (delta2 Or)  prim ((In .) . Op2 Or)  a b
-    XOr -> sym2 (delta2 XOr) prim ((In .) . Op2 XOr) a b
-    Eq  -> sym2 (delta2 Eq)  prim ((In .) . Op2 Eq)  a b
-    Lt  -> sym2 (delta2 Eq)  prim ((In .) . Op2 Lt)  a b
-    LtE -> sym2 (delta2 Eq)  prim ((In .) . Op2 LtE) a b
-    Gt  -> sym2 (delta2 Eq)  prim ((In .) . Op2 Gt)  a b
-    GtE -> sym2 (delta2 Eq)  prim ((In .) . Op2 GtE) a b
+    DividedBy -> isZero b >>= flip when divisionByZero >> sym2 (delta2 DividedBy) prim (binary DividedBy) a b
+    Quotient  -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Quotient)  prim (binary Quotient)  a b
+    Remainder -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Remainder) prim (binary Remainder) a b
+    Modulus   -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Modulus)   prim (binary Modulus)   a b
+    And -> sym2 (delta2 And) prim (binary And) a b
+    Or  -> sym2 (delta2 Or)  prim (binary Or)  a b
+    XOr -> sym2 (delta2 XOr) prim (binary XOr) a b
+    Eq  -> sym2 (delta2 Eq)  prim (binary Eq)  a b
+    Lt  -> sym2 (delta2 Eq)  prim (binary Lt)  a b
+    LtE -> sym2 (delta2 Eq)  prim (binary LtE) a b
+    Gt  -> sym2 (delta2 Eq)  prim (binary Gt)  a b
+    GtE -> sym2 (delta2 Eq)  prim (binary GtE) a b
 
   isZero (V a) = isZero a
   isZero (Sym e) = do

@@ -19,6 +19,9 @@ data Prim
   | PBool {-# UNPACK #-} !Bool
   deriving (Eq, Ord, Show)
 
+data PrimType = Int | Bool
+  deriving (Eq, Ord, Show)
+
 data Abstract = N | B
   deriving (Eq, Ord, Show)
 

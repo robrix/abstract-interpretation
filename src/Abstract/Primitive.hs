@@ -19,9 +19,6 @@ data Prim
   | PBool {-# UNPACK #-} !Bool
   deriving (Eq, Ord, Show)
 
-data PrimType = Int | Bool
-  deriving (Eq, Ord, Show)
-
 data Abstract = N | B
   deriving (Eq, Ord, Show)
 
@@ -270,9 +267,6 @@ instance Num Abstract where
 instance Pretty Prim where
   pretty (PBool a) = pretty a
   pretty (PInt a) = pretty a
-
-instance Pretty PrimType where
-  pretty = pretty . show
 
 instance Pretty Abstract where
   pretty N = pretty 'N'

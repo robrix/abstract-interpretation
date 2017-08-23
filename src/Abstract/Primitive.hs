@@ -32,6 +32,31 @@ class Primitive t where
 class Primitive t => AbstractPrimitive a t | t -> a where
   prim :: a -> t
 
+eq :: Primitive t => t -> t -> t
+eq = binary Eq
+
+lt :: Primitive t => t -> t -> t
+lt = binary Lt
+
+lte :: Primitive t => t -> t -> t
+lte = binary LtE
+
+gt :: Primitive t => t -> t -> t
+gt = binary Gt
+
+gte :: Primitive t => t -> t -> t
+gte = binary GtE
+
+and' :: Primitive t => t -> t -> t
+and' = binary And
+
+or' :: Primitive t => t -> t -> t
+or' = binary Or
+
+not' :: Primitive t => t -> t
+not' = unary Not
+
+
 class MonadFail m => PrimitiveOperations a m where
   delta1 :: Op1 -> a -> m a
   delta2 :: Op2 -> a -> a -> m a

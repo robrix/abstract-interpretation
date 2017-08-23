@@ -49,30 +49,6 @@ makeRec = (In .) . Rec
 if' :: Term a -> Term a -> Term a -> Term a
 if' c t e = In (If c t e)
 
-eq :: Term a -> Term a -> Term a
-eq = binary Eq
-
-lt :: Term a -> Term a -> Term a
-lt = binary Lt
-
-lte :: Term a -> Term a -> Term a
-lte = binary LtE
-
-gt :: Term a -> Term a -> Term a
-gt = binary Gt
-
-gte :: Term a -> Term a -> Term a
-gte = binary GtE
-
-and' :: Term a -> Term a -> Term a
-and' = binary And
-
-or' :: Term a -> Term a -> Term a
-or' = binary Or
-
-not' :: Term a -> Term a
-not' = unary Not
-
 let' :: Name -> Term a -> (Term a -> Term a) -> Term a
 let' var val body = lam var body # val
 

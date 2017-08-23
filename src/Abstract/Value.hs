@@ -13,14 +13,14 @@ import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 import Text.Show
 
-newtype Environment a = Environment { unEnvironment :: Map.Map Name (Type, a) }
-  deriving (Eq, Foldable, Functor, Monoid, Ord, Show, Traversable)
+newtype Environment a = Environment { unEnvironment :: Map.Map Name a }
+  deriving (Eq, Eq1, Foldable, Functor, Monoid, Ord, Ord1, Show, Show1, Traversable)
 
-envLookup :: Name -> Environment a -> Maybe (Type, a)
+envLookup :: Name -> Environment a -> Maybe a
 envLookup = (. unEnvironment) . Map.lookup
 
-envInsert :: Name -> Type -> a -> Environment a -> Environment a
-envInsert name ty value (Environment m) = Environment (Map.insert name (ty, value) m)
+envInsert :: Name -> a -> Environment a -> Environment a
+envInsert name value (Environment m) = Environment (Map.insert name value m)
 
 showsConstructor :: String -> Int -> [Int -> ShowS] -> ShowS
 showsConstructor name d fields = showParen (d > 10) $ showString name . showChar ' ' . foldr (.) id ([($ 11)] <*> fields)
@@ -30,9 +30,6 @@ data Value l t a
   = I a
   | Closure Name Type t (Environment (l (Value l t a)))
   deriving (Foldable, Functor, Traversable)
-
-instance Eq1 Environment where
-  liftEq eqA (Environment a) (Environment b) = liftEq (liftEq eqA) a b
 
 instance Address l => Eq2 (Value l) where
   liftEq2 eqT eqA = go
@@ -46,9 +43,6 @@ instance (Address l, Eq t) => Eq1 (Value l t) where
 
 instance (Eq a, Eq t, Address l) => Eq (Value l t a) where
   (==) = eq1
-
-instance Ord1 Environment where
-  liftCompare compareA (Environment a) (Environment b) = liftCompare (liftCompare compareA) a b
 
 instance Address l => Ord2 (Value l) where
   liftCompare2 compareT compareA = go
@@ -65,9 +59,6 @@ instance (Ord a, Ord t, Address l) => Ord (Value l t a) where
   compare = compare1
 
 
-instance Show1 Environment where
-  liftShowsPrec sp sl d (Environment m) = showsConstructor "Environment" d [ flip (liftShowsPrec (liftShowsPrec sp sl) (liftShowList sp sl)) m ]
-
 instance Address l => Show2 (Value l) where
   liftShowsPrec2 spT _ spA _ = go
     where go d v = case v of
@@ -82,7 +73,7 @@ instance (Show a, Show t, Address l) => Show (Value l t a) where
 
 
 instance Pretty1 Environment where
-  liftPretty p pl = list . map (liftPretty (liftPretty p pl) (list . map (liftPretty p pl))) . Map.toList . unEnvironment
+  liftPretty p pl = list . map (liftPretty p pl) . Map.toList . unEnvironment
 
 instance Pretty a => Pretty (Environment a) where
   pretty = liftPretty pretty prettyList

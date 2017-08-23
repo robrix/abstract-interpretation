@@ -22,6 +22,7 @@ library
                      , Abstract.Primitive
                      , Abstract.Store
                      , Abstract.Syntax
+                     , Abstract.Type
                      , Abstract.Value
                      , Control.Effect
                      , Control.Monad.Effect.Amb

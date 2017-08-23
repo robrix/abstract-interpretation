@@ -1,0 +1,1 @@
+module Abstract.Type where

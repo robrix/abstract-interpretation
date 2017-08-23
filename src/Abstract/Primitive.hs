@@ -218,6 +218,57 @@ instance Primitive Prim where
 
   fromIntegerPrim = PInt . fromInteger
 
+instance Primitive Abstract where
+  unary Negate N = N
+  unary Negate _ = error "negate of non-numeric primitive"
+  unary Abs    N = N
+  unary Abs    _ = error "abs of non-numeric primitive"
+  unary Signum N = N
+  unary Signum _ = error "signum of non-numeric primitive"
+
+  unary Not    B = B
+  unary Not    _ = error "not of non-boolean primitive"
+
+  binary Plus      N N = N
+  binary Plus      _ _ = error "(+) of non-numeric primitive"
+  binary Minus     N N = N
+  binary Minus     _ _ = error "(-) of non-numeric primitive"
+  binary Times     N N = N
+  binary Times     _ _ = error "(*) of non-numeric primitive"
+  binary DividedBy N N = N
+  binary DividedBy _ _ = error "(/) of non-numeric primitive"
+  binary Quotient  N N = N
+  binary Quotient  _ _ = error "quot of non-numeric primitive"
+  binary Remainder N N = N
+  binary Remainder _ _ = error "rem of non-numeric primitive"
+  binary Modulus   N N = N
+  binary Modulus   _ _ = error "mod of non-numeric primitive"
+
+  binary And B B = B
+  binary And _          _        = error "(&&) of non-boolean primitive"
+  binary Or  B B = B
+  binary Or  _          _        = error "(||) of non-boolean primitive"
+  binary XOr B B = B
+  binary XOr _          _        = error "xor of non-boolean primitive"
+
+  binary Eq  N N = B
+  binary Eq  B B = B
+  binary Eq  _ _ = error "(==) of disjoint primitives"
+  binary Lt  N N = B
+  binary Lt  B B = B
+  binary Lt  _ _ = error "(<) of disjoint primitives"
+  binary LtE N N = B
+  binary LtE B B = B
+  binary LtE _ _ = error "(<=) of disjoint primitives"
+  binary Gt  N N = B
+  binary Gt  B B = B
+  binary Gt  _ _ = error "(>) of disjoint primitives"
+  binary GtE N N = B
+  binary GtE B B = B
+  binary GtE _ _ = error "(>=) of disjoint primitives"
+
+  fromIntegerPrim _ = N
+
 instance Num Prim where
   negate = unary Negate
   signum = unary Signum

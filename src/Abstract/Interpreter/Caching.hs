@@ -9,7 +9,7 @@ import Abstract.Syntax
 import Abstract.Value
 import Control.Effect
 import Control.Monad.Effect.Amb
-import Control.Monad.Effect.Internal hiding (run)
+import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Data.Foldable

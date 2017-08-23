@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses #-}
 module Abstract.Primitive where
 
 import Control.Applicative
@@ -21,6 +21,10 @@ data Prim
 
 data Abstract = N | B
   deriving (Eq, Ord, Show)
+
+
+class (Num a, Num t) => AbstractNum a t | t -> a where
+  prim :: a -> t
 
 
 class MonadFail m => Primitive a m where

@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving, TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeFamilies #-}
 module Abstract.Syntax where
 
 import Abstract.Primitive
@@ -29,9 +29,6 @@ newtype Term a = In { out :: Syntax a (Term a) }
 
 var :: Name -> Term a
 var = In . Var
-
-prim :: a -> Term a
-prim = In . Prim
 
 infixl 9 #
 (#) :: Term a -> Term a -> Term a
@@ -234,6 +231,9 @@ instance Num a => Num (Term a) where
   (+) = binary Plus
   (-) = binary Minus
   (*) = binary Times
+
+instance Num a => AbstractNum a (Term a) where
+  prim = In . Prim
 
 
 instance Pretty1 Term where

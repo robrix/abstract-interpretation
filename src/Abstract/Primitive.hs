@@ -23,13 +23,14 @@ data Abstract = N | B
   deriving (Eq, Ord, Show)
 
 
-class AbstractPrimitive a t | t -> a where
-  prim :: a -> t
-
+class Primitive t where
   unary :: Op1 -> t -> t
 
   binary :: Op2 -> t -> t -> t
 
+
+class Primitive t => AbstractPrimitive a t | t -> a where
+  prim :: a -> t
 
 class MonadFail m => PrimitiveOperations a m where
   delta1 :: Op1 -> a -> m a

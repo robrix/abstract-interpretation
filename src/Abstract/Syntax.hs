@@ -229,12 +229,14 @@ instance Num a => Num (Term a) where
   (-) = binary Minus
   (*) = binary Times
 
-instance AbstractPrimitive a (Term a) where
-  prim = In . Prim
-
+instance Primitive (Term a) where
   unary o a = In (Op1 o a)
 
   binary o a b = In (Op2 o a b)
+
+
+instance AbstractPrimitive a (Term a) where
+  prim = In . Prim
 
 
 instance Pretty1 Term where

@@ -58,6 +58,21 @@ unary o a = In (Op1 o a)
 binary :: Op2 -> Term a -> Term a -> Term a
 binary o a b = In (Op2 o a b)
 
+eq :: Term a -> Term a -> Term a
+eq a b = binary Eq a b
+
+lt :: Term a -> Term a -> Term a
+lt a b = binary Lt a b
+
+lte :: Term a -> Term a -> Term a
+lte a b = binary LtE a b
+
+gt :: Term a -> Term a -> Term a
+gt a b = binary Gt a b
+
+gte :: Term a -> Term a -> Term a
+gte a b = binary GtE a b
+
 let' :: Name -> Term a -> (Term a -> Term a) -> Term a
 let' var val body = lam var body # val
 

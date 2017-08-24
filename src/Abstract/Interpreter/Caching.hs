@@ -41,17 +41,17 @@ type CachingResult l t v = (Either String ([] v, Cache l t v), Store l v)
 
 -- Coinductively-cached evaluation
 
-evalCache :: forall l a . (Ord a, Address l, Context l (Value l (Term a) a) (CachingInterpreter l (Term a) (Value l (Term a) a)), PrimitiveOperations a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> CachingResult l (Term a) (Value l (Term a) a)
+evalCache :: forall l a . (Ord a, Address l, Context l (Value l (Term a) a) (Eff (CachingInterpreter l (Term a) (Value l (Term a) a))), PrimitiveOperations a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> CachingResult l (Term a) (Value l (Term a) a)
 evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache (Proxy :: Proxy l) ev
 
-runCache :: (Ord t, Ord v, Address l, Context l v fs, CachingInterpreter l t v :<: fs)
+runCache :: (Ord t, Ord v, Address l, Context l v (Eff fs), CachingInterpreter l t v :<: fs)
          => proxy l
          -> (Eval t fs v -> Eval t fs v)
          -> Eval t fs v
 runCache proxy ev = fixCache proxy (fix (evCache proxy ev))
 
 evCache :: forall l t v fs proxy
-        .  (Ord t, Ord v, Address l, Context l v fs, CachingInterpreter l t v :<: fs)
+        .  (Ord t, Ord v, Address l, Context l v (Eff fs), CachingInterpreter l t v :<: fs)
         => proxy l
         -> (Eval t fs v -> Eval t fs v)
         -> Eval t fs v
@@ -75,7 +75,7 @@ evCache _ ev0 ev e = do
       return v
 
 fixCache :: forall l t fs v proxy
-         .  (Ord t, Ord v, Address l, Context l v fs, CachingInterpreter l t v :<: fs)
+         .  (Ord t, Ord v, Address l, Context l v (Eff fs), CachingInterpreter l t v :<: fs)
          => proxy l
          -> Eval t fs v
          -> Eval t fs v

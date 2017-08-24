@@ -38,14 +38,14 @@ storeSize = Map.size . unStore
 
 class (Traversable l, Eq1 l, Ord1 l, Show1 l, Eq1 (Cell l), Ord1 (Cell l), Show1 (Cell l), Traversable (Cell l), Applicative (Cell l)) => Address l where
   type Cell l :: * -> *
-  type Context l a (fs :: [* -> *]) :: Constraint
-  type instance Context l a fs = (State (Store l a) :< fs, MonadFail (Eff fs))
+  type Context l a (m :: * -> *) :: Constraint
+  type instance Context l a m = ()
 
-  deref :: Context l a fs => l a -> Eff fs a
+  deref :: (State (Store l a) :< fs, MonadFail (Eff fs), Context l a (Eff fs)) => l a -> Eff fs a
 
-  alloc :: Context l a fs => Name -> Eff fs (l a)
+  alloc :: (State (Store l a) :< fs, MonadFail (Eff fs), Context l a (Eff fs)) => Name -> Eff fs (l a)
 
-  assign :: Context l a fs => l a -> a -> Eff fs ()
+  assign :: (State (Store l a) :< fs, MonadFail (Eff fs), Context l a (Eff fs)) => l a -> a -> Eff fs ()
 
   coerceAddress :: l a -> l b
 
@@ -76,7 +76,7 @@ newtype Monovariant a = Monovariant { unMonovariant :: Name }
 
 instance Address Monovariant where
   type Cell Monovariant = []
-  type Context Monovariant a fs = (Ord a, State (Store Monovariant a) :< fs, Alternative (Eff fs), MonadFail (Eff fs))
+  type Context Monovariant a m = (Ord a, Alternative m)
 
   deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . storeLookup
 

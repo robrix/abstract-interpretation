@@ -16,7 +16,7 @@ type TypecheckingInterpreter l v = Interpreter l v
 
 type TypecheckingResult l v = (Either String v, Store l v)
 
-evalCheck :: forall l a. (Ord a, Address l, Context l (Value l (Term a) a) (TypecheckingInterpreter l (Value l (Term a) a)), PrimitiveOperations a (Eff (TypecheckingInterpreter l (Value l (Term a) a)))) => Term a -> TypecheckingResult l (Value l (Term a) a)
+evalCheck :: forall l a. (Ord a, Address l, Context l (Value l (Term a) a) (Eff (TypecheckingInterpreter l (Value l (Term a) a))), PrimitiveOperations a (Eff (TypecheckingInterpreter l (Value l (Term a) a)))) => Term a -> TypecheckingResult l (Value l (Term a) a)
 evalCheck = run @(TypecheckingInterpreter l (Value l (Term a) a)) . runCheck (Proxy :: Proxy l) ev
 
 runCheck :: TypecheckingInterpreter l v :<: fs => proxy l -> (Eval t fs v -> Eval t fs v) -> Eval t fs v

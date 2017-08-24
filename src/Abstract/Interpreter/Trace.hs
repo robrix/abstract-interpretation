@@ -27,13 +27,13 @@ type TraceResult l t v f = (Either String (v, f (Configuration l t v)), Store l 
 
 -- Tracing and reachable state analyses
 
-evalTrace :: forall a l. (Address l, Context l (Value l (Term a) a) (TraceInterpreter l (Term a) (Value l (Term a) a)), PrimitiveOperations a (Eff (TraceInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> TraceResult l (Term a) (Value l (Term a) a) []
+evalTrace :: forall a l. (Address l, Context l (Value l (Term a) a) (Eff (TraceInterpreter l (Term a) (Value l (Term a) a))), PrimitiveOperations a (Eff (TraceInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> TraceResult l (Term a) (Value l (Term a) a) []
 evalTrace = run @(TraceInterpreter l (Term a) (Value l (Term a) a)) . runTrace (Proxy :: Proxy l) ev
 
 runTrace :: (TraceInterpreter l t v :<: fs, Address l) => proxy l -> (Eval t fs v -> Eval t fs v) -> Eval t fs v
 runTrace proxy ev = fix (evTell proxy (Proxy :: Proxy []) ev)
 
-evalReach :: forall a l. (Ord a, Address l, Context l (Value l (Term a) a) (ReachableStateInterpreter l (Term a) (Value l (Term a) a)), PrimitiveOperations a (Eff (ReachableStateInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> TraceResult l (Term a) (Value l (Term a) a) Set.Set
+evalReach :: forall a l. (Ord a, Address l, Context l (Value l (Term a) a) (Eff (ReachableStateInterpreter l (Term a) (Value l (Term a) a))), PrimitiveOperations a (Eff (ReachableStateInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> TraceResult l (Term a) (Value l (Term a) a) Set.Set
 evalReach = run @(ReachableStateInterpreter l (Term a) (Value l (Term a) a)) . runReach (Proxy :: Proxy l) ev
 
 runReach :: (Ord t, Ord v, ReachableStateInterpreter l t v :<: fs, Address l) => proxy l -> (Eval t fs v -> Eval t fs v) -> Eval t fs v

@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes, DataKinds, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Interpreter.Caching where
 
 import Abstract.Configuration
@@ -17,7 +17,6 @@ import Data.Function (fix)
 import Data.Functor.Classes
 import qualified Data.Map as Map
 import Data.Maybe
-import Data.Proxy
 import qualified Data.Set as Set
 import Data.Text.Prettyprint.Doc
 
@@ -41,22 +40,23 @@ type CachingResult l t v = (Either String ([] v, Cache l t v), Store l v)
 
 -- Coinductively-cached evaluation
 
-evalCache :: forall l a . (Ord a, Address l, Context l (Value l (Term a) a) (Eff (CachingInterpreter l (Term a) (Value l (Term a) a))), PrimitiveOperations a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> CachingResult l (Term a) (Value l (Term a) a)
-evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache (Proxy :: Proxy l) ev
+evalCache :: forall l a
+          .  (Ord a, Address l, Context l (Value l (Term a) a) (Eff (CachingInterpreter l (Term a) (Value l (Term a) a))), PrimitiveOperations a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a))))
+          => Eval (Term a) (CachingResult l (Term a) (Value l (Term a) a))
+evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache @l ev
 
-runCache :: (Ord t, Ord v, Address l, Context l v (Eff fs), CachingInterpreter l t v :<: fs)
-         => proxy l
-         -> (Eval t (Eff fs v) -> Eval t (Eff fs v))
+runCache :: forall l t v fs
+         .  (CachingInterpreter l t v :<: fs, Ord t, Ord v, Address l, Context l v (Eff fs))
+         => (Eval t (Eff fs v) -> Eval t (Eff fs v))
          -> Eval t (Eff fs v)
-runCache proxy ev = fixCache proxy (fix (evCache proxy ev))
+runCache ev = fixCache @l (fix (evCache @l ev))
 
-evCache :: forall l t v fs proxy
-        .  (Ord t, Ord v, Address l, Context l v (Eff fs), CachingInterpreter l t v :<: fs)
-        => proxy l
-        -> (Eval t (Eff fs v) -> Eval t (Eff fs v))
+evCache :: forall l t v fs
+        .  (CachingInterpreter l t v :<: fs, Ord t, Ord v, Address l, Context l v (Eff fs))
+        => (Eval t (Eff fs v) -> Eval t (Eff fs v))
         -> Eval t (Eff fs v)
         -> Eval t (Eff fs v)
-evCache _ ev0 ev e = do
+evCache ev0 ev e = do
   env <- ask
   store <- get
   let c = Configuration e (env :: Environment (l v)) store :: Configuration l t v
@@ -74,12 +74,11 @@ evCache _ ev0 ev e = do
       modifyCache (cacheInsert c (v, store'))
       return v
 
-fixCache :: forall l t fs v proxy
+fixCache :: forall l t fs v
          .  (Ord t, Ord v, Address l, Context l v (Eff fs), CachingInterpreter l t v :<: fs)
-         => proxy l
+         => Eval t (Eff fs v)
          -> Eval t (Eff fs v)
-         -> Eval t (Eff fs v)
-fixCache _ eval e = do
+fixCache eval e = do
   env <- ask
   store <- get
   let c = Configuration e env store :: Configuration l t v

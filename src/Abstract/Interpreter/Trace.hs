@@ -26,16 +26,26 @@ type TraceResult l t v f = (Either String (v, f (Configuration l t v)), Store l 
 
 -- Tracing and reachable state analyses
 
-evalTrace :: forall l a. (Address l, Context l (Value l (Term a) a) (Eff (TraceInterpreter l (Term a) (Value l (Term a) a))), PrimitiveOperations a (Eff (TraceInterpreter l (Term a) (Value l (Term a) a)))) => Eval (Term a) (TraceResult l (Term a) (Value l (Term a) a) [])
+evalTrace :: forall l a
+          .  (Address l, Context l (Value l (Term a) a) (Eff (TraceInterpreter l (Term a) (Value l (Term a) a))), PrimitiveOperations a (Eff (TraceInterpreter l (Term a) (Value l (Term a) a))))
+          => Eval (Term a) (TraceResult l (Term a) (Value l (Term a) a) [])
 evalTrace = run @(TraceInterpreter l (Term a) (Value l (Term a) a)) . runTrace @l ev
 
-runTrace :: forall l t v fs. (TraceInterpreter l t v :<: fs, Address l) => (Eval t (Eff fs v) -> Eval t (Eff fs v)) -> Eval t (Eff fs v)
+runTrace :: forall l t v fs
+         .  (TraceInterpreter l t v :<: fs, Address l)
+         => (Eval t (Eff fs v) -> Eval t (Eff fs v))
+         -> Eval t (Eff fs v)
 runTrace ev = fix (evTell @l @t @v @[] ev)
 
-evalReach :: forall l a. (Ord a, Address l, Context l (Value l (Term a) a) (Eff (ReachableStateInterpreter l (Term a) (Value l (Term a) a))), PrimitiveOperations a (Eff (ReachableStateInterpreter l (Term a) (Value l (Term a) a)))) => Eval (Term a) (TraceResult l (Term a) (Value l (Term a) a) Set.Set)
+evalReach :: forall l a
+          .  (Ord a, Address l, Context l (Value l (Term a) a) (Eff (ReachableStateInterpreter l (Term a) (Value l (Term a) a))), PrimitiveOperations a (Eff (ReachableStateInterpreter l (Term a) (Value l (Term a) a))))
+          => Eval (Term a) (TraceResult l (Term a) (Value l (Term a) a) Set.Set)
 evalReach = run @(ReachableStateInterpreter l (Term a) (Value l (Term a) a)) . runReach @l ev
 
-runReach :: forall l t v fs. (ReachableStateInterpreter l t v :<: fs, Ord t, Ord v, Address l) => (Eval t (Eff fs v) -> Eval t (Eff fs v)) -> Eval t (Eff fs v)
+runReach :: forall l t v fs
+         .  (ReachableStateInterpreter l t v :<: fs, Ord t, Ord v, Address l)
+         => (Eval t (Eff fs v) -> Eval t (Eff fs v))
+         -> Eval t (Eff fs v)
 runReach ev = fix (evTell @l @t @v @Set.Set ev)
 
 evTell :: forall l t v g fs

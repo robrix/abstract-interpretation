@@ -60,8 +60,8 @@ subterms :: Ord a => Term a -> Set.Set (Term a)
 subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.singleton term
 
 
-showsTernaryWith :: (Int -> a -> ShowS) -> (Int -> b -> ShowS) -> (Int -> c -> ShowS) -> String -> Int -> a -> b -> c -> ShowS
-showsTernaryWith sp1 sp2 sp3 name d x y z = showParen (d > 10) $ showString name . showChar ' ' . sp1 11 x . showChar ' ' . sp2 11 y . showChar ' ' . sp3 11 z
+showsConstructor :: String -> Int -> [Int -> ShowS] -> ShowS
+showsConstructor name d fields = showParen (d > 10) $ showString name . showChar ' ' . foldr (.) id ([($ 11)] <*> fields)
 
 
 -- Instances
@@ -183,14 +183,14 @@ instance Show1 Term where
 
 instance Show2 Syntax where
   liftShowsPrec2 spV _ spA _ d s = case s of
-    Var n -> showsUnaryWith showsPrec "Var" d n
-    Prim v -> showsUnaryWith spV "Prim" d v
-    Op1 o a -> showsBinaryWith showsPrec spA "Op1" d o a
-    Op2 o a b -> showsTernaryWith showsPrec spA spA "Op2" d o a b
-    App a b -> showsBinaryWith spA spA "App" d a b
-    Lam n t a -> showsTernaryWith showsPrec showsPrec spA "Lam" d n t a
-    Rec n t a -> showsTernaryWith showsPrec showsPrec spA "Rec" d n t a
-    If c t e -> showsTernaryWith spA spA spA "If" d c t e
+    Var n -> showsConstructor "Var" d [ flip showsPrec n ]
+    Prim v -> showsConstructor "Prim" d [ flip spV v ]
+    Op1 o a -> showsConstructor "Op1" d [ flip showsPrec o, flip spA a ]
+    Op2 o a b -> showsConstructor "Op2" d [ flip showsPrec o, flip spA a, flip spA b ]
+    App a b -> showsConstructor "App" d (flip spA <$> [ a, b ])
+    Lam n t a -> showsConstructor "Lam" d [ flip showsPrec n, flip showsPrec t, flip spA a ]
+    Rec n t a -> showsConstructor  "Rec" d [ flip showsPrec n, flip showsPrec t, flip spA a ]
+    If c t e -> showsConstructor "If" d (flip spA <$> [c, t, e])
 
 instance Show a => Show1 (Syntax a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList

@@ -22,9 +22,6 @@ envLookup = (. unEnvironment) . Map.lookup
 envInsert :: Name -> a -> Environment a -> Environment a
 envInsert name value (Environment m) = Environment (Map.insert name value m)
 
-showsConstructor :: String -> Int -> [Int -> ShowS] -> ShowS
-showsConstructor name d fields = showParen (d > 10) $ showString name . showChar ' ' . foldr (.) id ([($ 11)] <*> fields)
-
 
 data Value l t a
   = I a

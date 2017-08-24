@@ -31,7 +31,7 @@ instance (Ord v, Ord t, Address l) => Ord (Configuration l t v) where
 
 
 instance Address l => Show2 (Configuration l) where
-  liftShowsPrec2 spT _ spV slV d (Configuration t1 e1 s1) = showsTernaryWith spT (liftShowsPrec (liftShowsPrec spV slV) (liftShowList spV slV)) (liftShowsPrec spV slV) "Configuration" d t1 e1 s1
+  liftShowsPrec2 spT _ spV slV d (Configuration t1 e1 s1) = showsConstructor "Configuration" d [ flip spT t1, flip (liftShowsPrec (liftShowsPrec spV slV) (liftShowList spV slV)) e1, flip (liftShowsPrec spV slV) s1 ]
 
 instance (Address l, Show t) => Show1 (Configuration l t) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList

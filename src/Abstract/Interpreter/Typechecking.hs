@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeApplications, TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes, FlexibleContexts, ScopedTypeVariables, TypeApplications, TypeOperators #-}
 module Abstract.Interpreter.Typechecking where
 
 import Abstract.Interpreter
@@ -10,21 +10,21 @@ import Abstract.Value
 import Control.Effect
 import Control.Monad.Effect hiding (run)
 import Data.Function (fix)
-import Data.Proxy
 
 type TypecheckingInterpreter l v = Interpreter l v
 
 type TypecheckingResult l v = (Either String v, Store l v)
 
-evalCheck :: forall l a. (Ord a, Address l, Context l (Value l (Term a) a) (Eff (TypecheckingInterpreter l (Value l (Term a) a))), PrimitiveOperations a (Eff (TypecheckingInterpreter l (Value l (Term a) a)))) => Term a -> TypecheckingResult l (Value l (Term a) a)
-evalCheck = run @(TypecheckingInterpreter l (Value l (Term a) a)) . runCheck (Proxy :: Proxy l) ev
+evalCheck :: forall l a
+          .  (Ord a, Address l, Context l (Value l (Term a) a) (Eff (TypecheckingInterpreter l (Value l (Term a) a))), PrimitiveOperations a (Eff (TypecheckingInterpreter l (Value l (Term a) a))))
+          => Eval (Term a) (TypecheckingResult l (Value l (Term a) a))
+evalCheck = run @(TypecheckingInterpreter l (Value l (Term a) a)) . runCheck @l ev
 
-runCheck :: TypecheckingInterpreter l v :<: fs => proxy l -> (Eval t (Eff fs v) -> Eval t (Eff fs v)) -> Eval t (Eff fs v)
-runCheck proxy ev e0 = fix (evCheck proxy ev) e0
+runCheck :: forall l t v fs. TypecheckingInterpreter l v :<: fs => (Eval t (Eff fs v) -> Eval t (Eff fs v)) -> Eval t (Eff fs v)
+runCheck ev e0 = fix (evCheck @l ev) e0
 
 evCheck :: TypecheckingInterpreter l v :<: fs
-        => proxy l
-        -> (Eval t (Eff fs v) -> Eval t (Eff fs v))
+        => (Eval t (Eff fs v) -> Eval t (Eff fs v))
         -> Eval t (Eff fs v)
         -> Eval t (Eff fs v)
-evCheck _ ev0 ev e = ev0 ev e
+evCheck ev0 ev e = ev0 ev e

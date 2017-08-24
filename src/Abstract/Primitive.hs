@@ -17,6 +17,7 @@ data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder | Modulus | A
 data Prim
   = PInt  {-# UNPACK #-} !Int
   | PBool {-# UNPACK #-} !Bool
+  | PPair !Prim !Prim
   deriving (Eq, Ord, Show)
 
 data Abstract = N | B
@@ -309,6 +310,7 @@ instance Num Abstract where
 instance Pretty Prim where
   pretty (PBool a) = pretty a
   pretty (PInt a) = pretty a
+  pretty (PPair a b) = tupled [pretty a, pretty b]
 
 instance Pretty Abstract where
   pretty N = pretty 'N'

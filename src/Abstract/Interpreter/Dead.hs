@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, DeriveFoldable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes, DataKinds, DeriveFoldable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
 module Abstract.Interpreter.Dead where
 
 import Abstract.Interpreter
@@ -11,7 +11,6 @@ import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.State
 import Data.Function (fix)
 import Data.Functor.Foldable
-import Data.Proxy
 import Data.Semigroup
 import qualified Data.Set as Set
 
@@ -32,19 +31,21 @@ subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.sing
 
 -- Dead code analysis
 
-evalDead :: forall l a. (Ord a, Address l, Context l (Value l (Term a) a) (Eff (DeadCodeInterpreter l (Term a) (Value l (Term a) a))), PrimitiveOperations a (Eff (DeadCodeInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> DeadCodeResult l a
-evalDead = run @(DeadCodeInterpreter l (Term a) (Value l (Term a) a)) . runDead (Proxy :: Proxy l) ev
+evalDead :: forall l a. (Address l, Ord a, Context l (Value l (Term a) a) (Eff (DeadCodeInterpreter l (Term a) (Value l (Term a) a))), PrimitiveOperations a (Eff (DeadCodeInterpreter l (Term a) (Value l (Term a) a)))) => Eval (Term a) (DeadCodeResult l a)
+evalDead = run @(DeadCodeInterpreter l (Term a) (Value l (Term a) a)) . runDead @l ev
 
-runDead :: (Ord t, Recursive t, Foldable (Base t), DeadCodeInterpreter l t v :<: fs) => proxy l -> (Eval t (Eff fs v) -> Eval t (Eff fs v)) -> Eval t (Eff fs v)
-runDead proxy ev e0 = do
+runDead :: forall l t v fs
+        .  (DeadCodeInterpreter l t v :<: fs, Ord t, Recursive t, Foldable (Base t))
+        => (Eval t (Eff fs v) -> Eval t (Eff fs v))
+        -> Eval t (Eff fs v)
+runDead ev e0 = do
   put (Dead (subterms e0))
-  fix (evDead proxy ev) e0
+  fix (evDead @l ev) e0
 
-evDead :: (Ord t, DeadCodeInterpreter l t v :<: fs)
-       => proxy l
-       -> (Eval t (Eff fs v) -> Eval t (Eff fs v))
+evDead :: (DeadCodeInterpreter l t v :<: fs, Ord t)
+       => (Eval t (Eff fs v) -> Eval t (Eff fs v))
        -> Eval t (Eff fs v)
        -> Eval t (Eff fs v)
-evDead _ ev0 ev e = do
+evDead ev0 ev e = do
   modify (revive e)
   ev0 ev e

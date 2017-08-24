@@ -46,16 +46,16 @@ evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache
 
 runCache :: (Ord t, Ord v, Address l, Context l v (Eff fs), CachingInterpreter l t v :<: fs)
          => proxy l
-         -> (Eval t fs v -> Eval t fs v)
-         -> Eval t fs v
+         -> (Eval t (Eff fs v) -> Eval t (Eff fs v))
+         -> Eval t (Eff fs v)
 runCache proxy ev = fixCache proxy (fix (evCache proxy ev))
 
 evCache :: forall l t v fs proxy
         .  (Ord t, Ord v, Address l, Context l v (Eff fs), CachingInterpreter l t v :<: fs)
         => proxy l
-        -> (Eval t fs v -> Eval t fs v)
-        -> Eval t fs v
-        -> Eval t fs v
+        -> (Eval t (Eff fs v) -> Eval t (Eff fs v))
+        -> Eval t (Eff fs v)
+        -> Eval t (Eff fs v)
 evCache _ ev0 ev e = do
   env <- ask
   store <- get
@@ -77,8 +77,8 @@ evCache _ ev0 ev e = do
 fixCache :: forall l t fs v proxy
          .  (Ord t, Ord v, Address l, Context l v (Eff fs), CachingInterpreter l t v :<: fs)
          => proxy l
-         -> Eval t fs v
-         -> Eval t fs v
+         -> Eval t (Eff fs v)
+         -> Eval t (Eff fs v)
 fixCache _ eval e = do
   env <- ask
   store <- get

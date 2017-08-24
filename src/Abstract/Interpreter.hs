@@ -18,7 +18,7 @@ type Interpreter l v = '[Failure, State (Store l v), Reader (Environment (l v))]
 
 type EvalResult l a = (Either String (Value l (Term a) a), Store l (Value l (Term a) a))
 
-type Eval t fs v = t -> Eff fs v
+type Eval t m = t -> m
 
 
 -- Evaluation
@@ -26,13 +26,13 @@ type Eval t fs v = t -> Eff fs v
 eval :: forall l a . (Address l, Context l (Value l (Term a) a) (Eff (Interpreter l (Value l (Term a) a))), PrimitiveOperations a (Eff (Interpreter l (Value l (Term a) a)))) => Term a -> EvalResult l a
 eval = run @(Interpreter l (Value l (Term a) a)) . runEval
 
-runEval :: (Address l, Context l (Value l (Term a) a) (Eff fs), PrimitiveOperations a (Eff fs), Interpreter l (Value l (Term a) a) :<: fs) => Eval (Term a) fs (Value l (Term a) a)
+runEval :: (Address l, Context l (Value l (Term a) a) (Eff fs), PrimitiveOperations a (Eff fs), Interpreter l (Value l (Term a) a) :<: fs) => Eval (Term a) (Eff fs (Value l (Term a) a))
 runEval = fix ev
 
 ev :: forall l a fs
    .  (Address l, Context l (Value l (Term a) a) (Eff fs), PrimitiveOperations a (Eff fs), Interpreter l (Value l (Term a) a) :<: fs)
-   => Eval (Term a) fs (Value l (Term a) a)
-   -> Eval (Term a) fs (Value l (Term a) a)
+   => Eval (Term a) (Eff fs (Value l (Term a) a))
+   -> Eval (Term a) (Eff fs (Value l (Term a) a))
 ev ev term = case out term of
   Prim n -> return (I n)
   Var x -> do

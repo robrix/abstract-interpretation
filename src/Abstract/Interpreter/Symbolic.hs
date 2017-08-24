@@ -24,7 +24,7 @@ sym2 _ _ g (Sym a) (Sym b) = pure (Sym (g a b))
 sym2 f num g a (V b) = sym2 f num g a (Sym (num b))
 sym2 f num g (V a) b = sym2 f num g (Sym (num a)) b
 
-evSymbolic :: (Eval t fs (Value l t (Sym t a)) -> Eval t fs (Value l t (Sym t a))) -> Eval t fs (Value l t (Sym t a)) -> Eval t fs (Value l t (Sym t a))
+evSymbolic :: (Eval t (Eff fs (Value l t (Sym t a))) -> Eval t (Eff fs (Value l t (Sym t a)))) -> Eval t (Eff fs (Value l t (Sym t a))) -> Eval t (Eff fs (Value l t (Sym t a)))
 evSymbolic ev0 ev e = ev0 ev e
 
 

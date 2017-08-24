@@ -2,7 +2,7 @@ module Abstract.Type where
 
 import Data.Text.Prettyprint.Doc
 
-data Type = Int | Bool | Type :-> Type
+data Type = Int | Bool | Type :-> Type | Type :* Type
   deriving (Eq, Ord, Show)
 
 

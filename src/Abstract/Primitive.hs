@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses #-}
 module Abstract.Primitive where
 
+import Abstract.Type
 import Control.Applicative
 import Control.Monad hiding (fail)
 import Control.Monad.Fail
@@ -18,10 +19,6 @@ data Prim
   = PInt  {-# UNPACK #-} !Int
   | PBool {-# UNPACK #-} !Bool
   deriving (Eq, Ord, Show)
-
-data Abstract = N | B
-  deriving (Eq, Ord, Show)
-
 
 class Primitive t where
   unary :: Op1 -> t -> t
@@ -130,42 +127,42 @@ instance MonadFail m => PrimitiveOperations Prim m where
   truthy (PBool a) = pure a
   truthy _         = nonBoolean
 
-instance (Alternative m, MonadFail m) => PrimitiveOperations Abstract m where
-  delta1 Not B = pure B
-  delta1 Not _ = nonBoolean
-  delta1 _   N = pure N
-  delta1 _   _ = nonNumeric
+instance (Alternative m, MonadFail m) => PrimitiveOperations Type m where
+  delta1 Not Bool = pure Bool
+  delta1 Not _    = nonBoolean
+  delta1 _   Int  = pure Int
+  delta1 _   _    = nonNumeric
 
-  delta2 And       B B = pure B
-  delta2 And       _ _ = nonBoolean
-  delta2 Or        B B = pure B
-  delta2 Or        _ _ = nonBoolean
-  delta2 XOr       B B = pure B
-  delta2 XOr       _ _ = nonBoolean
-  delta2 Eq        B B = pure B
-  delta2 Eq        N N = pure B
-  delta2 Eq        _ _ = disjointComparison
-  delta2 Lt        B B = pure B
-  delta2 Lt        N N = pure B
-  delta2 Lt        _ _ = disjointComparison
-  delta2 LtE       B B = pure B
-  delta2 LtE       N N = pure B
-  delta2 LtE       _ _ = disjointComparison
-  delta2 Gt        B B = pure B
-  delta2 Gt        N N = pure B
-  delta2 Gt        _ _ = disjointComparison
-  delta2 GtE       B B = pure B
-  delta2 GtE       N N = pure B
-  delta2 GtE       _ _ = disjointComparison
-  delta2 DividedBy N N = pure N <|> divisionByZero
-  delta2 Quotient  N N = pure N <|> divisionByZero
-  delta2 Remainder N N = pure N <|> divisionByZero
-  delta2 Modulus   N N = pure N <|> divisionByZero
-  delta2 _         N N = pure N
-  delta2 _         _ _ = nonNumeric
+  delta2 And       Bool Bool = pure Bool
+  delta2 And       _    _    = nonBoolean
+  delta2 Or        Bool Bool = pure Bool
+  delta2 Or        _    _    = nonBoolean
+  delta2 XOr       Bool Bool = pure Bool
+  delta2 XOr       _    _    = nonBoolean
+  delta2 Eq        Bool Bool = pure Bool
+  delta2 Eq        Int  Int  = pure Bool
+  delta2 Eq        _    _    = disjointComparison
+  delta2 Lt        Bool Bool = pure Bool
+  delta2 Lt        Int  Int  = pure Bool
+  delta2 Lt        _    _    = disjointComparison
+  delta2 LtE       Bool Bool = pure Bool
+  delta2 LtE       Int  Int  = pure Bool
+  delta2 LtE       _    _    = disjointComparison
+  delta2 Gt        Bool Bool = pure Bool
+  delta2 Gt        Int  Int  = pure Bool
+  delta2 Gt        _    _    = disjointComparison
+  delta2 GtE       Bool Bool = pure Bool
+  delta2 GtE       Int  Int  = pure Bool
+  delta2 GtE       _    _    = disjointComparison
+  delta2 DividedBy Int  Int  = pure Int <|> divisionByZero
+  delta2 Quotient  Int  Int  = pure Int <|> divisionByZero
+  delta2 Remainder Int  Int  = pure Int <|> divisionByZero
+  delta2 Modulus   Int  Int  = pure Int <|> divisionByZero
+  delta2 _         Int  Int  = pure Int
+  delta2 _         _    _    = nonNumeric
 
-  truthy B = pure True <|> pure False
-  truthy _ = nonBoolean
+  truthy Bool = pure True <|> pure False
+  truthy _    = nonBoolean
 
 instance Primitive Prim where
   unary Negate (PInt a)  = PInt (negate a)
@@ -218,56 +215,56 @@ instance Primitive Prim where
 
   fromIntegerPrim = PInt . fromInteger
 
-instance Primitive Abstract where
-  unary Negate N = N
-  unary Negate _ = error "negate of non-numeric primitive"
-  unary Abs    N = N
-  unary Abs    _ = error "abs of non-numeric primitive"
-  unary Signum N = N
-  unary Signum _ = error "signum of non-numeric primitive"
+instance Primitive Type where
+  unary Negate Int = Int
+  unary Negate _   = error "negate of non-numeric primitive"
+  unary Abs    Int = Int
+  unary Abs    _   = error "abs of non-numeric primitive"
+  unary Signum Int = Int
+  unary Signum _   = error "signum of non-numeric primitive"
 
-  unary Not    B = B
-  unary Not    _ = error "not of non-boolean primitive"
+  unary Not    Bool = Bool
+  unary Not    _    = error "not of non-boolean primitive"
 
-  binary Plus      N N = N
-  binary Plus      _ _ = error "(+) of non-numeric primitive"
-  binary Minus     N N = N
-  binary Minus     _ _ = error "(-) of non-numeric primitive"
-  binary Times     N N = N
-  binary Times     _ _ = error "(*) of non-numeric primitive"
-  binary DividedBy N N = N
-  binary DividedBy _ _ = error "(/) of non-numeric primitive"
-  binary Quotient  N N = N
-  binary Quotient  _ _ = error "quot of non-numeric primitive"
-  binary Remainder N N = N
-  binary Remainder _ _ = error "rem of non-numeric primitive"
-  binary Modulus   N N = N
-  binary Modulus   _ _ = error "mod of non-numeric primitive"
+  binary Plus      Int Int = Int
+  binary Plus      _   _   = error "(+) of non-numeric primitive"
+  binary Minus     Int Int = Int
+  binary Minus     _   _   = error "(-) of non-numeric primitive"
+  binary Times     Int Int = Int
+  binary Times     _   _   = error "(*) of non-numeric primitive"
+  binary DividedBy Int Int = Int
+  binary DividedBy _   _   = error "(/) of non-numeric primitive"
+  binary Quotient  Int Int = Int
+  binary Quotient  _   _   = error "quot of non-numeric primitive"
+  binary Remainder Int Int = Int
+  binary Remainder _   _   = error "rem of non-numeric primitive"
+  binary Modulus   Int Int = Int
+  binary Modulus   _   _   = error "mod of non-numeric primitive"
 
-  binary And B B = B
-  binary And _          _        = error "(&&) of non-boolean primitive"
-  binary Or  B B = B
-  binary Or  _          _        = error "(||) of non-boolean primitive"
-  binary XOr B B = B
-  binary XOr _          _        = error "xor of non-boolean primitive"
+  binary And Bool Bool = Bool
+  binary And _    _    = error "(&&) of non-boolean primitive"
+  binary Or  Bool Bool = Bool
+  binary Or  _    _    = error "(||) of non-boolean primitive"
+  binary XOr Bool Bool = Bool
+  binary XOr _    _    = error "xor of non-boolean primitive"
 
-  binary Eq  N N = B
-  binary Eq  B B = B
-  binary Eq  _ _ = error "(==) of disjoint primitives"
-  binary Lt  N N = B
-  binary Lt  B B = B
-  binary Lt  _ _ = error "(<) of disjoint primitives"
-  binary LtE N N = B
-  binary LtE B B = B
-  binary LtE _ _ = error "(<=) of disjoint primitives"
-  binary Gt  N N = B
-  binary Gt  B B = B
-  binary Gt  _ _ = error "(>) of disjoint primitives"
-  binary GtE N N = B
-  binary GtE B B = B
-  binary GtE _ _ = error "(>=) of disjoint primitives"
+  binary Eq  Int  Int  = Bool
+  binary Eq  Bool Bool = Bool
+  binary Eq  _    _    = error "(==) of disjoint primitives"
+  binary Lt  Int  Int  = Bool
+  binary Lt  Bool Bool = Bool
+  binary Lt  _    _    = error "(<) of disjoint primitives"
+  binary LtE Int  Int  = Bool
+  binary LtE Bool Bool = Bool
+  binary LtE _    _    = error "(<=) of disjoint primitives"
+  binary Gt  Int  Int  = Bool
+  binary Gt  Bool Bool = Bool
+  binary Gt  _    _    = error "(>) of disjoint primitives"
+  binary GtE Int  Int  = Bool
+  binary GtE Bool Bool = Bool
+  binary GtE _    _    = error "(>=) of disjoint primitives"
 
-  fromIntegerPrim _ = N
+  fromIntegerPrim _ = Int
 
 instance Num Prim where
   negate = unary Negate
@@ -295,24 +292,9 @@ instance Integral Prim where
   PInt a `quotRem` PInt b = let (q, r) = a `quotRem` b in (PInt q, PInt r)
   _ `quotRem` _ = error "quotRem of non-numeric primitive"
 
-instance Num Abstract where
-  negate = unary Negate
-  signum = unary Signum
-  abs = unary Abs
-
-  (+) = binary Plus
-  (-) = binary Minus
-  (*) = binary Times
-
-  fromInteger = fromIntegerPrim
-
 instance Pretty Prim where
   pretty (PBool a) = pretty a
   pretty (PInt a) = pretty a
-
-instance Pretty Abstract where
-  pretty N = pretty 'N'
-  pretty B = pretty 'B'
 
 instance Pretty Op1 where
   pretty Negate = pretty "negate"

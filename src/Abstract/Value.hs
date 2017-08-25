@@ -62,7 +62,7 @@ instance AbstractValue l Type t Prim where
   app _ (inTy :-> outTy) argTy = do
     unless (inTy == argTy) (fail ("expected " ++ show inTy ++ " but got " ++ show argTy))
     return outTy
-  app _ _ _ = fail "non-function operator"
+  app _ op _ = fail $ "non-function operator: " ++ show op
 
   prim' (PInt _)  = return Int
   prim' (PBool _) = return Bool

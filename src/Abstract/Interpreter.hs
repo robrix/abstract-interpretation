@@ -16,15 +16,15 @@ import Prelude hiding (fail)
 
 type Interpreter l v = '[Failure, State (Store l v), Reader (Environment (l v))]
 
-type EvalResult l a = (Either String (Value l (Term a) a), Store l (Value l (Term a) a))
+type EvalResult l v = (Either String v, Store l v)
 
 type Eval t m = t -> m
 
 
 -- Evaluation
 
-eval :: forall l a . (Address l, Context l (Value l (Term a) a) (Eff (Interpreter l (Value l (Term a) a))), PrimitiveOperations a (Eff (Interpreter l (Value l (Term a) a)))) => Term a -> EvalResult l a
-eval = run @(Interpreter l (Value l (Term a) a)) . runEval @l
+eval :: forall l v a . (Address l, Context l v (Eff (Interpreter l v)), AbstractValue l v Term a, PrimitiveOperations v (Eff (Interpreter l v))) => Term a -> EvalResult l v
+eval = run @(Interpreter l v) . runEval @l
 
 runEval :: forall l v a fs . (Address l, Context l v (Eff fs), AbstractValue l v Term a, PrimitiveOperations v (Eff fs), Interpreter l v :<: fs) => Eval (Term a) (Eff fs v)
 runEval = fix (ev @l)

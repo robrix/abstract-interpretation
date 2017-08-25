@@ -35,7 +35,7 @@ cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith
 
 type CachingInterpreter l t v = NonDetEff ': State (Cache l t v) ': Reader (Cache l t v) ': Interpreter l v
 
-type CachingResult l t v = (Either String ([] v, Cache l t v), Store l v)
+type CachingResult l t v = (Either String ([v], Cache l t v), Store l v)
 
 
 -- Coinductively-cached evaluation

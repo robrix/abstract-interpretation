@@ -21,7 +21,7 @@ type TracingInterpreter l t v g = Writer (g (Configuration l t v)) ': Interprete
 type TraceInterpreter l t v = TracingInterpreter l t v []
 type ReachableStateInterpreter l t v = TracingInterpreter l t v Set.Set
 
-type TraceResult l t v f = (Either String (v, f (Configuration l t v)), Store l v)
+type TraceResult l t v f = Final (TracingInterpreter l t v f) v
 
 
 -- Tracing and reachable state analyses

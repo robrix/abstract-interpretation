@@ -16,7 +16,7 @@ import Prelude hiding (fail)
 
 type Interpreter l v = '[Failure, State (Store l v), Reader (Environment (l v))]
 
-type EvalResult l v = (Either String v, Store l v)
+type EvalResult l v = Final (Interpreter l v) v
 
 type Eval t m = t -> m
 

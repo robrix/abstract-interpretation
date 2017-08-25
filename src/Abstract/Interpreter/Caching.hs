@@ -8,8 +8,8 @@ import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value
 import Control.Effect
-import Control.Monad.Effect.Amb
 import Control.Monad.Effect hiding (run)
+import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Data.Foldable
@@ -33,7 +33,7 @@ cacheInsert :: (Ord t, Ord v, Address l) => Configuration l t v -> (v, Store l v
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 
-type CachingInterpreter l t v = Amb ': State (Cache l t v) ': Reader (Cache l t v) ': Interpreter l v
+type CachingInterpreter l t v = NonDetEff ': State (Cache l t v) ': Reader (Cache l t v) ': Interpreter l v
 
 type CachingResult l t v = (Either String ([] v, Cache l t v), Store l v)
 

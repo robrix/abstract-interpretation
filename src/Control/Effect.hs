@@ -2,9 +2,9 @@
 module Control.Effect where
 
 import qualified Control.Monad.Effect as Effect
-import Control.Monad.Effect.Amb
 import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Internal as Effect hiding (run)
+import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader as Reader
 import Control.Monad.Effect.State as State
 import Control.Monad.Effect.Writer as Writer
@@ -44,6 +44,6 @@ instance Monoid w => RunEffect (Writer w) a where
   type Result (Writer w) a = (a, w)
   runEffect = runWriter
 
-instance RunEffect Amb a where
-  type Result Amb a = [a]
-  runEffect = runAmb
+instance RunEffect NonDetEff a where
+  type Result NonDetEff a = [a]
+  runEffect = makeChoiceA

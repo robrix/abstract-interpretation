@@ -6,7 +6,7 @@ import Abstract.Primitive
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Effect
-import Control.Monad.Effect.Amb
+import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.State
 import qualified Data.Set as Set
 
@@ -46,7 +46,7 @@ pathConditionInsert :: Ord t => PathExpression t -> PathCondition t -> PathCondi
 pathConditionInsert = ((PathCondition .) . (. unPathCondition)) . Set.insert
 
 
-instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, PrimitiveOperations a fs, State (PathCondition t) :< fs, Amb :< fs) => PrimitiveOperations (Sym t a) fs where
+instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, PrimitiveOperations a fs, State (PathCondition t) :< fs, NonDetEff :< fs) => PrimitiveOperations (Sym t a) fs where
   delta1 o a = case o of
     Negate -> pure (negate a)
     Abs    -> pure (abs a)

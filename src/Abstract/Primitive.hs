@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, TypeOperators, UndecidableInstances #-}
 module Abstract.Primitive where
 
 import Abstract.Type
@@ -6,6 +6,7 @@ import Control.Applicative
 import Control.Monad hiding (fail)
 import Control.Monad.Effect
 import Control.Monad.Effect.Failure
+import Control.Monad.Effect.NonDetEff
 import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 
@@ -128,7 +129,7 @@ instance Failure :< fs => PrimitiveOperations Prim fs where
   truthy (PBool a) = pure a
   truthy _         = nonBoolean
 
-instance (Failure :< fs, Alternative (Eff fs)) => PrimitiveOperations Type fs where
+instance (Failure :< fs, NonDetEff :< fs) => PrimitiveOperations Type fs where
   delta1 Not Bool = pure Bool
   delta1 Not _    = nonBoolean
   delta1 _   Int  = pure Int

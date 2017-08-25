@@ -1,4 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes, FlexibleContexts, ScopedTypeVariables, TypeApplications, TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes, DataKinds, FlexibleContexts, ScopedTypeVariables, TypeApplications, TypeOperators #-}
 module Abstract.Interpreter.Typechecking where
 
 import Abstract.Interpreter
@@ -8,10 +8,10 @@ import Abstract.Syntax
 import Abstract.Type
 import Control.Effect
 import Control.Monad.Effect hiding (run)
-import Control.Monad.Effect.Amb
+import Control.Monad.Effect.NonDetEff
 import Data.Function (fix)
 
-type TypecheckingInterpreter l = Amb ': Interpreter l Type
+type TypecheckingInterpreter l = NonDetEff ': Interpreter l Type
 
 type TypecheckingResult l = Final (TypecheckingInterpreter l) Type
 

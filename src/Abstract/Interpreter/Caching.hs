@@ -41,7 +41,7 @@ type CachingResult l t v = (Either String ([] v, Cache l t v), Store l v)
 -- Coinductively-cached evaluation
 
 evalCache :: forall l v a
-          .  (Ord a, Ord v, Address l, Context l v (Eff (CachingInterpreter l (Term a) v)), AbstractValue l v Term a, PrimitiveOperations v (Eff (CachingInterpreter l (Term a) v)))
+          .  (Ord a, Ord v, Address l, Context l v (Eff (CachingInterpreter l (Term a) v)), AbstractValue l v Term a, PrimitiveOperations v (CachingInterpreter l (Term a) v))
           => Eval (Term a) (CachingResult l (Term a) v)
 evalCache = run @(CachingInterpreter l (Term a) v) . runCache @l (ev @l)
 

@@ -7,9 +7,9 @@ import Abstract.Syntax
 import Abstract.Type
 import Control.Monad hiding (fail)
 import Control.Monad.Effect
+import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
-import Control.Monad.Fail
 import Data.Functor.Classes
 import qualified Data.Map as Map
 import Data.Semigroup
@@ -34,8 +34,8 @@ data Value l t a
 
 
 class AbstractValue l v t a where
-  lambda :: (Address l, Context l v (Eff fs), Reader (Environment (l v)) :< fs, State (Store l v) :< fs, MonadFail (Eff fs)) => (t a -> Eff fs v) -> Name -> Type -> t a -> Eff fs v
-  app :: (Address l, Context l v (Eff fs), Reader (Environment (l v)) :< fs, State (Store l v) :< fs, MonadFail (Eff fs)) => (t a -> Eff fs v) -> v -> v -> Eff fs v
+  lambda :: (Address l, Context l v (Eff fs), Reader (Environment (l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> Name -> Type -> t a -> Eff fs v
+  app :: (Address l, Context l v (Eff fs), Reader (Environment (l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> v -> v -> Eff fs v
 
   prim' :: a -> Eff fs v
 
@@ -128,7 +128,7 @@ instance (Pretty1 l, Pretty t, Pretty a) => Pretty (Value l t a) where
   pretty = liftPretty pretty prettyList
 
 
-instance (MonadFail m, PrimitiveOperations a m) => PrimitiveOperations (Value l t a) m where
+instance (Failure :< fs, PrimitiveOperations a fs) => PrimitiveOperations (Value l t a) fs where
   delta1 o   (I a) = fmap I (delta1 o a)
   delta1 Not _     = nonBoolean
   delta1 _   _     = nonNumeric

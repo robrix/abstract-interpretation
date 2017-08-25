@@ -1,10 +1,11 @@
-{-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, UndecidableInstances #-}
 module Abstract.Primitive where
 
 import Abstract.Type
 import Control.Applicative
 import Control.Monad hiding (fail)
-import Control.Monad.Fail
+import Control.Monad.Effect
+import Control.Monad.Effect.Failure
 import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 
@@ -56,32 +57,32 @@ class Primitive t => AbstractPrimitive a t | t -> a where
   prim :: a -> t
 
 
-class MonadFail m => PrimitiveOperations a m where
-  delta1 :: Op1 -> a -> m a
-  delta2 :: Op2 -> a -> a -> m a
-  truthy :: a -> m Bool
+class Failure :< fs => PrimitiveOperations a fs where
+  delta1 :: Op1 -> a -> Eff fs a
+  delta2 :: Op2 -> a -> a -> Eff fs a
+  truthy :: a -> Eff fs Bool
 
 
-divisionByZero :: MonadFail m => m a
+divisionByZero :: Failure :< fs => Eff fs a
 divisionByZero = fail "division by zero"
 
-nonNumeric :: MonadFail m => m a
+nonNumeric :: Failure :< fs => Eff fs a
 nonNumeric = fail "numeric operation on non-numeric value"
 
-nonBoolean :: MonadFail m => m a
+nonBoolean :: Failure :< fs => Eff fs a
 nonBoolean = fail "boolean operation on non-boolean value"
 
-disjointComparison :: MonadFail m => m a
+disjointComparison :: Failure :< fs => Eff fs a
 disjointComparison = fail "comparison of disjoint values"
 
-undefinedComparison :: MonadFail m => m a
+undefinedComparison :: Failure :< fs => Eff fs a
 undefinedComparison = fail "undefined comparison"
 
 
-isZero :: (Num a, PrimitiveOperations a m) => a -> m Bool
+isZero :: (Num a, PrimitiveOperations a fs) => a -> Eff fs Bool
 isZero = truthy <=< delta2 Eq 0
 
-instance MonadFail m => PrimitiveOperations Prim m where
+instance Failure :< fs => PrimitiveOperations Prim fs where
   delta1 o a = case (o, a) of
     (Negate, PInt a)  -> pure (PInt (negate a))
     (Abs,    PInt a)  -> pure (PInt (abs a))
@@ -127,7 +128,7 @@ instance MonadFail m => PrimitiveOperations Prim m where
   truthy (PBool a) = pure a
   truthy _         = nonBoolean
 
-instance (Alternative m, MonadFail m) => PrimitiveOperations Type m where
+instance (Failure :< fs, Alternative (Eff fs)) => PrimitiveOperations Type fs where
   delta1 Not Bool = pure Bool
   delta1 Not _    = nonBoolean
   delta1 _   Int  = pure Int

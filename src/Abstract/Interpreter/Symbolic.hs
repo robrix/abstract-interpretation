@@ -46,7 +46,7 @@ pathConditionInsert :: Ord t => PathExpression t -> PathCondition t -> PathCondi
 pathConditionInsert = ((PathCondition .) . (. unPathCondition)) . Set.insert
 
 
-instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, PrimitiveOperations a (Eff fs), State (PathCondition t) :< fs, Amb :< fs) => PrimitiveOperations (Sym t a) (Eff fs) where
+instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, PrimitiveOperations a fs, State (PathCondition t) :< fs, Amb :< fs) => PrimitiveOperations (Sym t a) fs where
   delta1 o a = case o of
     Negate -> pure (negate a)
     Abs    -> pure (abs a)

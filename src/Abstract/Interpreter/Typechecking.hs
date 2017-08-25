@@ -13,7 +13,7 @@ import Data.Function (fix)
 
 type TypecheckingInterpreter l = Amb ': Interpreter l Type
 
-type TypecheckingResult l = (Either String [Type], Store l Type)
+type TypecheckingResult l = Final (TypecheckingInterpreter l) Type
 
 evalCheck :: forall l
           .  (Address l, Context l Type (Eff (TypecheckingInterpreter l)))

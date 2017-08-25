@@ -9,6 +9,7 @@ import Abstract.Syntax
 import Abstract.Value
 import Control.Effect
 import Control.Monad.Effect hiding (run)
+import Control.Monad.Effect.Failure
 import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
@@ -33,7 +34,7 @@ cacheInsert :: (Ord t, Ord v, Address l) => Configuration l t v -> (v, Store l v
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 
-type CachingInterpreter l t v = NonDetEff ': State (Cache l t v) ': Reader (Cache l t v) ': Interpreter l v
+type CachingInterpreter l t v = '[Reader (Environment (l v)), Failure, State (Store l v), NonDetEff, Reader (Cache l t v), State (Cache l t v)]
 
 type CachingResult l t v = Final (CachingInterpreter l t v) v
 

@@ -27,6 +27,7 @@ data Value l t a
   | Closure Name t (Environment (l (Value l t a)))
   deriving (Foldable, Functor, Traversable)
 
+
 instance Address l => Eq2 (Value l) where
   liftEq2 eqT eqA = go
     where go v1 v2 = case (v1, v2) of

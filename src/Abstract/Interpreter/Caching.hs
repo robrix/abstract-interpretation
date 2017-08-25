@@ -43,7 +43,7 @@ type CachingResult l t v = (Either String ([] v, Cache l t v), Store l v)
 evalCache :: forall l a
           .  (Ord a, Address l, Context l (Value l (Term a) a) (Eff (CachingInterpreter l (Term a) (Value l (Term a) a))), PrimitiveOperations a (Eff (CachingInterpreter l (Term a) (Value l (Term a) a))))
           => Eval (Term a) (CachingResult l (Term a) (Value l (Term a) a))
-evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache @l ev
+evalCache = run @(CachingInterpreter l (Term a) (Value l (Term a) a)) . runCache @l (ev @l)
 
 runCache :: forall l t v fs
          .  (CachingInterpreter l t v :<: fs, Ord t, Ord v, Address l, Context l v (Eff fs))

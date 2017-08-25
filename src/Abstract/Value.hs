@@ -33,14 +33,16 @@ data Value l t a
   deriving (Foldable, Functor, Traversable)
 
 
-class AbstractValue l v t where
-  lambda :: (Address l, Context l v (Eff fs), Reader (Environment (l v)) :< fs, State (Store l v) :< fs, MonadFail (Eff fs)) => (t -> Eff fs v) -> Name -> Type -> t -> Eff fs v
-  app :: (Address l, Context l v (Eff fs), Reader (Environment (l v)) :< fs, State (Store l v) :< fs, MonadFail (Eff fs)) => (t -> Eff fs v) -> v -> v -> Eff fs v
+class AbstractValue l v t a where
+  lambda :: (Address l, Context l v (Eff fs), Reader (Environment (l v)) :< fs, State (Store l v) :< fs, MonadFail (Eff fs)) => (t a -> Eff fs v) -> Name -> Type -> t a -> Eff fs v
+  app :: (Address l, Context l v (Eff fs), Reader (Environment (l v)) :< fs, State (Store l v) :< fs, MonadFail (Eff fs)) => (t a -> Eff fs v) -> v -> v -> Eff fs v
 
-instance AbstractValue l (Value l t a) t where
+  prim' :: a -> Eff fs v
+
+instance AbstractValue l (Value l (t a) a) t a where
   lambda _ name _ body = do
     env <- ask
-    return (Closure name body (env :: Environment (l (Value l t a))))
+    return (Closure name body (env :: Environment (l (Value l (t a) a))))
 
   app ev (Closure x e2 p) v1 = do
     a <- alloc x
@@ -48,7 +50,9 @@ instance AbstractValue l (Value l t a) t where
     local (const (envInsert x a p)) (ev e2)
   app _ _ _ = fail "non-closure operator"
 
-instance AbstractValue l Type t where
+  prim' = return . I
+
+instance AbstractValue l Type t Prim where
   lambda ev name inTy body = do
     a <- alloc name
     assign a inTy
@@ -59,6 +63,9 @@ instance AbstractValue l Type t where
     unless (inTy == argTy) (fail ("expected " ++ show inTy ++ " but got " ++ show argTy))
     return outTy
   app _ _ _ = fail "non-function operator"
+
+  prim' (PInt _)  = return Int
+  prim' (PBool _) = return Bool
 
 
 instance Address l => Eq2 (Value l) where

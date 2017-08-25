@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes, DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeOperators #-}
 module Abstract.Interpreter where
 
 import Abstract.Primitive
@@ -24,20 +24,20 @@ type Eval t m = t -> m
 -- Evaluation
 
 eval :: forall l a . (Address l, Context l (Value l (Term a) a) (Eff (Interpreter l (Value l (Term a) a))), PrimitiveOperations a (Eff (Interpreter l (Value l (Term a) a)))) => Term a -> EvalResult l a
-eval = run @(Interpreter l (Value l (Term a) a)) . runEval
+eval = run @(Interpreter l (Value l (Term a) a)) . runEval @l
 
-runEval :: (Address l, Context l (Value l (Term a) a) (Eff fs), PrimitiveOperations a (Eff fs), Interpreter l (Value l (Term a) a) :<: fs) => Eval (Term a) (Eff fs (Value l (Term a) a))
-runEval = fix ev
+runEval :: forall l v a fs . (Address l, Context l v (Eff fs), AbstractValue l v Term a, PrimitiveOperations v (Eff fs), Interpreter l v :<: fs) => Eval (Term a) (Eff fs v)
+runEval = fix (ev @l)
 
-ev :: forall l a fs
-   .  (Address l, Context l (Value l (Term a) a) (Eff fs), PrimitiveOperations a (Eff fs), Interpreter l (Value l (Term a) a) :<: fs)
-   => Eval (Term a) (Eff fs (Value l (Term a) a))
-   -> Eval (Term a) (Eff fs (Value l (Term a) a))
+ev :: forall l v a fs
+   .  (Address l, Context l v (Eff fs), AbstractValue l v Term a, PrimitiveOperations v (Eff fs), Interpreter l v :<: fs)
+   => Eval (Term a) (Eff fs v)
+   -> Eval (Term a) (Eff fs v)
 ev ev term = case out term of
   Var x -> do
     p <- ask
-    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (l (Value l (Term a) a))))
-  Prim n -> return (I n)
+    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (l v)))
+  Prim n -> prim' @l @v @Term n
   Op1 o a -> do
     va <- ev a
     delta1 o va
@@ -52,7 +52,7 @@ ev ev term = case out term of
   Lam x ty e0 -> lambda @l ev x ty e0
   Rec f _ e -> do
     a <- alloc f
-    v <- local (envInsert f (a :: l (Value l (Term a) a))) (ev e)
+    v <- local (envInsert f (a :: l v)) (ev e)
     assign a v
     return v
   If c t e -> do

@@ -22,7 +22,7 @@ newtype Dead a = Dead { unDead :: Set.Set a }
 revive :: Ord a => a -> Dead a -> Dead a
 revive = (Dead .) . (. unDead) . Set.delete
 
-type DeadCodeResult l a = (Either String (Value l (Term a) a, Dead (Term a)), Store l (Value l (Term a) a))
+type DeadCodeResult l v a = (Either String (v, Dead (Term a)), Store l v)
 
 
 subterms :: (Ord a, Recursive a, Foldable (Base a)) => a -> Set.Set a
@@ -31,8 +31,8 @@ subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.sing
 
 -- Dead code analysis
 
-evalDead :: forall l a. (Address l, Ord a, Context l (Value l (Term a) a) (Eff (DeadCodeInterpreter l (Term a) (Value l (Term a) a))), PrimitiveOperations a (Eff (DeadCodeInterpreter l (Term a) (Value l (Term a) a)))) => Eval (Term a) (DeadCodeResult l a)
-evalDead = run @(DeadCodeInterpreter l (Term a) (Value l (Term a) a)) . runDead @l (ev @l)
+evalDead :: forall l v a. (Address l, Ord a, Context l v (Eff (DeadCodeInterpreter l (Term a) v)), AbstractValue l v Term a, PrimitiveOperations v (Eff (DeadCodeInterpreter l (Term a) v))) => Eval (Term a) (DeadCodeResult l v a)
+evalDead = run @(DeadCodeInterpreter l (Term a) v) . runDead @l (ev @l)
 
 runDead :: forall l t v fs
         .  (DeadCodeInterpreter l t v :<: fs, Ord t, Recursive t, Foldable (Base t))

@@ -1,9 +1,13 @@
-{-# LANGUAGE DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
+{-# LANGUAGE AllowAmbiguousTypes, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeOperators #-}
 module Abstract.Value where
 
 import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax
+import Abstract.Type
+import Control.Monad.Effect
+import Control.Monad.Effect.Reader
+import Control.Monad.Effect.State
 import Control.Monad.Fail
 import Data.Functor.Classes
 import qualified Data.Map as Map
@@ -26,6 +30,22 @@ data Value l t a
   = I a
   | Closure Name t (Environment (l (Value l t a)))
   deriving (Foldable, Functor, Traversable)
+
+
+class AbstractValue l v t where
+  lambda :: (Address l, Context l v (Eff fs), Reader (Environment (l v)) :< fs, State (Store l v) :< fs, MonadFail (Eff fs)) => (t -> Eff fs v) -> Name -> Type -> t -> Eff fs v
+
+instance AbstractValue l (Value l t a) t where
+  lambda _ name _ body = do
+    env <- ask
+    return (Closure name body (env :: Environment (l (Value l t a))))
+
+instance AbstractValue l Type t where
+  lambda ev name inTy body = do
+    a <- alloc name
+    assign a inTy
+    outTy <- local (envInsert name (a :: l Type)) (ev body)
+    return (inTy :-> outTy)
 
 
 instance Address l => Eq2 (Value l) where

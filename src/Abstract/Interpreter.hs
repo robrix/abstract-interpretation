@@ -54,9 +54,7 @@ ev ev term = case out term of
         assign a v1
         local (const (envInsert x a p)) (ev e2)
       _ -> fail "non-closure operator"
-  Lam x _ e0 -> do
-    p <- ask
-    return (Closure x e0 p)
+  Lam x ty e0 -> lambda @l ev x ty e0
   Rec f _ e -> do
     a <- alloc f
     v <- local (envInsert f (a :: l (Value l (Term a) a))) (ev e)

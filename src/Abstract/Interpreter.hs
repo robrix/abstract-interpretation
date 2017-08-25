@@ -34,14 +34,10 @@ ev :: forall l a fs
    => Eval (Term a) (Eff fs (Value l (Term a) a))
    -> Eval (Term a) (Eff fs (Value l (Term a) a))
 ev ev term = case out term of
-  Prim n -> return (I n)
   Var x -> do
     p <- ask
     maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (l (Value l (Term a) a))))
-  If c t e -> do
-    v <- ev c
-    c' <- truthy v
-    ev (if c' then t else e)
+  Prim n -> return (I n)
   Op1 o a -> do
     va <- ev a
     delta1 o va
@@ -49,14 +45,6 @@ ev ev term = case out term of
     va <- ev a
     vb <- ev b
     delta2 o va vb
-  Rec f _ e -> do
-    a <- alloc f
-    v <- local (envInsert f (a :: l (Value l (Term a) a))) (ev e)
-    assign a v
-    return v
-  Lam x _ e0 -> do
-    p <- ask
-    return (Closure x e0 p)
   App e0 e1 -> do
     closure <- ev e0
     case closure of
@@ -66,3 +54,15 @@ ev ev term = case out term of
         assign a v1
         local (const (envInsert x a p)) (ev e2)
       _ -> fail "non-closure operator"
+  Lam x _ e0 -> do
+    p <- ask
+    return (Closure x e0 p)
+  Rec f _ e -> do
+    a <- alloc f
+    v <- local (envInsert f (a :: l (Value l (Term a) a))) (ev e)
+    assign a v
+    return v
+  If c t e -> do
+    v <- ev c
+    c' <- truthy v
+    ev (if c' then t else e)

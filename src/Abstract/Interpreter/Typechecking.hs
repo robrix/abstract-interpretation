@@ -5,7 +5,6 @@ import Abstract.Interpreter
 import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax
-import Abstract.Type
 import Abstract.Value
 import Control.Effect
 import Control.Monad.Effect hiding (run)

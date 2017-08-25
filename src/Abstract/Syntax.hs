@@ -41,8 +41,8 @@ lam s ty f = makeLam s ty (f (var s))
 makeLam :: Name -> Type -> Term a -> Term a
 makeLam name ty body = In (Lam name ty body)
 
-rec :: Name -> Type -> Name -> Type -> (Term a -> Term a -> Term a) -> Term a
-rec f ty1 x ty2 b = makeRec f ty1 (lam x ty2 (b (var "f")))
+rec :: Name -> Type -> (Term a -> Term a) -> Term a
+rec f ty1 b = makeRec f ty1 (b (var f))
 
 makeRec :: Name -> Type -> Term a -> Term a
 makeRec name ty body = In (Rec name ty body)

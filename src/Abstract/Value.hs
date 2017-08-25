@@ -5,6 +5,7 @@ import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Type
+import Control.Monad hiding (fail)
 import Control.Monad.Effect
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
@@ -34,11 +35,18 @@ data Value l t a
 
 class AbstractValue l v t where
   lambda :: (Address l, Context l v (Eff fs), Reader (Environment (l v)) :< fs, State (Store l v) :< fs, MonadFail (Eff fs)) => (t -> Eff fs v) -> Name -> Type -> t -> Eff fs v
+  app :: (Address l, Context l v (Eff fs), Reader (Environment (l v)) :< fs, State (Store l v) :< fs, MonadFail (Eff fs)) => (t -> Eff fs v) -> v -> v -> Eff fs v
 
 instance AbstractValue l (Value l t a) t where
   lambda _ name _ body = do
     env <- ask
     return (Closure name body (env :: Environment (l (Value l t a))))
+
+  app ev (Closure x e2 p) v1 = do
+    a <- alloc x
+    assign a v1
+    local (const (envInsert x a p)) (ev e2)
+  app _ _ _ = fail "non-closure operator"
 
 instance AbstractValue l Type t where
   lambda ev name inTy body = do
@@ -46,6 +54,11 @@ instance AbstractValue l Type t where
     assign a inTy
     outTy <- local (envInsert name (a :: l Type)) (ev body)
     return (inTy :-> outTy)
+
+  app _ (inTy :-> outTy) argTy = do
+    unless (inTy == argTy) (fail ("expected " ++ show inTy ++ " but got " ++ show argTy))
+    return outTy
+  app _ _ _ = fail "non-function operator"
 
 
 instance Address l => Eq2 (Value l) where

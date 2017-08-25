@@ -47,13 +47,8 @@ ev ev term = case out term of
     delta2 o va vb
   App e0 e1 -> do
     closure <- ev e0
-    case closure of
-      Closure x e2 p -> do
-        v1 <- ev e1
-        a <- alloc x
-        assign a v1
-        local (const (envInsert x a p)) (ev e2)
-      _ -> fail "non-closure operator"
+    v1 <- ev e1
+    app @l ev closure v1
   Lam x ty e0 -> lambda @l ev x ty e0
   Rec f _ e -> do
     a <- alloc f

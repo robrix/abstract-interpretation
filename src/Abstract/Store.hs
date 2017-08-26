@@ -56,7 +56,7 @@ modifyStore :: MonadStore l a m => (Store l a -> Store l a) -> m ()
 modifyStore f = getStore >>= putStore . f
 
 
-class (Ord l, Alt (Cell l), Pointed (Cell l), MonadStore l a m, MonadFail m) => MonadAddress l a m where
+class (Ord l, Alt (Cell l), Pointed (Cell l)) => MonadAddress l a m where
   type Cell l :: * -> *
 
   deref :: Address l a -> m a

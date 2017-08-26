@@ -7,9 +7,8 @@ import Abstract.Syntax
 import Abstract.Type
 import Control.Monad hiding (fail)
 import Control.Monad.Effect
-import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Reader
-import Control.Monad.Effect.State
+import Control.Monad.Fail
 import Data.Functor.Classes
 import qualified Data.Map as Map
 import Data.Semigroup
@@ -43,20 +42,20 @@ instance Reader (Environment a) :< fs => MonadEnv a (Eff fs) where
 
 
 class AbstractValue l v t a where
-  lambda :: (AbstractAddress l (Eff fs), Reader (Environment (Address l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> Name -> Type -> t a -> Eff fs v
-  app :: (AbstractAddress l (Eff fs), Reader (Environment (Address l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> v -> v -> Eff fs v
+  lambda :: (AbstractAddress l m, MonadStore l v m, MonadEnv (Address l v) m, MonadFail m) => (t a -> m v) -> Name -> Type -> t a -> m v
+  app :: (AbstractAddress l m, MonadStore l v m, MonadEnv (Address l v) m, MonadFail m) => (t a -> m v) -> v -> v -> m v
 
   prim' :: a -> Eff fs v
 
 instance AbstractValue l (Value l (t a) a) t a where
   lambda _ name _ body = do
-    env <- ask
+    env <- askEnv
     return (Closure name body (env :: Environment (Address l (Value l (t a) a))))
 
   app ev (Closure x e2 p) v1 = do
     a <- alloc x
     assign a v1
-    local (const (envInsert x a p)) (ev e2)
+    localEnv (const (envInsert x a p)) (ev e2)
   app _ _ _ = fail "non-closure operator"
 
   prim' = return . I
@@ -65,7 +64,7 @@ instance AbstractValue l Type t Prim where
   lambda ev name inTy body = do
     a <- alloc name
     assign a inTy
-    outTy <- local (envInsert name (a :: Address l Type)) (ev body)
+    outTy <- localEnv (envInsert name (a :: Address l Type)) (ev body)
     return (inTy :-> outTy)
 
   app _ (inTy :-> outTy) argTy = do
@@ -137,7 +136,7 @@ instance (Pretty l, Pretty t, Pretty a) => Pretty (Value l t a) where
   pretty = liftPretty pretty prettyList
 
 
-instance (Failure :< fs, PrimitiveOperations a fs) => PrimitiveOperations (Value l t a) fs where
+instance (MonadFail (Eff fs), PrimitiveOperations a fs) => PrimitiveOperations (Value l t a) fs where
   delta1 o   (I a) = fmap I (delta1 o a)
   delta1 Not _     = nonBoolean
   delta1 _   _     = nonNumeric

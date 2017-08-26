@@ -9,6 +9,7 @@ import Data.Text.Prettyprint.Doc
 
 data Configuration l t v = Configuration { configurationTerm :: t, configurationEnvironment :: Environment (Address l v), configurationStore :: Store l v }
 
+deriving instance (Eq l, Eq t, Eq v, Eq1 (Cell l)) => Eq (Configuration l t v)
 deriving instance (Ord l, Foldable (Cell l)) => Foldable (Configuration l t)
 deriving instance (Ord l, Functor (Cell l)) => Functor (Configuration l t)
 deriving instance (Ord l, Traversable (Cell l)) => Traversable (Configuration l t)
@@ -19,9 +20,6 @@ instance (Eq l, Eq1 (Cell l)) => Eq2 (Configuration l) where
 
 instance (Eq l, Eq t, Eq1 (Cell l)) => Eq1 (Configuration l t) where
   liftEq = liftEq2 (==)
-
-instance (Eq l, Eq t, Eq v, Eq1 (Cell l)) => Eq (Configuration l t v) where
-  (==) = eq1
 
 instance (Ord l, Ord1 (Cell l)) => Ord2 (Configuration l) where
   liftCompare2 compareT compareV (Configuration t1 e1 s1) (Configuration t2 e2 s2) = compareT t1 t2 <> liftCompare (liftCompare compareV) e1 e2 <> liftCompare compareV s1 s2

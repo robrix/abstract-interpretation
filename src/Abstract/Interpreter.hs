@@ -35,7 +35,7 @@ ev :: forall l v a fs
    -> Eval (Term a) (Eff fs v)
 ev ev term = case out term of
   Var x -> do
-    p <- ask
+    p <- askEnv
     maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (Address l v)))
   Prim n -> prim' @l @v @Term n
   Op1 o a -> do
@@ -52,7 +52,7 @@ ev ev term = case out term of
   Lam x ty e0 -> lambda @l ev x ty e0
   Rec f _ e -> do
     a <- alloc f
-    v <- local (envInsert f (a :: Address l v)) (ev e)
+    v <- localEnv (envInsert f (a :: Address l v)) (ev e)
     assign a v
     return v
   If c t e -> do

@@ -26,9 +26,9 @@ envInsert :: Name -> a -> Environment a -> Environment a
 envInsert name value (Environment m) = Environment (Map.insert name value m)
 
 
-data Value l t a
+data Value l a
   = I a
-  | Closure Name t (Environment (Address l (Value l t a)))
+  | Closure Name (Term a) (Environment (Address l (Value l a)))
   deriving (Foldable, Functor, Traversable)
 
 
@@ -47,10 +47,10 @@ class Monad m => MonadValue l v t a m where
 
   prim' :: a -> m v
 
-instance (MonadAddress l (Value l (t a) a) m, MonadStore l (Value l (t a) a) m, MonadEnv (Address l (Value l (t a) a)) m, MonadFail m) => MonadValue l (Value l (t a) a) t a m where
+instance (MonadAddress l (Value l a) m, MonadStore l (Value l a) m, MonadEnv (Address l (Value l a)) m, MonadFail m) => MonadValue l (Value l a) Term a m where
   lambda _ name _ body = do
     env <- askEnv
-    return (Closure name body (env :: Environment (Address l (Value l (t a) a))))
+    return (Closure name body (env :: Environment (Address l (Value l a))))
 
   app ev (Closure x e2 p) v1 = do
     a <- alloc x
@@ -76,44 +76,44 @@ instance (MonadAddress l Type m, MonadStore l Type m, MonadEnv (Address l Type) 
   prim' (PBool _) = return Bool
 
 
-instance Eq l => Eq2 (Value l) where
-  liftEq2 eqT eqA = go
+instance Eq2 Value where
+  liftEq2 eqL eqA = go
     where go v1 v2 = case (v1, v2) of
             (I a, I b) -> a `eqA` b
-            (Closure s1 t1 e1, Closure s2 t2 e2) -> s1 == s2 && eqT t1 t2 && liftEq (liftEq go) e1 e2
+            (Closure s1 t1 e1, Closure s2 t2 e2) -> s1 == s2 && liftEq eqA t1 t2 && liftEq (liftEq2 eqL go) e1 e2
             _ -> False
 
-instance (Eq l, Eq t) => Eq1 (Value l t) where
+instance Eq l => Eq1 (Value l) where
   liftEq = liftEq2 (==)
 
-instance (Eq l, Eq t, Eq a) => Eq (Value l t a) where
+instance (Eq l, Eq a) => Eq (Value l a) where
   (==) = eq1
 
-instance Ord l => Ord2 (Value l) where
-  liftCompare2 compareT compareA = go
+instance Ord2 Value where
+  liftCompare2 compareL compareA = go
     where go v1 v2 = case (v1, v2) of
             (I a, I b) -> compareA a b
-            (Closure s1 t1 e1, Closure s2 t2 e2) -> compare s1 s2 <> compareT t1 t2 <> liftCompare (liftCompare go) e1 e2
+            (Closure s1 t1 e1, Closure s2 t2 e2) -> compare s1 s2 <> liftCompare compareA t1 t2 <> liftCompare (liftCompare2 compareL go) e1 e2
             (I _, _) -> LT
             _ -> GT
 
-instance (Ord l, Ord t) => Ord1 (Value l t) where
+instance Ord l => Ord1 (Value l) where
   liftCompare = liftCompare2 compare
 
-instance (Ord l, Ord t, Ord a) => Ord (Value l t a) where
+instance (Ord l, Ord a) => Ord (Value l a) where
   compare = compare1
 
 
-instance Show l => Show2 (Value l) where
-  liftShowsPrec2 spT _ spA _ = go
+instance Show2 Value where
+  liftShowsPrec2 spL slL spA slA = go
     where go d v = case v of
             I a -> showsUnaryWith spA "I" d a
-            Closure s t e -> showsConstructor "Closure" d [flip showsPrec s, flip spT t, flip (liftShowsPrec (liftShowsPrec go (showListWith (go 0))) (liftShowList go (showListWith (go 0)))) e]
+            Closure s t e -> showsConstructor "Closure" d [flip showsPrec s, flip (liftShowsPrec spA slA) t, flip (liftShowsPrec (liftShowsPrec2 spL slL go (showListWith (go 0))) (liftShowList2 spL slL go (showListWith (go 0)))) e]
 
-instance (Show l, Show t) => Show1 (Value l t) where
+instance Show l => Show1 (Value l) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
 
-instance (Show l, Show t, Show a) => Show (Value l t a) where
+instance (Show l, Show a) => Show (Value l a) where
   showsPrec = showsPrec1
 
 
@@ -123,20 +123,20 @@ instance Pretty1 Environment where
 instance Pretty a => Pretty (Environment a) where
   pretty = liftPretty pretty prettyList
 
-instance Pretty l => Pretty2 (Value l) where
-  liftPretty2 pT _ pA _ = go
+instance Pretty2 Value where
+  liftPretty2 pL plL pA plA = go
     where go (I a) = pA a
-          go (Closure n t e) = pretty "Closure" <+> pretty n <+> dot <+> pT t <> line
-                                 <> liftPretty (liftPretty go (list . map go)) (list . map (liftPretty go (list . map go))) e
+          go (Closure n t e) = pretty "Closure" <+> pretty n <+> dot <+> liftPretty pA plA t <> line
+                                 <> liftPretty (liftPretty2 pL plL go (list . map go)) (list . map (liftPretty2 pL plL go (list . map go))) e
 
-instance (Pretty l, Pretty t) => Pretty1 (Value l t) where
+instance Pretty l => Pretty1 (Value l) where
   liftPretty = liftPretty2 pretty prettyList
 
-instance (Pretty l, Pretty t, Pretty a) => Pretty (Value l t a) where
+instance (Pretty l, Pretty a) => Pretty (Value l a) where
   pretty = liftPretty pretty prettyList
 
 
-instance (MonadFail m, MonadPrim a m) => MonadPrim (Value l t a) m where
+instance (MonadFail m, MonadPrim a m) => MonadPrim (Value l a) m where
   delta1 o   (I a) = fmap I (delta1 o a)
   delta1 Not _     = nonBoolean
   delta1 _   _     = nonNumeric

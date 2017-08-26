@@ -7,6 +7,7 @@ import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value
+import Control.Applicative
 import Control.Effect
 import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.Failure
@@ -74,44 +75,44 @@ runCache :: forall l t v fs
          -> Eval t (Eff fs v)
 runCache ev = fixCache @l (fix (evCache @l ev))
 
-evCache :: forall l t v fs
-        .  (CachingInterpreter l t v :<: fs, Ord l, Ord t, Ord v, Ord1 (Cell l))
-        => (Eval t (Eff fs v) -> Eval t (Eff fs v))
-        -> Eval t (Eff fs v)
-        -> Eval t (Eff fs v)
+evCache :: forall l t v m
+        .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadEnv (Address l v) m, MonadStore l v m, MonadCacheIn l t v m, MonadCacheOut l t v m, Alternative m)
+        => (Eval t (m v) -> Eval t (m v))
+        -> Eval t (m v)
+        -> Eval t (m v)
 evCache ev0 ev e = do
-  env <- ask
-  store <- get
+  env <- askEnv
+  store <- getStore
   let c = Configuration e (env :: Environment (Address l v)) store :: Configuration l t v
   out <- getCache
   case cacheLookup c out of
     Just pairs -> asum . flip map (toList pairs) $ \ (value, store') -> do
-      put store'
+      putStore store'
       return value
     Nothing -> do
       in' <- askCache
       let pairs = fromMaybe Set.empty (cacheLookup c in')
       putCache (cacheSet c pairs out)
       v <- ev0 ev e
-      store' <- get
+      store' <- getStore
       modifyCache (cacheInsert c (v, store'))
       return v
 
-fixCache :: forall l t fs v
-         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), CachingInterpreter l t v :<: fs)
-         => Eval t (Eff fs v)
-         -> Eval t (Eff fs v)
+fixCache :: forall l t v m
+         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadEnv (Address l v) m, MonadStore l v m, MonadCacheIn l t v m, MonadCacheOut l t v m, Alternative m)
+         => Eval t (m v)
+         -> Eval t (m v)
 fixCache eval e = do
-  env <- ask
-  store <- get
+  env <- askEnv
+  store <- getStore
   let c = Configuration e env store :: Configuration l t v
   pairs <- mlfp mempty (\ dollar -> do
     putCache (mempty :: Cache l t v)
-    put store
+    putStore store
     _ <- localCache (const dollar) (eval e)
     getCache)
   asum . flip map (maybe [] toList (cacheLookup c pairs)) $ \ (value, store') -> do
-    put store'
+    putStore store'
     return value
 
 

@@ -4,6 +4,7 @@ module Abstract.Interpreter.Caching where
 import Abstract.Configuration
 import Abstract.Interpreter
 import Abstract.Primitive
+import Abstract.Set
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value
@@ -19,22 +20,22 @@ import Data.Function (fix)
 import Data.Functor.Classes
 import qualified Data.Map as Map
 import Data.Maybe
+import Data.Pointed
 import Data.Semigroup
-import qualified Data.Set as Set
 import Data.Text.Prettyprint.Doc
 
-newtype Cache l t v = Cache { unCache :: Map.Map (Configuration l t v) (Set.Set (v, Store l v)) }
+newtype Cache l t v = Cache { unCache :: Map.Map (Configuration l t v) (Set (v, Store l v)) }
 
 deriving instance (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Monoid (Cache l t v)
 
-cacheLookup :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> Cache l t v -> Set.Set (v, Store l v)
-cacheLookup key = fromMaybe Set.empty . Map.lookup key . unCache
+cacheLookup :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> Cache l t v -> Set (v, Store l v)
+cacheLookup key = fromMaybe mempty . Map.lookup key . unCache
 
-cacheSet :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> Set.Set (v, Store l v) -> Cache l t v -> Cache l t v
+cacheSet :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> Set (v, Store l v) -> Cache l t v -> Cache l t v
 cacheSet = (((Cache .) . (. unCache)) .) . Map.insert
 
 cacheInsert :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> (v, Store l v) -> Cache l t v -> Cache l t v
-cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
+cacheInsert = (((Cache .) . (. unCache)) .) . (. point) . Map.insertWith (<>)
 
 
 type CachingInterpreter l t v = '[Reader (Environment (Address l v)), Failure, NonDetEff, State (Store l v), Reader (Cache l t v), State (Cache l t v)]
@@ -169,7 +170,7 @@ instance (Pretty l, Pretty1 (Cell l)) => Pretty2 (Cache l) where
   liftPretty2 pT plT pV plV = list . map (liftPretty2 prettyConfiguration prettyListConfiguration prettySet prettyListSet) . Map.toList . unCache
     where prettyConfiguration = liftPretty2 pT plT pV plV
           prettyListConfiguration = list . map (liftPretty2 pT plT pV plV)
-          prettySet = list . map (liftPretty2 pV plV prettyStore prettyListStore) . Set.toList
+          prettySet = list . map (liftPretty2 pV plV prettyStore prettyListStore) . toList
           prettyListSet = list . map prettySet
           prettyStore = liftPretty pV plV
           prettyListStore = list . map (liftPretty pV plV)

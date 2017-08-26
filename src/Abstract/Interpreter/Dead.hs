@@ -21,6 +21,7 @@ newtype Dead a = Dead { unDead :: Set.Set a }
 
 type DeadCodeResult l t v = Final (DeadCodeInterpreter l t v) v
 
+
 class Monad m => MonadDead t m where
   killAll :: Dead t -> m ()
   revive :: Ord t => t -> m ()

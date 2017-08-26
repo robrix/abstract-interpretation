@@ -29,10 +29,10 @@ eval = run @(Interpreter l v) . runEval @l
 runEval :: forall l v a fs . (AbstractAddress l (Eff fs), AbstractValue l v Term a, MonadPrim v (Eff fs), Interpreter l v :<: fs) => Eval (Term a) (Eff fs v)
 runEval = fix (ev @l)
 
-ev :: forall l v a fs
-   .  (AbstractAddress l (Eff fs), AbstractValue l v Term a, MonadPrim v (Eff fs), Interpreter l v :<: fs)
-   => Eval (Term a) (Eff fs v)
-   -> Eval (Term a) (Eff fs v)
+ev :: forall l v a m
+   .  (AbstractAddress l m, AbstractValue l v Term a, MonadPrim v m, MonadEnv (Address l v) m, MonadStore l v m, MonadFail m)
+   => Eval (Term a) (m v)
+   -> Eval (Term a) (m v)
 ev ev term = case out term of
   Var x -> do
     p <- askEnv

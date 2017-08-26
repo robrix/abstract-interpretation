@@ -16,10 +16,11 @@ import qualified Data.Set as Set
 
 type DeadCodeInterpreter l t v = State (Dead t) ': Interpreter l v
 
+type DeadCodeResult l t v = Final (DeadCodeInterpreter l t v) v
+
+
 newtype Dead a = Dead { unDead :: Set.Set a }
   deriving (Eq, Foldable, Monoid, Ord, Show)
-
-type DeadCodeResult l t v = Final (DeadCodeInterpreter l t v) v
 
 
 class Monad m => MonadDead t m where

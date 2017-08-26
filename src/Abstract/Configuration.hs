@@ -11,6 +11,7 @@ data Configuration l t v = Configuration { configurationTerm :: t, configuration
 
 deriving instance (Eq l, Eq t, Eq v, Eq1 (Cell l)) => Eq (Configuration l t v)
 deriving instance (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Ord (Configuration l t v)
+deriving instance (Show l, Show t, Show v, Show1 (Cell l)) => Show (Configuration l t v)
 deriving instance (Ord l, Foldable (Cell l)) => Foldable (Configuration l t)
 deriving instance (Ord l, Functor (Cell l)) => Functor (Configuration l t)
 deriving instance (Ord l, Traversable (Cell l)) => Traversable (Configuration l t)
@@ -34,9 +35,6 @@ instance (Show l, Show1 (Cell l)) => Show2 (Configuration l) where
 
 instance (Show l, Show t, Show1 (Cell l)) => Show1 (Configuration l t) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
-
-instance (Show l, Show t, Show v, Show1 (Cell l)) => Show (Configuration l t v) where
-  showsPrec = showsPrec1
 
 
 instance (Pretty l, Pretty1 (Cell l)) => Pretty2 (Configuration l) where

@@ -123,7 +123,7 @@ instance Pretty l => Pretty (Value l) where
   pretty = liftPretty pretty prettyList
 
 
-instance (MonadFail m, MonadPrim a m) => MonadPrim (Value l) m where
+instance MonadFail m => MonadPrim (Value l) m where
   delta1 o   (I a) = fmap I (delta1 o a)
   delta1 Not _     = nonBoolean
   delta1 _   _     = nonNumeric

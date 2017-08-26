@@ -37,10 +37,10 @@ evalTrace :: forall l v a
           => Eval (Term a) (TraceResult l (Term a) v [])
 evalTrace = run @(TraceInterpreter l (Term a) v) . runTrace @l (ev @l)
 
-runTrace :: forall l t v fs
-         .  (TraceInterpreter l t v :<: fs)
-         => (Eval t (Eff fs v) -> Eval t (Eff fs v))
-         -> Eval t (Eff fs v)
+runTrace :: forall l t v m
+         .  (MonadTrace l t v [] m, MonadEnv (Address l v) m, MonadStore l v m)
+         => (Eval t (m v) -> Eval t (m v))
+         -> Eval t (m v)
 runTrace ev = fix (evTell @l @t @v @[] ev)
 
 evalReach :: forall l v a
@@ -48,10 +48,10 @@ evalReach :: forall l v a
           => Eval (Term a) (TraceResult l (Term a) v Set.Set)
 evalReach = run @(ReachableStateInterpreter l (Term a) v) . runReach @l (ev @l)
 
-runReach :: forall l t v fs
-         .  (ReachableStateInterpreter l t v :<: fs, Ord t, Ord v, Ord l, Ord1 (Cell l))
-         => (Eval t (Eff fs v) -> Eval t (Eff fs v))
-         -> Eval t (Eff fs v)
+runReach :: forall l t v m
+         .  (Ord t, Ord v, Ord l, Ord1 (Cell l), MonadTrace l t v Set.Set m, MonadEnv (Address l v) m, MonadStore l v m)
+         => (Eval t (m v) -> Eval t (m v))
+         -> Eval t (m v)
 runReach ev = fix (evTell @l @t @v @Set.Set ev)
 
 evTell :: forall l t v g m

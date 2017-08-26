@@ -26,7 +26,7 @@ type Eval t m = t -> m
 eval :: forall l v a . (AbstractAddress l (Eff (Interpreter l v)), AbstractValue l v Term a, MonadPrim v (Eff (Interpreter l v))) => Term a -> EvalResult l v
 eval = run @(Interpreter l v) . runEval @l
 
-runEval :: forall l v a fs . (AbstractAddress l (Eff fs), AbstractValue l v Term a, MonadPrim v (Eff fs), Interpreter l v :<: fs) => Eval (Term a) (Eff fs v)
+runEval :: forall l v a m . (AbstractAddress l m, AbstractValue l v Term a, MonadPrim v m, MonadEnv (Address l v) m, MonadStore l v m, MonadFail m) => Eval (Term a) (m v)
 runEval = fix (ev @l)
 
 ev :: forall l v a m

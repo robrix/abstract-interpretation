@@ -33,7 +33,7 @@ instance Writer (g (Configuration l t v)) :< fs => MonadTrace l t v g (Eff fs) w
 -- Tracing and reachable state analyses
 
 evalTrace :: forall l v a
-          .  (AbstractAddress l (Eff (TraceInterpreter l (Term a) v)), AbstractValue l v Term a, MonadPrim v (Eff (TraceInterpreter l (Term a) v)))
+          .  (AbstractAddress l (Eff (TraceInterpreter l (Term a) v)), MonadValue l v Term a (Eff (TraceInterpreter l (Term a) v)), MonadPrim v (Eff (TraceInterpreter l (Term a) v)))
           => Eval (Term a) (TraceResult l (Term a) v [])
 evalTrace = run @(TraceInterpreter l (Term a) v) . runTrace @l (ev @l)
 
@@ -44,7 +44,7 @@ runTrace :: forall l t v m
 runTrace ev = fix (evTell @l @t @v @[] ev)
 
 evalReach :: forall l v a
-          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), AbstractAddress l (Eff (ReachableStateInterpreter l (Term a) v)), AbstractValue l v Term a, MonadPrim v (Eff (ReachableStateInterpreter l (Term a) v)))
+          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), AbstractAddress l (Eff (ReachableStateInterpreter l (Term a) v)), MonadValue l v Term a (Eff (ReachableStateInterpreter l (Term a) v)), MonadPrim v (Eff (ReachableStateInterpreter l (Term a) v)))
           => Eval (Term a) (TraceResult l (Term a) v Set.Set)
 evalReach = run @(ReachableStateInterpreter l (Term a) v) . runReach @l (ev @l)
 

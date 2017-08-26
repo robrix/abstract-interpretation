@@ -41,13 +41,13 @@ instance Reader (Environment a) :< fs => MonadEnv a (Eff fs) where
   localEnv = local
 
 
-class AbstractValue l v t a where
-  lambda :: (AbstractAddress l m, MonadStore l v m, MonadEnv (Address l v) m, MonadFail m) => (t a -> m v) -> Name -> Type -> t a -> m v
-  app :: (AbstractAddress l m, MonadStore l v m, MonadEnv (Address l v) m, MonadFail m) => (t a -> m v) -> v -> v -> m v
+class Monad m => MonadValue l v t a m where
+  lambda :: (t a -> m v) -> Name -> Type -> t a -> m v
+  app :: (t a -> m v) -> v -> v -> m v
 
-  prim' :: Monad m => a -> m v
+  prim' :: a -> m v
 
-instance AbstractValue l (Value l (t a) a) t a where
+instance (AbstractAddress l m, MonadStore l (Value l (t a) a) m, MonadEnv (Address l (Value l (t a) a)) m, MonadFail m) => MonadValue l (Value l (t a) a) t a m where
   lambda _ name _ body = do
     env <- askEnv
     return (Closure name body (env :: Environment (Address l (Value l (t a) a))))
@@ -60,7 +60,7 @@ instance AbstractValue l (Value l (t a) a) t a where
 
   prim' = return . I
 
-instance AbstractValue l Type t Prim where
+instance (AbstractAddress l m, MonadStore l Type m, MonadEnv (Address l Type) m, MonadFail m) => MonadValue l Type t Prim m where
   lambda ev name inTy body = do
     a <- alloc name
     assign a inTy

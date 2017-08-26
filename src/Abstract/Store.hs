@@ -33,17 +33,17 @@ newtype Key l a = Key { unKey :: l }
 storeLookup :: Ord l => Key l a -> Store l a -> Maybe (Cell l a)
 storeLookup = (. unStore) . Map.lookup
 
-storeInsert :: (Ord l, Address l) => Key l a -> a -> Store l a -> Store l a
+storeInsert :: Address l => Key l a -> a -> Store l a -> Store l a
 storeInsert = (((Store .) . (. unStore)) .) . (. point) . Map.insertWith (<!>)
 
 storeSize :: Store l a -> Int
 storeSize = Map.size . unStore
 
-assign :: (State (Store l a) :< fs, Ord l, Address l) => Key l a -> a -> Eff fs ()
+assign :: (State (Store l a) :< fs, Address l) => Key l a -> a -> Eff fs ()
 assign = (modify .) . storeInsert
 
 
-class (Eq1 (Cell l), Ord1 (Cell l), Show1 (Cell l), Traversable (Cell l), Alt (Cell l), Pointed (Cell l)) => Address l where
+class (Ord l, Alt (Cell l), Pointed (Cell l)) => Address l where
   type Cell l :: * -> *
   type Context l (m :: * -> *) :: Constraint
   type instance Context l m = ()

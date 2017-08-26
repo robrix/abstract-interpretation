@@ -13,6 +13,7 @@ import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Control.Monad.Effect.Writer
 import Data.Function (fix)
+import Data.Functor.Classes (Ord1)
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
@@ -38,12 +39,12 @@ runTrace :: forall l t v fs
 runTrace ev = fix (evTell @l @t @v @[] ev)
 
 evalReach :: forall l v a
-          .  (Ord a, Ord v, Ord l, Address l, Context l (Eff (ReachableStateInterpreter l (Term a) v)), AbstractValue l v Term a, PrimitiveOperations v (ReachableStateInterpreter l (Term a) v))
+          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), Address l, Context l (Eff (ReachableStateInterpreter l (Term a) v)), AbstractValue l v Term a, PrimitiveOperations v (ReachableStateInterpreter l (Term a) v))
           => Eval (Term a) (TraceResult l (Term a) v Set.Set)
 evalReach = run @(ReachableStateInterpreter l (Term a) v) . runReach @l (ev @l)
 
 runReach :: forall l t v fs
-         .  (ReachableStateInterpreter l t v :<: fs, Ord t, Ord v, Ord l, Address l)
+         .  (ReachableStateInterpreter l t v :<: fs, Ord t, Ord v, Ord l, Ord1 (Cell l), Address l)
          => (Eval t (Eff fs v) -> Eval t (Eff fs v))
          -> Eval t (Eff fs v)
 runReach ev = fix (evTell @l @t @v @Set.Set ev)

@@ -1,4 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes, DataKinds, DeriveFoldable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes, DataKinds, DeriveFoldable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Interpreter.Dead where
 
 import Abstract.Interpreter
@@ -19,10 +19,15 @@ type DeadCodeInterpreter l t v = State (Dead t) ': Interpreter l v
 newtype Dead a = Dead { unDead :: Set.Set a }
   deriving (Eq, Foldable, Monoid, Ord, Show)
 
-revive :: Ord a => a -> Dead a -> Dead a
-revive = (Dead .) . (. unDead) . Set.delete
-
 type DeadCodeResult l t v = Final (DeadCodeInterpreter l t v) v
+
+class Monad m => MonadDead t m where
+  killAll :: Dead t -> m ()
+  revive :: Ord t => t -> m ()
+
+instance State (Dead t) :< fs => MonadDead t (Eff fs) where
+  killAll = put
+  revive = modify . (Dead .) . (. unDead) . Set.delete
 
 
 subterms :: (Ord a, Recursive a, Foldable (Base a)) => a -> Set.Set a
@@ -32,20 +37,20 @@ subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.sing
 -- Dead code analysis
 
 evalDead :: forall l v a. (AbstractAddress l (Eff (DeadCodeInterpreter l (Term a) v)), Ord a, AbstractValue l v Term a, MonadPrim v (Eff (DeadCodeInterpreter l (Term a) v))) => Eval (Term a) (DeadCodeResult l (Term a) v)
-evalDead = run @(DeadCodeInterpreter l (Term a) v) . runDead @l (ev @l)
+evalDead = run @(DeadCodeInterpreter l (Term a) v) . runDead (ev @l)
 
-runDead :: forall l t v fs
-        .  (DeadCodeInterpreter l t v :<: fs, Ord t, Recursive t, Foldable (Base t))
-        => (Eval t (Eff fs v) -> Eval t (Eff fs v))
-        -> Eval t (Eff fs v)
+runDead :: forall t v m
+        .  (Ord t, Recursive t, Foldable (Base t), MonadDead t m)
+        => (Eval t (m v) -> Eval t (m v))
+        -> Eval t (m v)
 runDead ev e0 = do
-  put (Dead (subterms e0))
-  fix (evDead @l ev) e0
+  killAll (Dead (subterms e0))
+  fix (evDead ev) e0
 
-evDead :: (DeadCodeInterpreter l t v :<: fs, Ord t)
-       => (Eval t (Eff fs v) -> Eval t (Eff fs v))
-       -> Eval t (Eff fs v)
-       -> Eval t (Eff fs v)
+evDead :: (Ord t, MonadDead t m)
+       => (Eval t (m v) -> Eval t (m v))
+       -> Eval t (m v)
+       -> Eval t (m v)
 evDead ev0 ev e = do
-  modify (revive e)
+  revive e
   ev0 ev e

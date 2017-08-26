@@ -30,9 +30,11 @@ library
   build-depends:       base >=4.10 && <4.11
                      , containers
                      , effects
+                     , pointed
                      , prettyprinter
                      , prettyprinter-ansi-terminal
                      , recursion-schemes
+                     , semigroupoids
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall -fno-warn-name-shadowing

@@ -4,6 +4,7 @@ module Abstract.Store
 , Monovariant(..)
 , Address(..)
 , Store(..)
+, assign
 ) where
 
 import Abstract.Syntax
@@ -14,9 +15,11 @@ import Control.Monad.Effect.State
 import Control.Monad.Fail
 import Data.Foldable (asum)
 import Data.Function (on)
+import Data.Functor.Alt
 import Data.Functor.Classes
 import Data.Kind
 import qualified Data.Map as Map
+import Data.Pointed
 import Data.Semigroup
 import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
@@ -29,14 +32,17 @@ newtype Key l a = Key { unKey :: l a }
 storeLookup :: Address l => l a -> Store l a -> Maybe (Cell l a)
 storeLookup = (. unStore) . Map.lookup . Key
 
-storeInsert :: (Semigroup (Cell l a), Address l) => l a -> a -> Store l a -> Store l a
-storeInsert = (((Store .) . (. unStore)) .) . (. pure) . Map.insertWith (<>) . Key
+storeInsert :: Address l => l a -> a -> Store l a -> Store l a
+storeInsert = (((Store .) . (. unStore)) .) . (. point) . Map.insertWith (<!>) . Key
 
 storeSize :: Store l a -> Int
 storeSize = Map.size . unStore
 
+assign :: (State (Store l a) :< fs, Address l) => l a -> a -> Eff fs ()
+assign = (modify .) . storeInsert
 
-class (Traversable l, Eq1 l, Ord1 l, Show1 l, Eq1 (Cell l), Ord1 (Cell l), Show1 (Cell l), Traversable (Cell l), Applicative (Cell l)) => Address l where
+
+class (Traversable l, Eq1 l, Ord1 l, Show1 l, Eq1 (Cell l), Ord1 (Cell l), Show1 (Cell l), Traversable (Cell l), Alt (Cell l), Pointed (Cell l)) => Address l where
   type Cell l :: * -> *
   type Context l a (m :: * -> *) :: Constraint
   type instance Context l a m = ()
@@ -44,8 +50,6 @@ class (Traversable l, Eq1 l, Ord1 l, Show1 l, Eq1 (Cell l), Ord1 (Cell l), Show1
   deref :: (State (Store l a) :< fs, MonadFail (Eff fs), Context l a (Eff fs)) => l a -> Eff fs a
 
   alloc :: (State (Store l a) :< fs, MonadFail (Eff fs), Context l a (Eff fs)) => Name -> Eff fs (l a)
-
-  assign :: (State (Store l a) :< fs, MonadFail (Eff fs), Context l a (Eff fs)) => l a -> a -> Eff fs ()
 
   coerceAddress :: l a -> l b
 
@@ -66,8 +70,6 @@ instance Address Precise where
 
   alloc _ = fmap allocPrecise get
 
-  assign = (modify .) . storeInsert
-
   coerceAddress = Precise . unPrecise
 
 
@@ -81,8 +83,6 @@ instance Address Monovariant where
   deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . storeLookup
 
   alloc = pure . Monovariant
-
-  assign = (modify .) . storeInsert
 
   coerceAddress = Monovariant . unMonovariant
 
@@ -103,9 +103,11 @@ instance Functor I where
 instance Traversable I where
   traverse f = fmap I . f . unI
 
-instance Applicative I where
-  pure = I
-  I f <*> I a = I (f a)
+instance Alt I where
+  a <!> _ = a
+
+instance Pointed I where
+  point = I
 
 instance Eq1 I where
   liftEq eq (I a) (I b) = eq a b

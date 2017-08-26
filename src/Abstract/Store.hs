@@ -79,7 +79,7 @@ instance Address Monovariant where
 
   deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . storeLookup
 
-  alloc = pure . (Key . Monovariant)
+  alloc = pure . Key . Monovariant
 
 
 uninitializedAddress :: MonadFail m => m a

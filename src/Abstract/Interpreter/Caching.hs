@@ -40,6 +40,15 @@ type CachingInterpreter l t v = '[Reader (Environment (Address l v)), Failure, N
 type CachingResult l t v = Final (CachingInterpreter l t v) v
 
 
+class Monad m => MonadCacheIn l t v m where
+  askCache :: m (Cache l t v)
+  localCache :: (Cache l t v -> Cache l t v) -> m a -> m a
+
+instance Reader (Cache l t v) :< fs => MonadCacheIn l t v (Eff fs) where
+  askCache = ask
+  localCache = local
+
+
 class Monad m => MonadCacheOut l t v m where
   getCache :: m (Cache l t v)
   putCache :: Cache l t v -> m ()
@@ -114,13 +123,6 @@ mlfp a f = loop a
             return x
           else
             loop x'
-
-
-askCache :: (Reader (Cache l t v) :< fs) => Eff fs (Cache l t v)
-askCache = ask
-
-localCache :: (Reader (Cache l t v) :< fs) => (Cache l t v -> Cache l t v) -> Eff fs b -> Eff fs b
-localCache = local
 
 
 instance (Eq l, Eq1 (Cell l)) => Eq2 (Cache l) where

@@ -69,10 +69,10 @@ evalCache :: forall l v a
           => Eval (Term a) (CachingResult l (Term a) v)
 evalCache = run @(CachingInterpreter l (Term a) v) . runCache @l (ev @l)
 
-runCache :: forall l t v fs
-         .  (CachingInterpreter l t v :<: fs, Ord l, Ord t, Ord v, Ord1 (Cell l))
-         => (Eval t (Eff fs v) -> Eval t (Eff fs v))
-         -> Eval t (Eff fs v)
+runCache :: forall l t v m
+         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadEnv (Address l v) m, MonadStore l v m, MonadCacheIn l t v m, MonadCacheOut l t v m, Alternative m)
+         => (Eval t (m v) -> Eval t (m v))
+         -> Eval t (m v)
 runCache ev = fixCache @l (fix (evCache @l ev))
 
 evCache :: forall l t v m

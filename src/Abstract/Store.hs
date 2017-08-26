@@ -15,7 +15,6 @@ import Control.Monad.Effect
 import Control.Monad.Effect.State
 import Control.Monad.Fail
 import Data.Foldable (asum)
-import Data.Function (on)
 import Data.Functor.Alt
 import Data.Functor.Classes
 import Data.Kind
@@ -26,6 +25,7 @@ import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 
 newtype Store l a = Store { unStore :: Map.Map (Key l a) (Cell l a) }
+  deriving (Monoid)
 
 newtype Key l a = Key { unKey :: l }
   deriving (Eq, Ord, Show)
@@ -134,11 +134,6 @@ instance Address l => Functor (Store l) where
 
 instance Address l => Traversable (Store l) where
   traverse f = fmap (Store . Map.mapKeys (Key . unKey)) . traverse (traverse f) . unStore
-
-
-instance Address l => Monoid (Store l a) where
-  mempty = Store mempty
-  mappend = (Store .) . (mappend `on` unStore)
 
 
 instance Address l => Eq1 (Store l) where

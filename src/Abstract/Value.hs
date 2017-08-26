@@ -33,13 +33,13 @@ data Value l t a
   deriving (Foldable, Functor, Traversable)
 
 
-class AbstractValue l v t a where
-  lambda :: (Address l, Context l (Eff fs), Reader (Environment (Key l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> Name -> Type -> t a -> Eff fs v
-  app :: (Address l, Context l (Eff fs), Reader (Environment (Key l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> v -> v -> Eff fs v
+class (Address l, Ord l) => AbstractValue l v t a where
+  lambda :: (Context l (Eff fs), Reader (Environment (Key l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> Name -> Type -> t a -> Eff fs v
+  app :: (Context l (Eff fs), Reader (Environment (Key l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> v -> v -> Eff fs v
 
   prim' :: a -> Eff fs v
 
-instance AbstractValue l (Value l (t a) a) t a where
+instance (Address l, Ord l) => AbstractValue l (Value l (t a) a) t a where
   lambda _ name _ body = do
     env <- ask
     return (Closure name body (env :: Environment (Key l (Value l (t a) a))))
@@ -52,7 +52,7 @@ instance AbstractValue l (Value l (t a) a) t a where
 
   prim' = return . I
 
-instance AbstractValue l Type t Prim where
+instance (Address l, Ord l) => AbstractValue l Type t Prim where
   lambda ev name inTy body = do
     a <- alloc name
     assign a inTy
@@ -68,20 +68,20 @@ instance AbstractValue l Type t Prim where
   prim' (PBool _) = return Bool
 
 
-instance Address l => Eq2 (Value l) where
+instance Eq l => Eq2 (Value l) where
   liftEq2 eqT eqA = go
     where go v1 v2 = case (v1, v2) of
             (I a, I b) -> a `eqA` b
             (Closure s1 t1 e1, Closure s2 t2 e2) -> s1 == s2 && eqT t1 t2 && liftEq (liftEq go) e1 e2
             _ -> False
 
-instance (Address l, Eq t) => Eq1 (Value l t) where
+instance (Eq l, Eq t) => Eq1 (Value l t) where
   liftEq = liftEq2 (==)
 
-instance (Eq a, Eq t, Address l) => Eq (Value l t a) where
+instance (Eq l, Eq t, Eq a) => Eq (Value l t a) where
   (==) = eq1
 
-instance Address l => Ord2 (Value l) where
+instance Ord l => Ord2 (Value l) where
   liftCompare2 compareT compareA = go
     where go v1 v2 = case (v1, v2) of
             (I a, I b) -> compareA a b
@@ -89,23 +89,23 @@ instance Address l => Ord2 (Value l) where
             (I _, _) -> LT
             _ -> GT
 
-instance (Address l, Ord t) => Ord1 (Value l t) where
+instance (Ord l, Ord t) => Ord1 (Value l t) where
   liftCompare = liftCompare2 compare
 
-instance (Ord a, Ord t, Address l) => Ord (Value l t a) where
+instance (Ord l, Ord t, Ord a) => Ord (Value l t a) where
   compare = compare1
 
 
-instance Address l => Show2 (Value l) where
+instance Show l => Show2 (Value l) where
   liftShowsPrec2 spT _ spA _ = go
     where go d v = case v of
             I a -> showsUnaryWith spA "I" d a
             Closure s t e -> showsConstructor "Closure" d [flip showsPrec s, flip spT t, flip (liftShowsPrec (liftShowsPrec go (showListWith (go 0))) (liftShowList go (showListWith (go 0)))) e]
 
-instance (Address l, Show t) => Show1 (Value l t) where
+instance (Show l, Show t) => Show1 (Value l t) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
 
-instance (Show a, Show t, Address l) => Show (Value l t a) where
+instance (Show l, Show t, Show a) => Show (Value l t a) where
   showsPrec = showsPrec1
 
 

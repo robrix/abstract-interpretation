@@ -16,7 +16,7 @@ type TypecheckingInterpreter l = NonDetEff ': Interpreter l Type
 type TypecheckingResult l = Final (TypecheckingInterpreter l) Type
 
 evalCheck :: forall l
-          .  (Address l, Context l (Eff (TypecheckingInterpreter l)))
+          .  (Ord l, Address l, Context l (Eff (TypecheckingInterpreter l)))
           => Eval (Term Prim) (TypecheckingResult l)
 evalCheck = run @(TypecheckingInterpreter l) . runCheck @l (ev @l)
 

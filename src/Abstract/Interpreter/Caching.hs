@@ -1,4 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes, DataKinds, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes, DataKinds, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, StandaloneDeriving, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Interpreter.Caching where
 
 import Abstract.Configuration
@@ -22,15 +22,16 @@ import qualified Data.Set as Set
 import Data.Text.Prettyprint.Doc
 
 newtype Cache l t v = Cache { unCache :: Map.Map (Configuration l t v) (Set.Set (v, Store l v)) }
-  deriving (Monoid)
 
-cacheLookup :: (Ord t, Ord v, Address l) => Configuration l t v -> Cache l t v -> Maybe (Set.Set (v, Store l v))
+deriving instance (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Monoid (Cache l t v)
+
+cacheLookup :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> Cache l t v -> Maybe (Set.Set (v, Store l v))
 cacheLookup = (. unCache) . Map.lookup
 
-cacheSet :: (Ord t, Ord v, Address l) => Configuration l t v -> Set.Set (v, Store l v) -> Cache l t v -> Cache l t v
+cacheSet :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> Set.Set (v, Store l v) -> Cache l t v -> Cache l t v
 cacheSet = (((Cache .) . (. unCache)) .) . Map.insert
 
-cacheInsert :: (Ord t, Ord v, Address l) => Configuration l t v -> (v, Store l v) -> Cache l t v -> Cache l t v
+cacheInsert :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> (v, Store l v) -> Cache l t v -> Cache l t v
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 
@@ -42,18 +43,18 @@ type CachingResult l t v = Final (CachingInterpreter l t v) v
 -- Coinductively-cached evaluation
 
 evalCache :: forall l v a
-          .  (Ord a, Ord v, Address l, Context l (Eff (CachingInterpreter l (Term a) v)), AbstractValue l v Term a, PrimitiveOperations v (CachingInterpreter l (Term a) v))
+          .  (Ord a, Ord v, Ord l, Address l, Context l (Eff (CachingInterpreter l (Term a) v)), AbstractValue l v Term a, PrimitiveOperations v (CachingInterpreter l (Term a) v))
           => Eval (Term a) (CachingResult l (Term a) v)
 evalCache = run @(CachingInterpreter l (Term a) v) . runCache @l (ev @l)
 
 runCache :: forall l t v fs
-         .  (CachingInterpreter l t v :<: fs, Ord t, Ord v, Address l, Context l (Eff fs))
+         .  (CachingInterpreter l t v :<: fs, Ord l, Ord t, Ord v, Address l, Context l (Eff fs))
          => (Eval t (Eff fs v) -> Eval t (Eff fs v))
          -> Eval t (Eff fs v)
 runCache ev = fixCache @l (fix (evCache @l ev))
 
 evCache :: forall l t v fs
-        .  (CachingInterpreter l t v :<: fs, Ord t, Ord v, Address l, Context l (Eff fs))
+        .  (CachingInterpreter l t v :<: fs, Ord l, Ord t, Ord v, Address l, Context l (Eff fs))
         => (Eval t (Eff fs v) -> Eval t (Eff fs v))
         -> Eval t (Eff fs v)
         -> Eval t (Eff fs v)
@@ -76,7 +77,7 @@ evCache ev0 ev e = do
       return v
 
 fixCache :: forall l t fs v
-         .  (Ord t, Ord v, Address l, Context l (Eff fs), CachingInterpreter l t v :<: fs)
+         .  (Ord l, Ord t, Ord v, Address l, Context l (Eff fs), CachingInterpreter l t v :<: fs)
          => Eval t (Eff fs v)
          -> Eval t (Eff fs v)
 fixCache eval e = do
@@ -120,17 +121,17 @@ modifyCache :: (State (Cache l t v) :< fs) => (Cache l t v -> Cache l t v) -> Ef
 modifyCache f = fmap f getCache >>= putCache
 
 
-instance Address l => Eq2 (Cache l) where
+instance (Eq l, Eq1 (Cell l)) => Eq2 (Cache l) where
   liftEq2 eqT eqV (Cache a) (Cache b) = liftEq2 (liftEq2 eqT eqV) (liftEq (liftEq2 eqV (liftEq eqV))) a b
 
-instance (Eq t, Address l) => Eq1 (Cache l t) where
+instance (Eq l, Eq t, Eq1 (Cell l)) => Eq1 (Cache l t) where
   liftEq = liftEq2 (==)
 
-instance (Eq v, Eq t, Address l) => Eq (Cache l t v) where
+instance (Eq l, Eq t, Eq v, Eq1 (Cell l)) => Eq (Cache l t v) where
   (==) = eq1
 
 
-instance Address l => Show2 (Cache l) where
+instance (Show l, Show1 (Cell l)) => Show2 (Cache l) where
   liftShowsPrec2 spT slT spV slV d = showsUnaryWith (liftShowsPrec2 spKey slKey (liftShowsPrec spPair slPair) (liftShowList spPair slPair)) "Cache" d . unCache
     where spKey = liftShowsPrec2 spT slT spV slV
           slKey = liftShowList2 spT slT spV slV
@@ -139,14 +140,14 @@ instance Address l => Show2 (Cache l) where
           spStore = liftShowsPrec spV slV
           slStore = liftShowList  spV slV
 
-instance (Show t, Address l) => Show1 (Cache l t) where
+instance (Show l, Show t, Show1 (Cell l)) => Show1 (Cache l t) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
 
-instance (Show a, Show t, Address l) => Show (Cache l t a) where
+instance (Show l, Show t, Show v, Show1 (Cell l)) => Show (Cache l t v) where
   showsPrec = showsPrec1
 
 
-instance (Address l, Pretty l, Pretty1 (Cell l)) => Pretty2 (Cache l) where
+instance (Pretty l, Pretty1 (Cell l)) => Pretty2 (Cache l) where
   liftPretty2 pT plT pV plV = list . map (liftPretty2 prettyConfiguration prettyListConfiguration prettySet prettyListSet) . Map.toList . unCache
     where prettyConfiguration = liftPretty2 pT plT pV plV
           prettyListConfiguration = list . map (liftPretty2 pT plT pV plV)
@@ -155,8 +156,8 @@ instance (Address l, Pretty l, Pretty1 (Cell l)) => Pretty2 (Cache l) where
           prettyStore = liftPretty pV plV
           prettyListStore = list . map (liftPretty pV plV)
 
-instance (Address l, Pretty l, Pretty1 (Cell l), Pretty t) => Pretty1 (Cache l t) where
+instance (Pretty l, Pretty t, Pretty1 (Cell l)) => Pretty1 (Cache l t) where
   liftPretty = liftPretty2 pretty prettyList
 
-instance (Address l, Pretty l, Pretty1 (Cell l), Pretty t, Pretty v) => Pretty (Cache l t v) where
+instance (Pretty l, Pretty t, Pretty v, Pretty1 (Cell l)) => Pretty (Cache l t v) where
   pretty = liftPretty pretty prettyList

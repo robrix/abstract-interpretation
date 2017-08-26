@@ -30,20 +30,20 @@ newtype Store l a = Store { unStore :: Map.Map (Key l a) (Cell l a) }
 newtype Key l a = Key { unKey :: l }
   deriving (Eq, Ord, Show)
 
-storeLookup :: Address l => Key l a -> Store l a -> Maybe (Cell l a)
+storeLookup :: Ord l => Key l a -> Store l a -> Maybe (Cell l a)
 storeLookup = (. unStore) . Map.lookup
 
-storeInsert :: Address l => Key l a -> a -> Store l a -> Store l a
+storeInsert :: (Ord l, Address l) => Key l a -> a -> Store l a -> Store l a
 storeInsert = (((Store .) . (. unStore)) .) . (. point) . Map.insertWith (<!>)
 
 storeSize :: Store l a -> Int
 storeSize = Map.size . unStore
 
-assign :: (State (Store l a) :< fs, Address l) => Key l a -> a -> Eff fs ()
+assign :: (State (Store l a) :< fs, Ord l, Address l) => Key l a -> a -> Eff fs ()
 assign = (modify .) . storeInsert
 
 
-class (Eq l, Ord l, Show l, Eq1 (Cell l), Ord1 (Cell l), Show1 (Cell l), Traversable (Cell l), Alt (Cell l), Pointed (Cell l)) => Address l where
+class (Eq1 (Cell l), Ord1 (Cell l), Show1 (Cell l), Traversable (Cell l), Alt (Cell l), Pointed (Cell l)) => Address l where
   type Cell l :: * -> *
   type Context l (m :: * -> *) :: Constraint
   type instance Context l m = ()
@@ -126,41 +126,41 @@ instance Address l => Traversable (Key l) where
   traverse _ = fmap Key . pure . unKey
 
 
-instance Address l => Foldable (Store l) where
+instance Foldable (Cell l) => Foldable (Store l) where
   foldMap = (. unStore) . foldMap . foldMap
 
-instance Address l => Functor (Store l) where
+instance (Ord l, Functor (Cell l)) => Functor (Store l) where
   fmap f = Store . Map.mapKeys (Key . unKey) . fmap (fmap f) . unStore
 
-instance Address l => Traversable (Store l) where
+instance (Ord l, Traversable (Cell l)) => Traversable (Store l) where
   traverse f = fmap (Store . Map.mapKeys (Key . unKey)) . traverse (traverse f) . unStore
 
 
-instance Address l => Eq1 (Store l) where
+instance (Eq l, Eq1 (Cell l)) => Eq1 (Store l) where
   liftEq eq (Store m1) (Store m2) = liftEq2 (liftEq eq) (liftEq eq) m1 m2
 
-instance (Eq a, Address l) => Eq (Store l a) where
+instance (Eq a, Eq l, Eq1 (Cell l)) => Eq (Store l a) where
   (==) = eq1
 
-instance Address l => Eq1 (Key l) where
+instance Eq l => Eq1 (Key l) where
   liftEq _ (Key a) (Key b) = a == b
 
-instance Address l => Ord1 (Store l) where
+instance (Ord l, Ord1 (Cell l)) => Ord1 (Store l) where
   liftCompare compareA (Store m1) (Store m2) = liftCompare2 (liftCompare compareA) (liftCompare compareA) m1 m2
 
-instance (Ord a, Address l) => Ord (Store l a) where
+instance (Ord a, Ord l, Ord1 (Cell l)) => Ord (Store l a) where
   compare = compare1
 
-instance Address l => Ord1 (Key l) where
+instance Ord l => Ord1 (Key l) where
   liftCompare _ (Key a) (Key b) = compare a b
 
-instance Address l => Show1 (Store l) where
+instance (Show l, Show1 (Cell l)) => Show1 (Store l) where
   liftShowsPrec sp sl d (Store m) = showsUnaryWith (liftShowsPrec (liftShowsPrec sp sl) (liftShowList sp sl)) "Store" d m
 
-instance (Show a, Address l) => Show (Store l a) where
+instance (Show a, Show l, Show1 (Cell l)) => Show (Store l a) where
   showsPrec = showsPrec1
 
-instance Address l => Show1 (Key l) where
+instance Show l => Show1 (Key l) where
   liftShowsPrec _ _ d = showsUnaryWith showsPrec "Key" d . unKey
 
 instance Pretty Precise where

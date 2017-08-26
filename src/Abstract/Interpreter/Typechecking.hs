@@ -18,13 +18,13 @@ type TypecheckingResult l = Final (TypecheckingInterpreter l) Type
 evalCheck :: forall l
           .  (Ord l, AbstractAddress l (Eff (TypecheckingInterpreter l)))
           => Eval (Term Prim) (TypecheckingResult l)
-evalCheck = run @(TypecheckingInterpreter l) . runCheck @l (ev @l)
+evalCheck = run @(TypecheckingInterpreter l) . runCheck (ev @l)
 
-runCheck :: forall l t fs. TypecheckingInterpreter l :<: fs => (Eval t (Eff fs Type) -> Eval t (Eff fs Type)) -> Eval t (Eff fs Type)
-runCheck ev e0 = fix (evCheck @l ev) e0
+runCheck :: (Eval t (m Type) -> Eval t (m Type))
+         -> Eval t (m Type)
+runCheck ev e0 = fix (evCheck ev) e0
 
-evCheck :: TypecheckingInterpreter l :<: fs
-        => (Eval t (Eff fs Type) -> Eval t (Eff fs Type))
-        -> Eval t (Eff fs Type)
-        -> Eval t (Eff fs Type)
+evCheck :: (Eval t (m Type) -> Eval t (m Type))
+        -> Eval t (m Type)
+        -> Eval t (m Type)
 evCheck ev0 ev e = ev0 ev e

@@ -78,7 +78,7 @@ allocPrecise = Address . Precise . storeSize
 newtype I a = I { unI :: a }
   deriving (Eq, Ord, Show)
 
-instance (MonadStore Precise a m, MonadFail m) => MonadAddress Precise a m where
+instance MonadStore Precise a m => MonadAddress Precise a m where
   type Cell Precise = I
 
   readCell = pure . unI
@@ -89,7 +89,7 @@ instance (MonadStore Precise a m, MonadFail m) => MonadAddress Precise a m where
 newtype Monovariant = Monovariant { unMonovariant :: Name }
   deriving (Eq, Ord, Show)
 
-instance (MonadStore Monovariant a m, MonadFail m, Alternative m) => MonadAddress Monovariant a m where
+instance (MonadStore Monovariant a m, Alternative m) => MonadAddress Monovariant a m where
   type Cell Monovariant = []
 
   readCell = asum . fmap pure

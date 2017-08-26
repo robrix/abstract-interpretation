@@ -152,8 +152,11 @@ instance (Eq l, Eq1 (Cell l)) => Eq1 (Store l) where
 instance (Eq a, Eq l, Eq1 (Cell l)) => Eq (Store l a) where
   (==) = eq1
 
+instance Eq2 Address where
+  liftEq2 eqL _ (Address a) (Address b) = eqL a b
+
 instance Eq l => Eq1 (Address l) where
-  liftEq _ (Address a) (Address b) = a == b
+  liftEq = liftEq2 (==)
 
 instance (Ord l, Ord1 (Cell l)) => Ord1 (Store l) where
   liftCompare compareA (Store m1) (Store m2) = liftCompare2 (liftCompare compareA) (liftCompare compareA) m1 m2
@@ -161,8 +164,11 @@ instance (Ord l, Ord1 (Cell l)) => Ord1 (Store l) where
 instance (Ord a, Ord l, Ord1 (Cell l)) => Ord (Store l a) where
   compare = compare1
 
+instance Ord2 Address where
+  liftCompare2 compareL _ (Address a) (Address b) = compareL a b
+
 instance Ord l => Ord1 (Address l) where
-  liftCompare _ (Address a) (Address b) = compare a b
+  liftCompare = liftCompare2 compare
 
 instance (Show l, Show1 (Cell l)) => Show1 (Store l) where
   liftShowsPrec sp sl d (Store m) = showsUnaryWith (liftShowsPrec (liftShowsPrec sp sl) (liftShowList sp sl)) "Store" d m
@@ -170,8 +176,11 @@ instance (Show l, Show1 (Cell l)) => Show1 (Store l) where
 instance (Show a, Show l, Show1 (Cell l)) => Show (Store l a) where
   showsPrec = showsPrec1
 
+instance Show2 Address where
+  liftShowsPrec2 spL _ _ _ d = showsUnaryWith spL "Address" d . unAddress
+
 instance Show l => Show1 (Address l) where
-  liftShowsPrec _ _ d = showsUnaryWith showsPrec "Address" d . unAddress
+  liftShowsPrec = liftShowsPrec2 showsPrec showList
 
 instance Pretty Precise where
   pretty (Precise n) = pretty "Precise" <+> pretty n

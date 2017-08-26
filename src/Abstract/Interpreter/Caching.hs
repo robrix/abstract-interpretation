@@ -26,8 +26,8 @@ newtype Cache l t v = Cache { unCache :: Map.Map (Configuration l t v) (Set.Set 
 
 deriving instance (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Monoid (Cache l t v)
 
-cacheLookup :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> Cache l t v -> Maybe (Set.Set (v, Store l v))
-cacheLookup = (. unCache) . Map.lookup
+cacheLookup :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> Cache l t v -> Set.Set (v, Store l v)
+cacheLookup key = fromMaybe Set.empty . Map.lookup key . unCache
 
 cacheSet :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> Set.Set (v, Store l v) -> Cache l t v -> Cache l t v
 cacheSet = (((Cache .) . (. unCache)) .) . Map.insert
@@ -87,13 +87,13 @@ evCache ev0 ev e = do
   store <- getStore
   let c = Configuration e (env :: Environment (Address l v)) store :: Configuration l t v
   out <- getCache
-  case cacheLookup c out of
-    Just pairs -> asum . flip map (toList pairs) $ \ (value, store') -> do
+  case toList (cacheLookup c out) of
+    pairs@(_:_) -> asum . flip map (toList pairs) $ \ (value, store') -> do
       putStore store'
       return value
-    Nothing -> do
+    [] -> do
       in' <- askCache
-      let pairs = fromMaybe Set.empty (cacheLookup c in')
+      let pairs = cacheLookup c in'
       putCache (cacheSet c pairs out)
       v <- ev0 ev e
       store' <- getStore
@@ -113,7 +113,7 @@ fixCache eval e = do
     putStore store
     _ <- localCache (const dollar) (eval e)
     getCache)
-  asum . flip map (maybe [] toList (cacheLookup c pairs)) $ \ (value, store') -> do
+  asum . flip map (toList (cacheLookup c pairs)) $ \ (value, store') -> do
     putStore store'
     return value
 

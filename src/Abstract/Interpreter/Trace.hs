@@ -28,7 +28,7 @@ type TraceResult l t v f = Final (TracingInterpreter l t v f) v
 -- Tracing and reachable state analyses
 
 evalTrace :: forall l v a
-          .  (AbstractAddress l (Eff (TraceInterpreter l (Term a) v)), AbstractValue l v Term a, PrimitiveOperations v (TraceInterpreter l (Term a) v))
+          .  (AbstractAddress l (Eff (TraceInterpreter l (Term a) v)), AbstractValue l v Term a, MonadPrim v (Eff (TraceInterpreter l (Term a) v)))
           => Eval (Term a) (TraceResult l (Term a) v [])
 evalTrace = run @(TraceInterpreter l (Term a) v) . runTrace @l (ev @l)
 
@@ -39,7 +39,7 @@ runTrace :: forall l t v fs
 runTrace ev = fix (evTell @l @t @v @[] ev)
 
 evalReach :: forall l v a
-          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), AbstractAddress l (Eff (ReachableStateInterpreter l (Term a) v)), AbstractValue l v Term a, PrimitiveOperations v (ReachableStateInterpreter l (Term a) v))
+          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), AbstractAddress l (Eff (ReachableStateInterpreter l (Term a) v)), AbstractValue l v Term a, MonadPrim v (Eff (ReachableStateInterpreter l (Term a) v)))
           => Eval (Term a) (TraceResult l (Term a) v Set.Set)
 evalReach = run @(ReachableStateInterpreter l (Term a) v) . runReach @l (ev @l)
 

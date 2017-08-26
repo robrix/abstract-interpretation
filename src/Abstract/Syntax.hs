@@ -238,7 +238,7 @@ instance Pretty2 Syntax where
 instance Pretty a => Pretty1 (Syntax a) where
   liftPretty = liftPretty2 pretty prettyList
 
-instance (Primitive a, PrimitiveOperations a m) => PrimitiveOperations (Term a) m where
+instance (Primitive a, MonadPrim a m) => MonadPrim (Term a) m where
   delta1 op = pure . unary op
   delta2 op = (pure .) . binary op
 

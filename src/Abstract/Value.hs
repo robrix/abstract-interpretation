@@ -136,7 +136,7 @@ instance (Pretty l, Pretty t, Pretty a) => Pretty (Value l t a) where
   pretty = liftPretty pretty prettyList
 
 
-instance (MonadFail (Eff fs), PrimitiveOperations a fs) => PrimitiveOperations (Value l t a) fs where
+instance (MonadFail m, MonadPrim a m) => MonadPrim (Value l t a) m where
   delta1 o   (I a) = fmap I (delta1 o a)
   delta1 Not _     = nonBoolean
   delta1 _   _     = nonNumeric

@@ -17,11 +17,12 @@ import Control.Monad ((<=<))
 import Control.Monad.Effect
 import Control.Monad.Effect.State
 import Control.Monad.Fail
-import Data.Foldable (asum)
+import Data.Foldable (asum, toList)
 import Data.Functor.Classes
 import qualified Data.Map as Map
 import Data.Pointed
 import Data.Semigroup
+import qualified Data.Set as Set
 import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 
@@ -89,9 +90,9 @@ newtype Monovariant = Monovariant { unMonovariant :: Name }
   deriving (Eq, Ord, Show)
 
 instance (Alternative m, Monad m) => MonadAddress Monovariant m where
-  type Cell Monovariant = []
+  type Cell Monovariant = Set.Set
 
-  readCell = asum . fmap pure
+  readCell = asum . map pure . toList
 
   alloc = pure . Address . Monovariant
 

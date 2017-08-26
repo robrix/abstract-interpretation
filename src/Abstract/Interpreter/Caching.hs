@@ -35,7 +35,7 @@ cacheInsert :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> (v
 cacheInsert = (((Cache .) . (. unCache)) .) . (. Set.singleton) . Map.insertWith (<>)
 
 
-type CachingInterpreter l t v = '[Reader (Environment (Key l v)), Failure, NonDetEff, State (Store l v), Reader (Cache l t v), State (Cache l t v)]
+type CachingInterpreter l t v = '[Reader (Environment (Address l v)), Failure, NonDetEff, State (Store l v), Reader (Cache l t v), State (Cache l t v)]
 
 type CachingResult l t v = Final (CachingInterpreter l t v) v
 
@@ -61,7 +61,7 @@ evCache :: forall l t v fs
 evCache ev0 ev e = do
   env <- ask
   store <- get
-  let c = Configuration e (env :: Environment (Key l v)) store :: Configuration l t v
+  let c = Configuration e (env :: Environment (Address l v)) store :: Configuration l t v
   out <- getCache
   case cacheLookup c out of
     Just pairs -> asum . flip map (toList pairs) $ \ (value, store') -> do

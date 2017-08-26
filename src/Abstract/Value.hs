@@ -29,20 +29,20 @@ envInsert name value (Environment m) = Environment (Map.insert name value m)
 
 data Value l t a
   = I a
-  | Closure Name t (Environment (Key l (Value l t a)))
+  | Closure Name t (Environment (Address l (Value l t a)))
   deriving (Foldable, Functor, Traversable)
 
 
 class AbstractValue l v t a where
-  lambda :: (AbstractAddress l fs, Reader (Environment (Key l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> Name -> Type -> t a -> Eff fs v
-  app :: (AbstractAddress l fs, Reader (Environment (Key l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> v -> v -> Eff fs v
+  lambda :: (AbstractAddress l fs, Reader (Environment (Address l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> Name -> Type -> t a -> Eff fs v
+  app :: (AbstractAddress l fs, Reader (Environment (Address l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> v -> v -> Eff fs v
 
   prim' :: a -> Eff fs v
 
 instance AbstractValue l (Value l (t a) a) t a where
   lambda _ name _ body = do
     env <- ask
-    return (Closure name body (env :: Environment (Key l (Value l (t a) a))))
+    return (Closure name body (env :: Environment (Address l (Value l (t a) a))))
 
   app ev (Closure x e2 p) v1 = do
     a <- alloc x
@@ -56,7 +56,7 @@ instance AbstractValue l Type t Prim where
   lambda ev name inTy body = do
     a <- alloc name
     assign a inTy
-    outTy <- local (envInsert name (a :: Key l Type)) (ev body)
+    outTy <- local (envInsert name (a :: Address l Type)) (ev body)
     return (inTy :-> outTy)
 
   app _ (inTy :-> outTy) argTy = do

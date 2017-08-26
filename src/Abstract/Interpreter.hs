@@ -14,7 +14,7 @@ import Data.Function (fix)
 import Prelude hiding (fail)
 
 
-type Interpreter l v = '[Failure, State (Store l v), Reader (Environment (Key l v))]
+type Interpreter l v = '[Failure, State (Store l v), Reader (Environment (Address l v))]
 
 type EvalResult l v = Final (Interpreter l v) v
 
@@ -36,7 +36,7 @@ ev :: forall l v a fs
 ev ev term = case out term of
   Var x -> do
     p <- ask
-    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (Key l v)))
+    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (Address l v)))
   Prim n -> prim' @l @v @Term n
   Op1 o a -> do
     va <- ev a
@@ -52,7 +52,7 @@ ev ev term = case out term of
   Lam x ty e0 -> lambda @l ev x ty e0
   Rec f _ e -> do
     a <- alloc f
-    v <- local (envInsert f (a :: Key l v)) (ev e)
+    v <- local (envInsert f (a :: Address l v)) (ev e)
     assign a v
     return v
   If c t e -> do

@@ -7,7 +7,7 @@ import Abstract.Value
 import Data.Functor.Classes
 import Data.Text.Prettyprint.Doc
 
-data Configuration l t v = Configuration { configurationTerm :: t, configurationEnvironment :: Environment (Key l v), configurationStore :: Store l v }
+data Configuration l t v = Configuration { configurationTerm :: t, configurationEnvironment :: Environment (Address l v), configurationStore :: Store l v }
   -- deriving (Foldable, Functor, Traversable)
 
 deriving instance (Ord l, Functor (Cell l)) => Functor (Configuration l t)

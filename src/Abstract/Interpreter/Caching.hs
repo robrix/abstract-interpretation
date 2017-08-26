@@ -40,6 +40,18 @@ type CachingInterpreter l t v = '[Reader (Environment (Address l v)), Failure, N
 type CachingResult l t v = Final (CachingInterpreter l t v) v
 
 
+class Monad m => MonadCacheOut l t v m where
+  getCache :: m (Cache l t v)
+  putCache :: Cache l t v -> m ()
+
+instance State (Cache l t v) :< fs => MonadCacheOut l t v (Eff fs) where
+  getCache = get
+  putCache = put
+
+modifyCache :: MonadCacheOut l t v m => (Cache l t v -> Cache l t v) -> m ()
+modifyCache f = fmap f getCache >>= putCache
+
+
 -- Coinductively-cached evaluation
 
 evalCache :: forall l v a
@@ -109,16 +121,6 @@ askCache = ask
 
 localCache :: (Reader (Cache l t v) :< fs) => (Cache l t v -> Cache l t v) -> Eff fs b -> Eff fs b
 localCache = local
-
-
-getCache :: (State (Cache l t v) :< fs) => Eff fs (Cache l t v)
-getCache = get
-
-putCache :: (State (Cache l t v) :< fs) => Cache l t v -> Eff fs ()
-putCache = put
-
-modifyCache :: (State (Cache l t v) :< fs) => (Cache l t v -> Cache l t v) -> Eff fs ()
-modifyCache f = fmap f getCache >>= putCache
 
 
 instance (Eq l, Eq1 (Cell l)) => Eq2 (Cache l) where

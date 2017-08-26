@@ -24,6 +24,7 @@ instance RunEffect f a => RunEffects '[f] a where
   type Final '[f] a = Result f a
   runEffects = runEffect
 
+
 class RunEffect f a where
   type Result f a
   type instance Result f a = a

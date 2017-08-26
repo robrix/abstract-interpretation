@@ -5,6 +5,7 @@ module Abstract.Store
 , MonadAddress(alloc, Cell)
 , Store(..)
 , Address(..)
+, Set(..)
 , deref
 , assign
 , MonadStore(..)
@@ -31,6 +32,9 @@ newtype Store l a = Store { unStore :: Map.Map (Address l a) (Cell l a) }
 
 newtype Address l a = Address { unAddress :: l }
   deriving (Eq, Ord, Show)
+
+newtype Set a = Set { unSet :: Set.Set a }
+  deriving (Eq, Eq1, Foldable, Monoid, Ord, Ord1, Pointed, Semigroup, Show, Show1)
 
 storeLookup :: Ord l => Address l a -> Store l a -> Maybe (Cell l a)
 storeLookup = (. unStore) . Map.lookup
@@ -90,7 +94,7 @@ newtype Monovariant = Monovariant { unMonovariant :: Name }
   deriving (Eq, Ord, Show)
 
 instance (Alternative m, Monad m) => MonadAddress Monovariant m where
-  type Cell Monovariant = Set.Set
+  type Cell Monovariant = Set
 
   readCell = asum . map pure . toList
 
@@ -204,3 +208,9 @@ instance Pretty l => Pretty1 (Address l) where
 
 instance Pretty l => Pretty (Address l a) where
   pretty = liftPretty (const emptyDoc) (const emptyDoc)
+
+instance Pretty1 Set where
+  liftPretty _ pl = pl . toList
+
+instance Pretty a => Pretty (Set a) where
+  pretty = liftPretty pretty prettyList

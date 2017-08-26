@@ -1,10 +1,11 @@
-{-# LANGUAGE DataKinds, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeFamilies, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes, DataKinds, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Store
 ( Precise(..)
 , Monovariant(..)
-, MonadAddress(..)
+, MonadAddress(alloc, Cell)
 , Store(..)
 , Address(..)
+, deref
 , assign
 , MonadStore(..)
 , modifyStore
@@ -40,6 +41,10 @@ storeInsert = (((Store .) . (. unStore)) .) . (. point) . Map.insertWith (<!>)
 storeSize :: Store l a -> Int
 storeSize = Map.size . unStore
 
+
+deref :: forall l a m. (MonadAddress l a m, MonadStore l a m, MonadFail m) => Address l a -> m a
+deref = maybe uninitializedAddress (readCell @l) <=< flip fmap getStore . storeLookup
+
 assign :: (Ord l, Alt (Cell l), Pointed (Cell l), MonadStore l a m) => Address l a -> a -> m ()
 assign = (modifyStore .) . storeInsert
 
@@ -59,7 +64,7 @@ modifyStore f = getStore >>= putStore . f
 class (Ord l, Alt (Cell l), Pointed (Cell l)) => MonadAddress l a m where
   type Cell l :: * -> *
 
-  deref :: Address l a -> m a
+  readCell :: Cell l a -> m a
 
   alloc :: Name -> m (Address l a)
 
@@ -76,7 +81,7 @@ newtype I a = I { unI :: a }
 instance (MonadStore Precise a m, MonadFail m) => MonadAddress Precise a m where
   type Cell Precise = I
 
-  deref = maybe uninitializedAddress (pure . unI) <=< flip fmap getStore . storeLookup
+  readCell = pure . unI
 
   alloc _ = fmap allocPrecise getStore
 
@@ -87,7 +92,7 @@ newtype Monovariant = Monovariant { unMonovariant :: Name }
 instance (MonadStore Monovariant a m, MonadFail m, Alternative m) => MonadAddress Monovariant a m where
   type Cell Monovariant = []
 
-  deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap getStore . storeLookup
+  readCell = asum . fmap pure
 
   alloc = pure . Address . Monovariant
 

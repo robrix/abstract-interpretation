@@ -47,7 +47,7 @@ class Monad m => MonadValue l v t a m where
 
   prim' :: a -> m v
 
-instance (AbstractAddress l m, MonadStore l (Value l (t a) a) m, MonadEnv (Address l (Value l (t a) a)) m, MonadFail m) => MonadValue l (Value l (t a) a) t a m where
+instance (MonadAddress l (Value l (t a) a) m, MonadStore l (Value l (t a) a) m, MonadEnv (Address l (Value l (t a) a)) m, MonadFail m) => MonadValue l (Value l (t a) a) t a m where
   lambda _ name _ body = do
     env <- askEnv
     return (Closure name body (env :: Environment (Address l (Value l (t a) a))))
@@ -60,7 +60,7 @@ instance (AbstractAddress l m, MonadStore l (Value l (t a) a) m, MonadEnv (Addre
 
   prim' = return . I
 
-instance (AbstractAddress l m, MonadStore l Type m, MonadEnv (Address l Type) m, MonadFail m) => MonadValue l Type t Prim m where
+instance (MonadAddress l Type m, MonadStore l Type m, MonadEnv (Address l Type) m, MonadFail m) => MonadValue l Type t Prim m where
   lambda ev name inTy body = do
     a <- alloc name
     assign a inTy

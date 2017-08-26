@@ -2,7 +2,7 @@
 module Abstract.Store
 ( Precise(..)
 , Monovariant(..)
-, AbstractAddress(..)
+, MonadAddress(..)
 , Store(..)
 , Address(..)
 , assign
@@ -56,12 +56,12 @@ modifyStore :: MonadStore l a m => (Store l a -> Store l a) -> m ()
 modifyStore f = getStore >>= putStore . f
 
 
-class (Ord l, Alt (Cell l), Pointed (Cell l)) => AbstractAddress l m where
+class (Ord l, Alt (Cell l), Pointed (Cell l), MonadStore l a m, MonadFail m) => MonadAddress l a m where
   type Cell l :: * -> *
 
-  deref :: (MonadStore l a m, MonadFail m) => Address l a -> m a
+  deref :: Address l a -> m a
 
-  alloc :: (MonadStore l a m, MonadFail m) => Name -> m (Address l a)
+  alloc :: Name -> m (Address l a)
 
 
 newtype Precise = Precise { unPrecise :: Int }
@@ -73,7 +73,7 @@ allocPrecise = Address . Precise . storeSize
 newtype I a = I { unI :: a }
   deriving (Eq, Ord, Show)
 
-instance AbstractAddress Precise m where
+instance (MonadStore Precise a m, MonadFail m) => MonadAddress Precise a m where
   type Cell Precise = I
 
   deref = maybe uninitializedAddress (pure . unI) <=< flip fmap getStore . storeLookup
@@ -84,7 +84,7 @@ instance AbstractAddress Precise m where
 newtype Monovariant = Monovariant { unMonovariant :: Name }
   deriving (Eq, Ord, Show)
 
-instance Alternative m => AbstractAddress Monovariant m where
+instance (MonadStore Monovariant a m, MonadFail m, Alternative m) => MonadAddress Monovariant a m where
   type Cell Monovariant = []
 
   deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap getStore . storeLookup

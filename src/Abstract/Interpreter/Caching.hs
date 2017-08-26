@@ -67,7 +67,7 @@ modifyCache f = fmap f getCache >>= putCache
 -- Coinductively-cached evaluation
 
 evalCache :: forall l v a
-          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), AbstractAddress l (Eff (CachingInterpreter l (Term a) v)), MonadValue l v Term a (Eff (CachingInterpreter l (Term a) v)), MonadPrim v (Eff (CachingInterpreter l (Term a) v)))
+          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), MonadAddress l v (Eff (CachingInterpreter l (Term a) v)), MonadValue l v Term a (Eff (CachingInterpreter l (Term a) v)), MonadPrim v (Eff (CachingInterpreter l (Term a) v)))
           => Eval (Term a) (CachingResult l (Term a) v)
 evalCache = run @(CachingInterpreter l (Term a) v) . runCache @l (ev @l)
 

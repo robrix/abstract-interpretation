@@ -4,6 +4,7 @@ module Abstract.Store
 , Monovariant(..)
 , Address(..)
 , Store(..)
+, Key(..)
 , assign
 ) where
 
@@ -27,38 +28,36 @@ import Text.Show
 
 newtype Store l a = Store { unStore :: Map.Map (Key l a) (Cell l a) }
 
-newtype Key l a = Key { unKey :: l a }
+newtype Key l a = Key { unKey :: l }
 
-storeLookup :: Address l => l a -> Store l a -> Maybe (Cell l a)
-storeLookup = (. unStore) . Map.lookup . Key
+storeLookup :: Address l => Key l a -> Store l a -> Maybe (Cell l a)
+storeLookup = (. unStore) . Map.lookup
 
-storeInsert :: Address l => l a -> a -> Store l a -> Store l a
-storeInsert = (((Store .) . (. unStore)) .) . (. point) . Map.insertWith (<!>) . Key
+storeInsert :: Address l => Key l a -> a -> Store l a -> Store l a
+storeInsert = (((Store .) . (. unStore)) .) . (. point) . Map.insertWith (<!>)
 
 storeSize :: Store l a -> Int
 storeSize = Map.size . unStore
 
-assign :: (State (Store l a) :< fs, Address l) => l a -> a -> Eff fs ()
+assign :: (State (Store l a) :< fs, Address l) => Key l a -> a -> Eff fs ()
 assign = (modify .) . storeInsert
 
 
-class (Traversable l, Eq1 l, Ord1 l, Show1 l, Eq1 (Cell l), Ord1 (Cell l), Show1 (Cell l), Traversable (Cell l), Alt (Cell l), Pointed (Cell l)) => Address l where
+class (Eq l, Ord l, Show l, Eq1 (Cell l), Ord1 (Cell l), Show1 (Cell l), Traversable (Cell l), Alt (Cell l), Pointed (Cell l)) => Address l where
   type Cell l :: * -> *
-  type Context l a (m :: * -> *) :: Constraint
-  type instance Context l a m = ()
+  type Context l (m :: * -> *) :: Constraint
+  type instance Context l m = ()
 
-  deref :: (State (Store l a) :< fs, MonadFail (Eff fs), Context l a (Eff fs)) => l a -> Eff fs a
+  deref :: (State (Store l a) :< fs, MonadFail (Eff fs), Context l (Eff fs)) => Key l a -> Eff fs a
 
-  alloc :: (State (Store l a) :< fs, MonadFail (Eff fs), Context l a (Eff fs)) => Name -> Eff fs (l a)
-
-  coerceAddress :: l a -> l b
+  alloc :: (State (Store l a) :< fs, MonadFail (Eff fs), Context l (Eff fs)) => Name -> Eff fs (Key l a)
 
 
-newtype Precise a = Precise { unPrecise :: Int }
-  deriving (Eq, Foldable, Functor, Ord, Show, Traversable)
+newtype Precise = Precise { unPrecise :: Int }
+  deriving (Eq, Ord, Show)
 
-allocPrecise :: Store Precise a -> Precise a
-allocPrecise = Precise . storeSize
+allocPrecise :: Store Precise a -> Key Precise a
+allocPrecise = Key . Precise . storeSize
 
 newtype I a = I { unI :: a }
   deriving (Eq, Ord, Show)
@@ -70,21 +69,17 @@ instance Address Precise where
 
   alloc _ = fmap allocPrecise get
 
-  coerceAddress = Precise . unPrecise
 
-
-newtype Monovariant a = Monovariant { unMonovariant :: Name }
-  deriving (Eq, Foldable, Functor, Ord, Show, Traversable)
+newtype Monovariant = Monovariant { unMonovariant :: Name }
+  deriving (Eq, Ord, Show)
 
 instance Address Monovariant where
   type Cell Monovariant = []
-  type Context Monovariant a m = (Alternative m)
+  type Context Monovariant m = (Alternative m)
 
   deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . storeLookup
 
-  alloc = pure . Monovariant
-
-  coerceAddress = Monovariant . unMonovariant
+  alloc = pure . (Key . Monovariant)
 
 
 uninitializedAddress :: MonadFail m => m a
@@ -124,33 +119,27 @@ instance Pretty1 I where
 instance Address l => Foldable (Key l) where
   foldMap _ = mempty
 
-instance Address l => Functor (Key l) where
-  fmap f = Key . fmap f . unKey
+instance Functor (Key l) where
+  fmap _ = Key . unKey
 
 instance Address l => Traversable (Key l) where
-  traverse f = fmap Key . traverse f . unKey
+  traverse _ = fmap Key . pure . unKey
 
 
 instance Address l => Foldable (Store l) where
   foldMap = (. unStore) . foldMap . foldMap
 
 instance Address l => Functor (Store l) where
-  fmap f = Store . Map.mapKeys (Key . coerceAddress . unKey) . fmap (fmap f) . unStore
+  fmap f = Store . Map.mapKeys (Key . unKey) . fmap (fmap f) . unStore
 
 instance Address l => Traversable (Store l) where
-  traverse f = fmap (Store . Map.mapKeys (Key . coerceAddress . unKey)) . traverse (traverse f) . unStore
+  traverse f = fmap (Store . Map.mapKeys (Key . unKey)) . traverse (traverse f) . unStore
 
 
 instance Address l => Monoid (Store l a) where
   mempty = Store mempty
   mappend = (Store .) . (mappend `on` unStore)
 
-
-instance Eq1 Precise where
-  liftEq _ (Precise i1) (Precise i2) = i1 == i2
-
-instance Eq1 Monovariant where
-  liftEq _ (Monovariant n1) (Monovariant n2) = n1 == n2
 
 instance Address l => Eq1 (Store l) where
   liftEq eq (Store m1) (Store m2) = liftEq2 (liftEq eq) (liftEq eq) m1 m2
@@ -159,16 +148,10 @@ instance (Eq a, Address l) => Eq (Store l a) where
   (==) = eq1
 
 instance Address l => Eq1 (Key l) where
-  liftEq eq (Key a) (Key b) = liftEq eq a b
+  liftEq _ (Key a) (Key b) = a == b
 
 instance Address l => Eq (Key l a) where
   (==) = liftEq (const (const True))
-
-instance Ord1 Precise where
-  liftCompare _ (Precise i1) (Precise i2) = compare i1 i2
-
-instance Ord1 Monovariant where
-  liftCompare _ (Monovariant n1) (Monovariant n2) = compare n1 n2
 
 instance Address l => Ord1 (Store l) where
   liftCompare compareA (Store m1) (Store m2) = liftCompare2 (liftCompare compareA) (liftCompare compareA) m1 m2
@@ -177,16 +160,10 @@ instance (Ord a, Address l) => Ord (Store l a) where
   compare = compare1
 
 instance Address l => Ord1 (Key l) where
-  liftCompare compareA (Key a) (Key b) = liftCompare compareA a b
+  liftCompare _ (Key a) (Key b) = compare a b
 
 instance Address l => Ord (Key l a) where
   compare = liftCompare (const (const EQ))
-
-instance Show1 Precise where
-  liftShowsPrec _ _ d (Precise i) = showsUnaryWith showsPrec "Precise" d i
-
-instance Show1 Monovariant where
-  liftShowsPrec _ _ d (Monovariant n) = showsUnaryWith showsPrec "Monovariant" d n
 
 instance Address l => Show1 (Store l) where
   liftShowsPrec sp sl d (Store m) = showsUnaryWith (liftShowsPrec (liftShowsPrec sp sl) (liftShowList sp sl)) "Store" d m
@@ -195,31 +172,25 @@ instance (Show a, Address l) => Show (Store l a) where
   showsPrec = showsPrec1
 
 instance Address l => Show1 (Key l) where
-  liftShowsPrec sp sl d = showsUnaryWith (liftShowsPrec sp sl) "Key" d . unKey
+  liftShowsPrec _ _ d = showsUnaryWith showsPrec "Key" d . unKey
 
 instance Address l => Show (Key l a) where
   showsPrec = liftShowsPrec (const (const id)) (showListWith (const id))
 
-instance Pretty1 Precise where
-  liftPretty _ _ (Precise n) = pretty "Precise" <+> pretty n
+instance Pretty Precise where
+  pretty (Precise n) = pretty "Precise" <+> pretty n
 
-instance Pretty (Precise a) where
-  pretty = liftPretty (const emptyDoc) (const emptyDoc)
+instance Pretty Monovariant where
+  pretty (Monovariant n) = pretty "Monovariant" <+> pretty n
 
-instance Pretty1 Monovariant where
-  liftPretty _ _ (Monovariant n) = pretty "Monovariant" <+> pretty n
-
-instance Pretty (Monovariant a) where
-  pretty = liftPretty (const emptyDoc) (const emptyDoc)
-
-instance (Pretty1 l, Pretty1 (Cell l)) => Pretty1 (Store l) where
+instance (Pretty l, Pretty1 (Cell l)) => Pretty1 (Store l) where
   liftPretty p pl = list . map (liftPretty (liftPretty p pl) (list . map (liftPretty p pl))) . Map.toList . unStore
 
-instance (Pretty1 l, Pretty1 (Cell l), Pretty a) => Pretty (Store l a) where
+instance (Pretty l, Pretty1 (Cell l), Pretty a) => Pretty (Store l a) where
   pretty = liftPretty pretty prettyList
 
-instance Pretty1 l => Pretty1 (Key l) where
-  liftPretty _ _ (Key l) = liftPretty (const emptyDoc) (const emptyDoc) l
+instance Pretty l => Pretty1 (Key l) where
+  liftPretty _ _ (Key l) = pretty l
 
-instance Pretty1 l => Pretty (Key l a) where
+instance Pretty l => Pretty (Key l a) where
   pretty = liftPretty (const emptyDoc) (const emptyDoc)

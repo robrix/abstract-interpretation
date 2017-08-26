@@ -14,7 +14,7 @@ import Data.Function (fix)
 import Prelude hiding (fail)
 
 
-type Interpreter l v = '[Failure, State (Store l v), Reader (Environment (l v))]
+type Interpreter l v = '[Failure, State (Store l v), Reader (Environment (Key l v))]
 
 type EvalResult l v = Final (Interpreter l v) v
 
@@ -23,20 +23,20 @@ type Eval t m = t -> m
 
 -- Evaluation
 
-eval :: forall l v a . (Address l, Context l v (Eff (Interpreter l v)), AbstractValue l v Term a, PrimitiveOperations v (Interpreter l v)) => Term a -> EvalResult l v
+eval :: forall l v a . (Address l, Context l (Eff (Interpreter l v)), AbstractValue l v Term a, PrimitiveOperations v (Interpreter l v)) => Term a -> EvalResult l v
 eval = run @(Interpreter l v) . runEval @l
 
-runEval :: forall l v a fs . (Address l, Context l v (Eff fs), AbstractValue l v Term a, PrimitiveOperations v fs, Interpreter l v :<: fs) => Eval (Term a) (Eff fs v)
+runEval :: forall l v a fs . (Address l, Context l (Eff fs), AbstractValue l v Term a, PrimitiveOperations v fs, Interpreter l v :<: fs) => Eval (Term a) (Eff fs v)
 runEval = fix (ev @l)
 
 ev :: forall l v a fs
-   .  (Address l, Context l v (Eff fs), AbstractValue l v Term a, PrimitiveOperations v fs, Interpreter l v :<: fs)
+   .  (Address l, Context l (Eff fs), AbstractValue l v Term a, PrimitiveOperations v fs, Interpreter l v :<: fs)
    => Eval (Term a) (Eff fs v)
    -> Eval (Term a) (Eff fs v)
 ev ev term = case out term of
   Var x -> do
     p <- ask
-    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (l v)))
+    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (Key l v)))
   Prim n -> prim' @l @v @Term n
   Op1 o a -> do
     va <- ev a
@@ -52,7 +52,7 @@ ev ev term = case out term of
   Lam x ty e0 -> lambda @l ev x ty e0
   Rec f _ e -> do
     a <- alloc f
-    v <- local (envInsert f (a :: l v)) (ev e)
+    v <- local (envInsert f (a :: Key l v)) (ev e)
     assign a v
     return v
   If c t e -> do

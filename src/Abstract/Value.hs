@@ -33,13 +33,13 @@ data Value l t a
   deriving (Foldable, Functor, Traversable)
 
 
-class (Address l, Ord l) => AbstractValue l v t a where
-  lambda :: (Context l (Eff fs), Reader (Environment (Key l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> Name -> Type -> t a -> Eff fs v
-  app :: (Context l (Eff fs), Reader (Environment (Key l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> v -> v -> Eff fs v
+class AbstractValue l v t a where
+  lambda :: (Address l fs, Reader (Environment (Key l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> Name -> Type -> t a -> Eff fs v
+  app :: (Address l fs, Reader (Environment (Key l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> v -> v -> Eff fs v
 
   prim' :: a -> Eff fs v
 
-instance (Address l, Ord l) => AbstractValue l (Value l (t a) a) t a where
+instance AbstractValue l (Value l (t a) a) t a where
   lambda _ name _ body = do
     env <- ask
     return (Closure name body (env :: Environment (Key l (Value l (t a) a))))
@@ -52,7 +52,7 @@ instance (Address l, Ord l) => AbstractValue l (Value l (t a) a) t a where
 
   prim' = return . I
 
-instance (Address l, Ord l) => AbstractValue l Type t Prim where
+instance AbstractValue l Type t Prim where
   lambda ev name inTy body = do
     a <- alloc name
     assign a inTy

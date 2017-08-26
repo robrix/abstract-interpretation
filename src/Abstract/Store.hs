@@ -1,4 +1,4 @@
-{-# LANGUAGE ConstraintKinds, DataKinds, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, GeneralizedNewtypeDeriving, ScopedTypeVariables, TypeFamilies, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE DataKinds, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Store
 ( Precise(..)
 , Monovariant(..)
@@ -17,7 +17,6 @@ import Control.Monad.Fail
 import Data.Foldable (asum)
 import Data.Functor.Alt
 import Data.Functor.Classes
-import Data.Kind
 import qualified Data.Map as Map
 import Data.Pointed
 import Data.Semigroup
@@ -33,24 +32,22 @@ newtype Key l a = Key { unKey :: l }
 storeLookup :: Ord l => Key l a -> Store l a -> Maybe (Cell l a)
 storeLookup = (. unStore) . Map.lookup
 
-storeInsert :: Address l => Key l a -> a -> Store l a -> Store l a
+storeInsert :: (Ord l, Alt (Cell l), Pointed (Cell l)) => Key l a -> a -> Store l a -> Store l a
 storeInsert = (((Store .) . (. unStore)) .) . (. point) . Map.insertWith (<!>)
 
 storeSize :: Store l a -> Int
 storeSize = Map.size . unStore
 
-assign :: (State (Store l a) :< fs, Address l) => Key l a -> a -> Eff fs ()
+assign :: (Ord l, Alt (Cell l), Pointed (Cell l), State (Store l a) :< fs) => Key l a -> a -> Eff fs ()
 assign = (modify .) . storeInsert
 
 
-class (Ord l, Alt (Cell l), Pointed (Cell l)) => Address l where
+class (Ord l, Alt (Cell l), Pointed (Cell l)) => Address l fs where
   type Cell l :: * -> *
-  type Context l (m :: * -> *) :: Constraint
-  type instance Context l m = ()
 
-  deref :: (State (Store l a) :< fs, MonadFail (Eff fs), Context l (Eff fs)) => Key l a -> Eff fs a
+  deref :: (State (Store l a) :< fs, MonadFail (Eff fs)) => Key l a -> Eff fs a
 
-  alloc :: (State (Store l a) :< fs, MonadFail (Eff fs), Context l (Eff fs)) => Name -> Eff fs (Key l a)
+  alloc :: (State (Store l a) :< fs, MonadFail (Eff fs)) => Name -> Eff fs (Key l a)
 
 
 newtype Precise = Precise { unPrecise :: Int }
@@ -62,7 +59,7 @@ allocPrecise = Key . Precise . storeSize
 newtype I a = I { unI :: a }
   deriving (Eq, Ord, Show)
 
-instance Address Precise where
+instance Address Precise fs where
   type Cell Precise = I
 
   deref = maybe uninitializedAddress (pure . unI) <=< flip fmap get . storeLookup
@@ -73,9 +70,8 @@ instance Address Precise where
 newtype Monovariant = Monovariant { unMonovariant :: Name }
   deriving (Eq, Ord, Show)
 
-instance Address Monovariant where
+instance (Alternative (Eff fs)) => Address Monovariant fs where
   type Cell Monovariant = []
-  type Context Monovariant m = (Alternative m)
 
   deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . storeLookup
 

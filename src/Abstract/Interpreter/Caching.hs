@@ -1,4 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes, DataKinds, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, StandaloneDeriving, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes, ConstraintKinds, DataKinds, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, StandaloneDeriving, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Interpreter.Caching where
 
 import Abstract.Configuration
@@ -40,6 +40,8 @@ type CachingInterpreter l t v = '[Reader (Environment (Address l v)), Failure, N
 
 type CachingResult l t v = Final (CachingInterpreter l t v) v
 
+type MonadCachingInterpreter l t v m = (MonadEnv (Address l v) m, MonadStore l v m, MonadCacheIn l t v m, MonadCacheOut l t v m, Alternative m)
+
 
 class Monad m => MonadCacheIn l t v m where
   askCache :: m (Cache l t v)
@@ -70,13 +72,13 @@ evalCache :: forall l v a
 evalCache = run @(CachingInterpreter l (Term a) v) . runCache @l (ev @l)
 
 runCache :: forall l t v m
-         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadEnv (Address l v) m, MonadStore l v m, MonadCacheIn l t v m, MonadCacheOut l t v m, Alternative m)
+         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadCachingInterpreter l t v m)
          => (Eval t (m v) -> Eval t (m v))
          -> Eval t (m v)
 runCache ev = fixCache @l (fix (evCache @l ev))
 
 evCache :: forall l t v m
-        .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadEnv (Address l v) m, MonadStore l v m, MonadCacheIn l t v m, MonadCacheOut l t v m, Alternative m)
+        .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadCachingInterpreter l t v m)
         => (Eval t (m v) -> Eval t (m v))
         -> Eval t (m v)
         -> Eval t (m v)
@@ -99,7 +101,7 @@ evCache ev0 ev e = do
       return v
 
 fixCache :: forall l t v m
-         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadEnv (Address l v) m, MonadStore l v m, MonadCacheIn l t v m, MonadCacheOut l t v m, Alternative m)
+         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadCachingInterpreter l t v m)
          => Eval t (m v)
          -> Eval t (m v)
 fixCache eval e = do

@@ -21,6 +21,7 @@ library
                      , Abstract.Interpreter.Trace
                      , Abstract.Interpreter.Typechecking
                      , Abstract.Primitive
+                     , Abstract.Set
                      , Abstract.Store
                      , Abstract.Syntax
                      , Abstract.Type

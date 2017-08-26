@@ -194,8 +194,11 @@ instance (Pretty l, Pretty1 (Cell l)) => Pretty1 (Store l) where
 instance (Pretty l, Pretty1 (Cell l), Pretty a) => Pretty (Store l a) where
   pretty = liftPretty pretty prettyList
 
+instance Pretty2 Address where
+  liftPretty2 pL _ _ _ (Address l) = pL l
+
 instance Pretty l => Pretty1 (Address l) where
-  liftPretty _ _ (Address l) = pretty l
+  liftPretty = liftPretty2 pretty prettyList
 
 instance Pretty l => Pretty (Address l a) where
   pretty = liftPretty (const emptyDoc) (const emptyDoc)

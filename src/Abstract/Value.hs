@@ -1,4 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, StandaloneDeriving, TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, StandaloneDeriving, TypeOperators, UndecidableInstances #-}
 module Abstract.Value where
 
 import Abstract.Primitive
@@ -31,6 +31,15 @@ data Value l t a
   = I a
   | Closure Name t (Environment (Address l (Value l t a)))
   deriving (Foldable, Functor, Traversable)
+
+
+class Monad m => MonadEnv a m where
+  askEnv :: m (Environment a)
+  localEnv :: (Environment a -> Environment a) -> m b -> m b
+
+instance Reader (Environment a) :< fs => MonadEnv a (Eff fs) where
+  askEnv = ask
+  localEnv = local
 
 
 class AbstractValue l v t a where

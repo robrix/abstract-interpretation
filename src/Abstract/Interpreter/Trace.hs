@@ -9,8 +9,6 @@ import Abstract.Syntax
 import Abstract.Value
 import Control.Effect
 import Control.Monad.Effect hiding (run)
-import Control.Monad.Effect.Reader
-import Control.Monad.Effect.State
 import Control.Monad.Effect.Writer
 import Data.Function (fix)
 import Data.Functor.Classes (Ord1)
@@ -55,7 +53,7 @@ evTell :: forall l t v g fs
        -> Eval t (Eff fs v)
        -> Eval t (Eff fs v)
 evTell ev0 ev e = do
-  env <- ask
-  store <- get
+  env <- askEnv
+  store <- getStore
   tell (fromList [Configuration e env store] :: g (Configuration l t v))
   ev0 ev e

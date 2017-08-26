@@ -45,7 +45,7 @@ class AbstractValue l v t a where
   lambda :: (AbstractAddress l m, MonadStore l v m, MonadEnv (Address l v) m, MonadFail m) => (t a -> m v) -> Name -> Type -> t a -> m v
   app :: (AbstractAddress l m, MonadStore l v m, MonadEnv (Address l v) m, MonadFail m) => (t a -> m v) -> v -> v -> m v
 
-  prim' :: a -> Eff fs v
+  prim' :: Monad m => a -> m v
 
 instance AbstractValue l (Value l (t a) a) t a where
   lambda _ name _ body = do

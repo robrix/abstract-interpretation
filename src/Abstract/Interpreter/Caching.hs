@@ -138,6 +138,16 @@ instance (Eq l, Eq t, Eq v, Eq1 (Cell l)) => Eq (Cache l t v) where
   (==) = eq1
 
 
+instance (Ord l, Ord1 (Cell l)) => Ord2 (Cache l) where
+  liftCompare2 compareT compareV (Cache a) (Cache b) = liftCompare2 (liftCompare2 compareT compareV) (liftCompare (liftCompare2 compareV (liftCompare compareV))) a b
+
+instance (Ord l, Ord t, Ord1 (Cell l)) => Ord1 (Cache l t) where
+  liftCompare = liftCompare2 compare
+
+instance (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Ord (Cache l t v) where
+  compare = compare1
+
+
 instance (Show l, Show1 (Cell l)) => Show2 (Cache l) where
   liftShowsPrec2 spT slT spV slV d = showsUnaryWith (liftShowsPrec2 spKey slKey (liftShowsPrec spPair slPair) (liftShowList spPair slPair)) "Cache" d . unCache
     where spKey = liftShowsPrec2 spT slT spV slV

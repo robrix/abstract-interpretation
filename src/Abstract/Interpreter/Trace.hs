@@ -12,6 +12,7 @@ import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.Writer
 import Data.Function (fix)
 import Data.Functor.Classes (Ord1)
+import Data.Semigroup
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
@@ -33,7 +34,7 @@ instance Writer (g (Configuration l t v)) :< fs => MonadTrace l t v g (Eff fs) w
 -- Tracing and reachable state analyses
 
 evalTrace :: forall l v a
-          .  (MonadAddress l (Eff (TraceInterpreter l (Term a) v)), MonadValue l v Term a (Eff (TraceInterpreter l (Term a) v)), MonadPrim v (Eff (TraceInterpreter l (Term a) v)))
+          .  (MonadAddress l (Eff (TraceInterpreter l (Term a) v)), MonadValue l v Term a (Eff (TraceInterpreter l (Term a) v)), MonadPrim v (Eff (TraceInterpreter l (Term a) v)), Semigroup (Cell l v))
           => Eval (Term a) (TraceResult l (Term a) v [])
 evalTrace = run @(TraceInterpreter l (Term a) v) . runTrace @l (ev @l)
 
@@ -44,7 +45,7 @@ runTrace :: forall l t v m
 runTrace ev = fix (evTell @l @t @v @[] ev)
 
 evalReach :: forall l v a
-          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), MonadAddress l (Eff (ReachableStateInterpreter l (Term a) v)), MonadValue l v Term a (Eff (ReachableStateInterpreter l (Term a) v)), MonadPrim v (Eff (ReachableStateInterpreter l (Term a) v)))
+          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), MonadAddress l (Eff (ReachableStateInterpreter l (Term a) v)), MonadValue l v Term a (Eff (ReachableStateInterpreter l (Term a) v)), MonadPrim v (Eff (ReachableStateInterpreter l (Term a) v)), Semigroup (Cell l v))
           => Eval (Term a) (TraceResult l (Term a) v Set.Set)
 evalReach = run @(ReachableStateInterpreter l (Term a) v) . runReach @l (ev @l)
 

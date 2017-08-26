@@ -18,7 +18,6 @@ import Control.Monad.Effect
 import Control.Monad.Effect.State
 import Control.Monad.Fail
 import Data.Foldable (asum)
-import Data.Functor.Alt
 import Data.Functor.Classes
 import qualified Data.Map as Map
 import Data.Pointed
@@ -35,8 +34,8 @@ newtype Address l a = Address { unAddress :: l }
 storeLookup :: Ord l => Address l a -> Store l a -> Maybe (Cell l a)
 storeLookup = (. unStore) . Map.lookup
 
-storeInsert :: (Ord l, Alt (Cell l), Pointed (Cell l)) => Address l a -> a -> Store l a -> Store l a
-storeInsert = (((Store .) . (. unStore)) .) . (. point) . Map.insertWith (<!>)
+storeInsert :: (Ord l, Semigroup (Cell l a), Pointed (Cell l)) => Address l a -> a -> Store l a -> Store l a
+storeInsert = (((Store .) . (. unStore)) .) . (. point) . Map.insertWith (<>)
 
 storeSize :: Store l a -> Int
 storeSize = Map.size . unStore
@@ -45,7 +44,7 @@ storeSize = Map.size . unStore
 deref :: forall l a m. (MonadAddress l m, MonadStore l a m, MonadFail m) => Address l a -> m a
 deref = maybe uninitializedAddress (readCell @l) <=< flip fmap getStore . storeLookup
 
-assign :: (Ord l, Alt (Cell l), Pointed (Cell l), MonadStore l a m) => Address l a -> a -> m ()
+assign :: (Ord l, Semigroup (Cell l a), Pointed (Cell l), MonadStore l a m) => Address l a -> a -> m ()
 assign = (modifyStore .) . storeInsert
 
 
@@ -61,7 +60,7 @@ modifyStore :: MonadStore l a m => (Store l a -> Store l a) -> m ()
 modifyStore f = getStore >>= putStore . f
 
 
-class (Ord l, Alt (Cell l), Pointed (Cell l), Monad m) => MonadAddress l m where
+class (Ord l, Pointed (Cell l), Monad m) => MonadAddress l m where
   type Cell l :: * -> *
 
   readCell :: Cell l a -> m a
@@ -112,9 +111,6 @@ instance Functor I where
 
 instance Traversable I where
   traverse f = fmap I . f . unI
-
-instance Alt I where
-  a <!> _ = a
 
 instance Pointed I where
   point = I

@@ -38,7 +38,7 @@ subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.sing
 
 -- Dead code analysis
 
-evalDead :: forall l v a. (MonadAddress l (Eff (DeadCodeInterpreter l (Term a) v)), Ord a, MonadValue l v Term a (Eff (DeadCodeInterpreter l (Term a) v)), MonadPrim v (Eff (DeadCodeInterpreter l (Term a) v))) => Eval (Term a) (DeadCodeResult l (Term a) v)
+evalDead :: forall l v a. (MonadAddress l (Eff (DeadCodeInterpreter l (Term a) v)), Ord a, MonadValue l v Term a (Eff (DeadCodeInterpreter l (Term a) v)), MonadPrim v (Eff (DeadCodeInterpreter l (Term a) v)), Semigroup (Cell l v)) => Eval (Term a) (DeadCodeResult l (Term a) v)
 evalDead = run @(DeadCodeInterpreter l (Term a) v) . runDead (ev @l)
 
 runDead :: (Ord t, Recursive t, Foldable (Base t), MonadDead t m)

@@ -10,13 +10,14 @@ import Control.Effect
 import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.NonDetEff
 import Data.Function (fix)
+import Data.Semigroup
 
 type TypecheckingInterpreter l = NonDetEff ': Interpreter l Type
 
 type TypecheckingResult l = Final (TypecheckingInterpreter l) Type
 
 evalCheck :: forall l
-          .  (Ord l, MonadAddress l (Eff (TypecheckingInterpreter l)))
+          .  (Ord l, MonadAddress l (Eff (TypecheckingInterpreter l)), Semigroup (Cell l Type))
           => Eval (Term Prim) (TypecheckingResult l)
 evalCheck = run @(TypecheckingInterpreter l) . runCheck (ev @l)
 

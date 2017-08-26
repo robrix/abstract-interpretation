@@ -16,7 +16,7 @@ import Prelude hiding (fail)
 
 type Interpreter l v = '[Failure, State (Store l v), Reader (Environment (Address l v))]
 
-type MonadInterpreter l v m = (MonadEnv (Address l v) m, MonadStore l v m, MonadFail m, MonadPrim v m)
+type MonadInterpreter l v m = (MonadEnv (Address l v) m, MonadStore l v m, MonadFail m)
 
 type EvalResult l v = Final (Interpreter l v) v
 
@@ -28,11 +28,11 @@ type Eval t m = t -> m
 eval :: forall l v a . (AbstractAddress l (Eff (Interpreter l v)), AbstractValue l v Term a, MonadPrim v (Eff (Interpreter l v))) => Term a -> EvalResult l v
 eval = run @(Interpreter l v) . runEval @l
 
-runEval :: forall l v a m . (AbstractAddress l m, AbstractValue l v Term a, MonadInterpreter l v m) => Eval (Term a) (m v)
+runEval :: forall l v a m . (AbstractAddress l m, AbstractValue l v Term a, MonadInterpreter l v m, MonadPrim v m) => Eval (Term a) (m v)
 runEval = fix (ev @l)
 
 ev :: forall l v a m
-   .  (AbstractAddress l m, AbstractValue l v Term a, MonadInterpreter l v m)
+   .  (AbstractAddress l m, AbstractValue l v Term a, MonadInterpreter l v m, MonadPrim v m)
    => Eval (Term a) (m v)
    -> Eval (Term a) (m v)
 ev ev term = case out term of

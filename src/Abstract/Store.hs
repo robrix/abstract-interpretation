@@ -24,11 +24,11 @@ import Data.Pointed
 import Data.Semigroup
 import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
-import Text.Show
 
 newtype Store l a = Store { unStore :: Map.Map (Key l a) (Cell l a) }
 
 newtype Key l a = Key { unKey :: l }
+  deriving (Eq, Ord, Show)
 
 storeLookup :: Address l => Key l a -> Store l a -> Maybe (Cell l a)
 storeLookup = (. unStore) . Map.lookup
@@ -150,9 +150,6 @@ instance (Eq a, Address l) => Eq (Store l a) where
 instance Address l => Eq1 (Key l) where
   liftEq _ (Key a) (Key b) = a == b
 
-instance Address l => Eq (Key l a) where
-  (==) = liftEq (const (const True))
-
 instance Address l => Ord1 (Store l) where
   liftCompare compareA (Store m1) (Store m2) = liftCompare2 (liftCompare compareA) (liftCompare compareA) m1 m2
 
@@ -162,9 +159,6 @@ instance (Ord a, Address l) => Ord (Store l a) where
 instance Address l => Ord1 (Key l) where
   liftCompare _ (Key a) (Key b) = compare a b
 
-instance Address l => Ord (Key l a) where
-  compare = liftCompare (const (const EQ))
-
 instance Address l => Show1 (Store l) where
   liftShowsPrec sp sl d (Store m) = showsUnaryWith (liftShowsPrec (liftShowsPrec sp sl) (liftShowList sp sl)) "Store" d m
 
@@ -173,9 +167,6 @@ instance (Show a, Address l) => Show (Store l a) where
 
 instance Address l => Show1 (Key l) where
   liftShowsPrec _ _ d = showsUnaryWith showsPrec "Key" d . unKey
-
-instance Address l => Show (Key l a) where
-  showsPrec = liftShowsPrec (const (const id)) (showListWith (const id))
 
 instance Pretty Precise where
   pretty (Precise n) = pretty "Precise" <+> pretty n

@@ -34,7 +34,7 @@ newtype PathCondition t = PathCondition { unPathCondition :: Set.Set (PathExpres
   deriving (Eq, Ord, Show)
 
 
-refine :: (Ord t, MonadPath t m) => PathExpression t -> m ()
+refine :: (Ord t, MonadPathCondition t m) => PathExpression t -> m ()
 refine = modifyPathCondition . pathConditionInsert
 
 pathConditionMember :: Ord t => PathExpression t -> PathCondition t -> Bool
@@ -44,18 +44,18 @@ pathConditionInsert :: Ord t => PathExpression t -> PathCondition t -> PathCondi
 pathConditionInsert = ((PathCondition .) . (. unPathCondition)) . Set.insert
 
 
-class Monad m => MonadPath t m where
+class Monad m => MonadPathCondition t m where
   getPathCondition :: m (PathCondition t)
   putPathCondition :: PathCondition t -> m ()
 
-instance State (PathCondition t) :< fs => MonadPath t (Eff fs) where
+instance State (PathCondition t) :< fs => MonadPathCondition t (Eff fs) where
   getPathCondition = get
   putPathCondition = put
 
-modifyPathCondition :: MonadPath t m => (PathCondition t -> PathCondition t) -> m ()
+modifyPathCondition :: MonadPathCondition t m => (PathCondition t -> PathCondition t) -> m ()
 modifyPathCondition f = getPathCondition >>= putPathCondition . f
 
-instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, MonadFail m, MonadPrim a m, MonadPath t m, Alternative m) => MonadPrim (Sym t a) m where
+instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, MonadFail m, MonadPrim a m, MonadPathCondition t m, Alternative m) => MonadPrim (Sym t a) m where
   delta1 o a = case o of
     Negate -> pure (negate a)
     Abs    -> pure (abs a)

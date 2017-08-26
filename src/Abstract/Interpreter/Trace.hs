@@ -1,4 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes, DataKinds, FlexibleContexts, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes, DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Interpreter.Trace where
 
 import Abstract.Configuration
@@ -21,6 +21,13 @@ type TraceInterpreter l t v = TracingInterpreter l t v []
 type ReachableStateInterpreter l t v = TracingInterpreter l t v Set.Set
 
 type TraceResult l t v f = Final (TracingInterpreter l t v f) v
+
+
+class MonadTrace l t v g m where
+  trace :: g (Configuration l t v) -> m ()
+
+instance Writer (g (Configuration l t v)) :< fs => MonadTrace l t v g (Eff fs) where
+  trace = tell
 
 
 -- Tracing and reachable state analyses
@@ -47,13 +54,13 @@ runReach :: forall l t v fs
          -> Eval t (Eff fs v)
 runReach ev = fix (evTell @l @t @v @Set.Set ev)
 
-evTell :: forall l t v g fs
-       .  (TracingInterpreter l t v g :<: fs, IsList (g (Configuration l t v)), Item (g (Configuration l t v)) ~ Configuration l t v)
-       => (Eval t (Eff fs v) -> Eval t (Eff fs v))
-       -> Eval t (Eff fs v)
-       -> Eval t (Eff fs v)
+evTell :: forall l t v g m
+       .  (IsList (g (Configuration l t v)), Item (g (Configuration l t v)) ~ Configuration l t v, MonadTrace l t v g m, MonadEnv (Address l v) m, MonadStore l v m)
+       => (Eval t (m v) -> Eval t (m v))
+       -> Eval t (m v)
+       -> Eval t (m v)
 evTell ev0 ev e = do
   env <- askEnv
   store <- getStore
-  tell (fromList [Configuration e env store] :: g (Configuration l t v))
+  trace (fromList [Configuration e env store] :: g (Configuration l t v))
   ev0 ev e

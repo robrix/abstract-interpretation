@@ -12,8 +12,9 @@ import Abstract.Syntax
 import Control.Applicative
 import Control.Monad ((<=<))
 import Control.Monad.Effect
+import Control.Monad.Effect.Failure
+import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.State
-import Control.Monad.Fail
 import Data.Foldable (asum)
 import Data.Functor.Alt
 import Data.Functor.Classes
@@ -45,9 +46,9 @@ assign = (modify .) . storeInsert
 class (Ord l, Alt (Cell l), Pointed (Cell l)) => AbstractAddress l fs where
   type Cell l :: * -> *
 
-  deref :: (State (Store l a) :< fs, MonadFail (Eff fs)) => Address l a -> Eff fs a
+  deref :: (State (Store l a) :< fs, Failure :< fs) => Address l a -> Eff fs a
 
-  alloc :: (State (Store l a) :< fs, MonadFail (Eff fs)) => Name -> Eff fs (Address l a)
+  alloc :: (State (Store l a) :< fs, Failure :< fs) => Name -> Eff fs (Address l a)
 
 
 newtype Precise = Precise { unPrecise :: Int }
@@ -70,7 +71,7 @@ instance AbstractAddress Precise fs where
 newtype Monovariant = Monovariant { unMonovariant :: Name }
   deriving (Eq, Ord, Show)
 
-instance (Alternative (Eff fs)) => AbstractAddress Monovariant fs where
+instance NonDetEff :< fs => AbstractAddress Monovariant fs where
   type Cell Monovariant = []
 
   deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . storeLookup
@@ -78,7 +79,7 @@ instance (Alternative (Eff fs)) => AbstractAddress Monovariant fs where
   alloc = pure . Address . Monovariant
 
 
-uninitializedAddress :: MonadFail m => m a
+uninitializedAddress :: Failure :< fs => Eff fs a
 uninitializedAddress = fail "uninitialized address"
 
 

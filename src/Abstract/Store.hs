@@ -116,13 +116,13 @@ instance Show1 I where
 instance Pretty1 I where
   liftPretty p _ (I a) = p a
 
-instance Address l => Foldable (Key l) where
+instance Foldable (Key l) where
   foldMap _ = mempty
 
 instance Functor (Key l) where
   fmap _ = Key . unKey
 
-instance Address l => Traversable (Key l) where
+instance Traversable (Key l) where
   traverse _ = fmap Key . pure . unKey
 
 

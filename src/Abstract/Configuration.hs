@@ -8,9 +8,11 @@ import Data.Functor.Classes
 import Data.Text.Prettyprint.Doc
 
 data Configuration l t v = Configuration { configurationTerm :: t, configurationEnvironment :: Environment (Address l v), configurationStore :: Store l v }
-  -- deriving (Foldable, Functor, Traversable)
 
+deriving instance (Ord l, Foldable (Cell l)) => Foldable (Configuration l t)
 deriving instance (Ord l, Functor (Cell l)) => Functor (Configuration l t)
+deriving instance (Ord l, Traversable (Cell l)) => Traversable (Configuration l t)
+
 
 instance (Eq l, Eq1 (Cell l)) => Eq2 (Configuration l) where
   liftEq2 eqT eqV (Configuration t1 e1 s1) (Configuration t2 e2 s2) = eqT t1 t2 && liftEq (liftEq eqV) e1 e2 && liftEq eqV s1 s2

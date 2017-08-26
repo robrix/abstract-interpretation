@@ -23,14 +23,14 @@ type Eval t m = t -> m
 
 -- Evaluation
 
-eval :: forall l v a . (AbstractAddress l (Interpreter l v), AbstractValue l v Term a, PrimitiveOperations v (Interpreter l v)) => Term a -> EvalResult l v
+eval :: forall l v a . (AbstractAddress l (Eff (Interpreter l v)), AbstractValue l v Term a, PrimitiveOperations v (Interpreter l v)) => Term a -> EvalResult l v
 eval = run @(Interpreter l v) . runEval @l
 
-runEval :: forall l v a fs . (AbstractAddress l fs, AbstractValue l v Term a, PrimitiveOperations v fs, Interpreter l v :<: fs) => Eval (Term a) (Eff fs v)
+runEval :: forall l v a fs . (AbstractAddress l (Eff fs), AbstractValue l v Term a, PrimitiveOperations v fs, Interpreter l v :<: fs) => Eval (Term a) (Eff fs v)
 runEval = fix (ev @l)
 
 ev :: forall l v a fs
-   .  (AbstractAddress l fs, AbstractValue l v Term a, PrimitiveOperations v fs, Interpreter l v :<: fs)
+   .  (AbstractAddress l (Eff fs), AbstractValue l v Term a, PrimitiveOperations v fs, Interpreter l v :<: fs)
    => Eval (Term a) (Eff fs v)
    -> Eval (Term a) (Eff fs v)
 ev ev term = case out term of

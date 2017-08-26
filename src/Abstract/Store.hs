@@ -6,15 +6,16 @@ module Abstract.Store
 , Store(..)
 , Address(..)
 , assign
+, MonadStore(..)
+, modifyStore
 ) where
 
 import Abstract.Syntax
 import Control.Applicative
 import Control.Monad ((<=<))
 import Control.Monad.Effect
-import Control.Monad.Effect.Failure
-import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.State
+import Control.Monad.Fail
 import Data.Foldable (asum)
 import Data.Functor.Alt
 import Data.Functor.Classes
@@ -39,16 +40,28 @@ storeInsert = (((Store .) . (. unStore)) .) . (. point) . Map.insertWith (<!>)
 storeSize :: Store l a -> Int
 storeSize = Map.size . unStore
 
-assign :: (Ord l, Alt (Cell l), Pointed (Cell l), State (Store l a) :< fs) => Address l a -> a -> Eff fs ()
-assign = (modify .) . storeInsert
+assign :: (Ord l, Alt (Cell l), Pointed (Cell l), MonadStore l a m) => Address l a -> a -> m ()
+assign = (modifyStore .) . storeInsert
 
 
-class (Ord l, Alt (Cell l), Pointed (Cell l)) => AbstractAddress l fs where
+class Monad m => MonadStore l a m where
+  getStore :: m (Store l a)
+  putStore :: Store l a -> m ()
+
+instance State (Store l a) :< fs => MonadStore l a (Eff fs) where
+  getStore = get
+  putStore = put
+
+modifyStore :: MonadStore l a m => (Store l a -> Store l a) -> m ()
+modifyStore f = getStore >>= putStore . f
+
+
+class (Ord l, Alt (Cell l), Pointed (Cell l)) => AbstractAddress l m where
   type Cell l :: * -> *
 
-  deref :: (State (Store l a) :< fs, Failure :< fs) => Address l a -> Eff fs a
+  deref :: (MonadStore l a m, MonadFail m) => Address l a -> m a
 
-  alloc :: (State (Store l a) :< fs, Failure :< fs) => Name -> Eff fs (Address l a)
+  alloc :: (MonadStore l a m, MonadFail m) => Name -> m (Address l a)
 
 
 newtype Precise = Precise { unPrecise :: Int }
@@ -60,26 +73,26 @@ allocPrecise = Address . Precise . storeSize
 newtype I a = I { unI :: a }
   deriving (Eq, Ord, Show)
 
-instance AbstractAddress Precise fs where
+instance AbstractAddress Precise m where
   type Cell Precise = I
 
-  deref = maybe uninitializedAddress (pure . unI) <=< flip fmap get . storeLookup
+  deref = maybe uninitializedAddress (pure . unI) <=< flip fmap getStore . storeLookup
 
-  alloc _ = fmap allocPrecise get
+  alloc _ = fmap allocPrecise getStore
 
 
 newtype Monovariant = Monovariant { unMonovariant :: Name }
   deriving (Eq, Ord, Show)
 
-instance NonDetEff :< fs => AbstractAddress Monovariant fs where
+instance Alternative m => AbstractAddress Monovariant m where
   type Cell Monovariant = []
 
-  deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . storeLookup
+  deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap getStore . storeLookup
 
   alloc = pure . Address . Monovariant
 
 
-uninitializedAddress :: Failure :< fs => Eff fs a
+uninitializedAddress :: MonadFail m => m a
 uninitializedAddress = fail "uninitialized address"
 
 

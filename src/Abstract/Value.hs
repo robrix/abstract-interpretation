@@ -34,8 +34,8 @@ data Value l t a
 
 
 class AbstractValue l v t a where
-  lambda :: (AbstractAddress l fs, Reader (Environment (Address l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> Name -> Type -> t a -> Eff fs v
-  app :: (AbstractAddress l fs, Reader (Environment (Address l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> v -> v -> Eff fs v
+  lambda :: (AbstractAddress l (Eff fs), Reader (Environment (Address l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> Name -> Type -> t a -> Eff fs v
+  app :: (AbstractAddress l (Eff fs), Reader (Environment (Address l v)) :< fs, State (Store l v) :< fs, Failure :< fs) => (t a -> Eff fs v) -> v -> v -> Eff fs v
 
   prim' :: a -> Eff fs v
 

@@ -31,7 +31,7 @@ subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.sing
 
 -- Dead code analysis
 
-evalDead :: forall l v a. (AbstractAddress l (DeadCodeInterpreter l (Term a) v), Ord a, AbstractValue l v Term a, PrimitiveOperations v (DeadCodeInterpreter l (Term a) v)) => Eval (Term a) (DeadCodeResult l (Term a) v)
+evalDead :: forall l v a. (AbstractAddress l (Eff (DeadCodeInterpreter l (Term a) v)), Ord a, AbstractValue l v Term a, PrimitiveOperations v (DeadCodeInterpreter l (Term a) v)) => Eval (Term a) (DeadCodeResult l (Term a) v)
 evalDead = run @(DeadCodeInterpreter l (Term a) v) . runDead @l (ev @l)
 
 runDead :: forall l t v fs

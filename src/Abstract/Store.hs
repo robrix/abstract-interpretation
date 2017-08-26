@@ -78,7 +78,7 @@ newtype Monovariant a = Monovariant { unMonovariant :: Name }
 
 instance Address Monovariant where
   type Cell Monovariant = []
-  type Context Monovariant a m = (Ord a, Alternative m)
+  type Context Monovariant a m = (Alternative m)
 
   deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . storeLookup
 

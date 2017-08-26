@@ -3,11 +3,11 @@ module Control.Effect where
 
 import qualified Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
-import Control.Monad.Effect.Internal as Effect hiding (run)
+import Control.Monad.Effect.Internal hiding (run)
 import Control.Monad.Effect.NonDetEff
-import Control.Monad.Effect.Reader as Reader
-import Control.Monad.Effect.State as State
-import Control.Monad.Effect.Writer as Writer
+import Control.Monad.Effect.Reader
+import Control.Monad.Effect.State
+import Control.Monad.Effect.Writer
 
 run :: RunEffects fs a => Eff fs a -> Final fs a
 run = Effect.run . runEffects

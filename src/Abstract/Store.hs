@@ -2,7 +2,7 @@
 module Abstract.Store
 ( Precise(..)
 , Monovariant(..)
-, Address(..)
+, AbstractAddress(..)
 , Store(..)
 , Key(..)
 , assign
@@ -42,7 +42,7 @@ assign :: (Ord l, Alt (Cell l), Pointed (Cell l), State (Store l a) :< fs) => Ke
 assign = (modify .) . storeInsert
 
 
-class (Ord l, Alt (Cell l), Pointed (Cell l)) => Address l fs where
+class (Ord l, Alt (Cell l), Pointed (Cell l)) => AbstractAddress l fs where
   type Cell l :: * -> *
 
   deref :: (State (Store l a) :< fs, MonadFail (Eff fs)) => Key l a -> Eff fs a
@@ -59,7 +59,7 @@ allocPrecise = Key . Precise . storeSize
 newtype I a = I { unI :: a }
   deriving (Eq, Ord, Show)
 
-instance Address Precise fs where
+instance AbstractAddress Precise fs where
   type Cell Precise = I
 
   deref = maybe uninitializedAddress (pure . unI) <=< flip fmap get . storeLookup
@@ -70,7 +70,7 @@ instance Address Precise fs where
 newtype Monovariant = Monovariant { unMonovariant :: Name }
   deriving (Eq, Ord, Show)
 
-instance (Alternative (Eff fs)) => Address Monovariant fs where
+instance (Alternative (Eff fs)) => AbstractAddress Monovariant fs where
   type Cell Monovariant = []
 
   deref = maybe uninitializedAddress (asum . fmap pure) <=< flip fmap get . storeLookup

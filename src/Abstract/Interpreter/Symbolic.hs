@@ -3,12 +3,11 @@ module Abstract.Interpreter.Symbolic where
 
 import Abstract.Interpreter
 import Abstract.Primitive
-import Abstract.Value
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Effect
-import Control.Monad.Effect.Amb
 import Control.Monad.Effect.State
+import Control.Monad.Fail
 import qualified Data.Set as Set
 
 data Sym t a = Sym t | V a
@@ -24,7 +23,7 @@ sym2 _ _ g (Sym a) (Sym b) = pure (Sym (g a b))
 sym2 f num g a (V b) = sym2 f num g a (Sym (num b))
 sym2 f num g (V a) b = sym2 f num g (Sym (num a)) b
 
-evSymbolic :: (Eval t fs (Value l t (Sym t a)) -> Eval t fs (Value l t (Sym t a))) -> Eval t fs (Value l t (Sym t a)) -> Eval t fs (Value l t (Sym t a))
+evSymbolic :: (Eval t (Eff fs (v (Sym t a))) -> Eval t (Eff fs (v (Sym t a)))) -> Eval t (Eff fs (v (Sym t a))) -> Eval t (Eff fs (v (Sym t a)))
 evSymbolic ev0 ev e = ev0 ev e
 
 
@@ -34,11 +33,9 @@ data PathExpression t = E t | NotE t
 newtype PathCondition t = PathCondition { unPathCondition :: Set.Set (PathExpression t) }
   deriving (Eq, Ord, Show)
 
-getPathCondition :: State (PathCondition t) :< fs => Eff fs (PathCondition t)
-getPathCondition = get
 
-refine :: (Ord t, State (PathCondition t) :< fs) => PathExpression t -> Eff fs ()
-refine = modify . pathConditionInsert
+refine :: (Ord t, MonadPathCondition t m) => PathExpression t -> m ()
+refine = modifyPathCondition . pathConditionInsert
 
 pathConditionMember :: Ord t => PathExpression t -> PathCondition t -> Bool
 pathConditionMember = (. unPathCondition) . Set.member
@@ -47,7 +44,18 @@ pathConditionInsert :: Ord t => PathExpression t -> PathCondition t -> PathCondi
 pathConditionInsert = ((PathCondition .) . (. unPathCondition)) . Set.insert
 
 
-instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, PrimitiveOperations a (Eff fs), State (PathCondition t) :< fs, Amb :< fs) => PrimitiveOperations (Sym t a) (Eff fs) where
+class Monad m => MonadPathCondition t m where
+  getPathCondition :: m (PathCondition t)
+  putPathCondition :: PathCondition t -> m ()
+
+instance State (PathCondition t) :< fs => MonadPathCondition t (Eff fs) where
+  getPathCondition = get
+  putPathCondition = put
+
+modifyPathCondition :: MonadPathCondition t m => (PathCondition t -> PathCondition t) -> m ()
+modifyPathCondition f = getPathCondition >>= putPathCondition . f
+
+instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, MonadFail m, MonadPrim a m, MonadPathCondition t m, Alternative m) => MonadPrim (Sym t a) m where
   delta1 o a = case o of
     Negate -> pure (negate a)
     Abs    -> pure (abs a)

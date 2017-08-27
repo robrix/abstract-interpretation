@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes, ConstraintKinds, DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeOperators #-}
 module Abstract.Interpreter where
 
 import Abstract.Primitive
@@ -11,37 +11,36 @@ import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Data.Function (fix)
+import Data.Semigroup
 import Prelude hiding (fail)
 
 
-type Interpreter l v = '[Failure, State (Store l v), Reader (Environment (l v))]
+type Interpreter l v = '[Failure, State (Store l v), Reader (Environment (Address l v))]
 
-type EvalResult l a = (Either String (Value l (Term a) a), Store l (Value l (Term a) a))
+type MonadInterpreter l v m = (MonadEnv (Address l v) m, MonadStore l v m, MonadFail m)
 
-type Eval t fs v = t -> Eff fs v
+type EvalResult l v = Final (Interpreter l v) v
+
+type Eval t m = t -> m
 
 
 -- Evaluation
 
-eval :: forall l a . (Address l, Context l (Value l (Term a) a) (Interpreter l (Value l (Term a) a)), PrimitiveOperations a (Eff (Interpreter l (Value l (Term a) a)))) => Term a -> EvalResult l a
-eval = run @(Interpreter l (Value l (Term a) a)) . runEval
+eval :: forall l v a . (MonadAddress l (Eff (Interpreter l v)), MonadValue l v Term a (Eff (Interpreter l v)), MonadPrim v (Eff (Interpreter l v)), Semigroup (Cell l v)) => Term a -> EvalResult l v
+eval = run @(Interpreter l v) . runEval @l
 
-runEval :: (Address l, Context l (Value l (Term a) a) fs, PrimitiveOperations a (Eff fs), Interpreter l (Value l (Term a) a) :<: fs) => Eval (Term a) fs (Value l (Term a) a)
-runEval = fix ev
+runEval :: forall l v a m . (MonadAddress l m, MonadValue l v Term a m, MonadInterpreter l v m, MonadPrim v m, Semigroup (Cell l v)) => Eval (Term a) (m v)
+runEval = fix (ev @l)
 
-ev :: forall l a fs
-   .  (Address l, Context l (Value l (Term a) a) fs, PrimitiveOperations a (Eff fs), Interpreter l (Value l (Term a) a) :<: fs)
-   => Eval (Term a) fs (Value l (Term a) a)
-   -> Eval (Term a) fs (Value l (Term a) a)
+ev :: forall l v a m
+   .  (MonadAddress l m, MonadValue l v Term a m, MonadInterpreter l v m, MonadPrim v m, Semigroup (Cell l v))
+   => Eval (Term a) (m v)
+   -> Eval (Term a) (m v)
 ev ev term = case out term of
-  Prim n -> return (I n)
   Var x -> do
-    p <- ask
-    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (l (Value l (Term a) a))))
-  If c t e -> do
-    v <- ev c
-    c' <- truthy v
-    ev (if c' then t else e)
+    p <- askEnv
+    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (Address l v)))
+  Prim n -> prim' @l @v @Term n
   Op1 o a -> do
     va <- ev a
     delta1 o va
@@ -49,21 +48,17 @@ ev ev term = case out term of
     va <- ev a
     vb <- ev b
     delta2 o va vb
-  Rec f e -> do
-    p <- ask
-    a <- alloc f
-    v <- local (const (envInsert f a (p :: Environment (l (Value l (Term a) a))))) (ev e)
-    assign a v
-    return v
-  Lam x e0 -> do
-    p <- ask
-    return (Closure x e0 p)
   App e0 e1 -> do
     closure <- ev e0
-    case closure of
-      Closure x e2 p -> do
-        v1 <- ev e1
-        a <- alloc x
-        assign a v1
-        local (const (envInsert x a p)) (ev e2)
-      _ -> fail "non-closure operator"
+    v1 <- ev e1
+    app @l ev closure v1
+  Lam x ty e0 -> lambda @l ev x ty e0
+  Rec f _ e -> do
+    a <- alloc f
+    v <- localEnv (envInsert f (a :: Address l v)) (ev e)
+    assign a v
+    return v
+  If c t e -> do
+    v <- ev c
+    c' <- truthy v
+    ev (if c' then t else e)

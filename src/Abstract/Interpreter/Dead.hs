@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, DeriveFoldable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes, DataKinds, DeriveFoldable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Interpreter.Dead where
 
 import Abstract.Interpreter
@@ -11,19 +11,25 @@ import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.State
 import Data.Function (fix)
 import Data.Functor.Foldable
-import Data.Proxy
 import Data.Semigroup
 import qualified Data.Set as Set
 
 type DeadCodeInterpreter l t v = State (Dead t) ': Interpreter l v
 
+type DeadCodeResult l t v = Final (DeadCodeInterpreter l t v) v
+
+
 newtype Dead a = Dead { unDead :: Set.Set a }
   deriving (Eq, Foldable, Monoid, Ord, Show)
 
-revive :: Ord a => a -> Dead a -> Dead a
-revive = (Dead .) . (. unDead) . Set.delete
 
-type DeadCodeResult l a = (Either String (Value l (Term a) a, Dead (Term a)), Store l (Value l (Term a) a))
+class Monad m => MonadDead t m where
+  killAll :: Dead t -> m ()
+  revive :: Ord t => t -> m ()
+
+instance State (Dead t) :< fs => MonadDead t (Eff fs) where
+  killAll = put
+  revive = modify . (Dead .) . (. unDead) . Set.delete
 
 
 subterms :: (Ord a, Recursive a, Foldable (Base a)) => a -> Set.Set a
@@ -32,19 +38,20 @@ subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.sing
 
 -- Dead code analysis
 
-evalDead :: forall l a. (Ord a, Address l, Context l (Value l (Term a) a) (DeadCodeInterpreter l (Term a) (Value l (Term a) a)), PrimitiveOperations a (Eff (DeadCodeInterpreter l (Term a) (Value l (Term a) a)))) => Term a -> DeadCodeResult l a
-evalDead = run @(DeadCodeInterpreter l (Term a) (Value l (Term a) a)) . runDead (Proxy :: Proxy l) ev
+evalDead :: forall l v a. (MonadAddress l (Eff (DeadCodeInterpreter l (Term a) v)), Ord a, MonadValue l v Term a (Eff (DeadCodeInterpreter l (Term a) v)), MonadPrim v (Eff (DeadCodeInterpreter l (Term a) v)), Semigroup (Cell l v)) => Eval (Term a) (DeadCodeResult l (Term a) v)
+evalDead = run @(DeadCodeInterpreter l (Term a) v) . runDead (ev @l)
 
-runDead :: (Ord t, Recursive t, Foldable (Base t), DeadCodeInterpreter l t v :<: fs) => proxy l -> (Eval t fs v -> Eval t fs v) -> Eval t fs v
-runDead proxy ev e0 = do
-  put (Dead (subterms e0))
-  fix (evDead proxy ev) e0
+runDead :: (Ord t, Recursive t, Foldable (Base t), MonadDead t m)
+        => (Eval t (m v) -> Eval t (m v))
+        -> Eval t (m v)
+runDead ev e0 = do
+  killAll (Dead (subterms e0))
+  fix (evDead ev) e0
 
-evDead :: (Ord t, DeadCodeInterpreter l t v :<: fs)
-       => proxy l
-       -> (Eval t fs v -> Eval t fs v)
-       -> Eval t fs v
-       -> Eval t fs v
-evDead _ ev0 ev e = do
-  modify (revive e)
+evDead :: (Ord t, MonadDead t m)
+       => (Eval t (m v) -> Eval t (m v))
+       -> Eval t (m v)
+       -> Eval t (m v)
+evDead ev0 ev e = do
+  revive e
   ev0 ev e

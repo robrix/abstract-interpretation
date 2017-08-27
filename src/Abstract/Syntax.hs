@@ -2,6 +2,7 @@
 module Abstract.Syntax where
 
 import Abstract.Primitive
+import Abstract.Type
 import Data.Bifoldable
 import Data.Bifunctor
 import Data.Bitraversable
@@ -16,8 +17,8 @@ data Syntax a r
   | Op1 Op1 r
   | Op2 Op2 r r
   | App r r
-  | Lam Name r
-  | Rec Name r
+  | Lam Name Type r
+  | Rec Name Type r
   | If r r r
   deriving (Eq, Ord, Show)
 
@@ -34,23 +35,23 @@ infixl 9 #
 (#) :: Term a -> Term a -> Term a
 (#) = (In .) . App
 
-lam :: Name -> (Term a -> Term a) -> Term a
-lam s f = makeLam s (f (var s))
+lam :: Name -> Type -> (Term a -> Term a) -> Term a
+lam s ty f = makeLam s ty (f (var s))
 
-makeLam :: Name -> Term a -> Term a
-makeLam = (In .) . Lam
+makeLam :: Name -> Type -> Term a -> Term a
+makeLam name ty body = In (Lam name ty body)
 
-rec :: Name -> Name -> (Term a -> Term a -> Term a) -> Term a
-rec f x b = makeRec f (lam x (b (var "f")))
+rec :: Name -> Type -> (Term a -> Term a) -> Term a
+rec f ty1 b = makeRec f ty1 (b (var f))
 
-makeRec :: Name -> Term a -> Term a
-makeRec = (In .) . Rec
+makeRec :: Name -> Type -> Term a -> Term a
+makeRec name ty body = In (Rec name ty body)
 
 if' :: Term a -> Term a -> Term a -> Term a
 if' c t e = In (If c t e)
 
-let' :: Name -> Term a -> (Term a -> Term a) -> Term a
-let' var val body = lam var body # val
+let' :: Name -> Term a -> Type -> (Term a -> Term a) -> Term a
+let' var val ty body = lam var ty body # val
 
 immediateSubterms :: Ord a => Term a -> Set.Set (Term a)
 immediateSubterms = foldMap Set.singleton . out
@@ -59,8 +60,8 @@ subterms :: Ord a => Term a -> Set.Set (Term a)
 subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.singleton term
 
 
-showsTernaryWith :: (Int -> a -> ShowS) -> (Int -> b -> ShowS) -> (Int -> c -> ShowS) -> String -> Int -> a -> b -> c -> ShowS
-showsTernaryWith sp1 sp2 sp3 name d x y z = showParen (d > 10) $ showString name . showChar ' ' . sp1 11 x . showChar ' ' . sp2 11 y . showChar ' ' . sp3 11 z
+showsConstructor :: String -> Int -> [Int -> ShowS] -> ShowS
+showsConstructor name d fields = showParen (d > 10) $ showString name . showChar ' ' . foldr (.) id ([($ 11)] <*> fields)
 
 
 -- Instances
@@ -83,8 +84,8 @@ instance Bifoldable Syntax where
     Op1 _ a -> g a
     Op2 _ a b -> g a `mappend` g b
     App a b -> g a `mappend` g b
-    Lam _ a -> g a
-    Rec _ a -> g a
+    Lam _ _ a -> g a
+    Rec _ _ a -> g a
     If c t e -> g c `mappend` g t `mappend` g e
 
 instance Foldable (Syntax a) where
@@ -101,8 +102,8 @@ instance Bifunctor Syntax where
     Op1 o a -> Op1 o (g a)
     Op2 o a b -> Op2 o (g a) (g b)
     App a b -> App (g a) (g b)
-    Lam n a -> Lam n (g a)
-    Rec n a -> Rec n (g a)
+    Lam n t a -> Lam n t (g a)
+    Rec n t a -> Rec n t (g a)
     If c t e -> If (g c) (g t) (g e)
 
 instance Functor (Syntax a) where
@@ -119,8 +120,8 @@ instance Bitraversable Syntax where
     Op1 o a -> Op1 o <$> g a
     Op2 o a b -> Op2 o <$> g a <*> g b
     App a b -> App <$> g a <*> g b
-    Lam n a -> Lam n <$> g a
-    Rec n a -> Rec n <$> g a
+    Lam n t a -> Lam n t <$> g a
+    Rec n t a -> Rec n t <$> g a
     If c t e -> If <$> g c <*> g t <*> g e
 
 instance Traversable (Syntax a) where
@@ -137,8 +138,8 @@ instance Eq2 Syntax where
     (Op1 o1 a1, Op1 o2 a2) -> o1 == o2 && eqA a1 a2
     (Op2 o1 a1 b1, Op2 o2 a2 b2) -> o1 == o2 && eqA a1 a2 && eqA b1 b2
     (App a1 b1, App a2 b2) -> eqA a1 a2 && eqA b1 b2
-    (Lam n1 a1, Lam n2 a2) -> n1 == n2 && eqA a1 a2
-    (Rec n1 a1, Rec n2 a2) -> n1 == n2 && eqA a1 a2
+    (Lam n1 t1 a1, Lam n2 t2 a2) -> n1 == n2 && t1 == t2 && eqA a1 a2
+    (Rec n1 t1 a1, Rec n2 t2 a2) -> n1 == n2 && t1 == t2 && eqA a1 a2
     (If c1 t1 e1, If c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
     _ -> False
 
@@ -165,10 +166,10 @@ instance Ord2 Syntax where
     (App a1 b1, App a2 b2) -> compareA a1 a2 <> compareA b1 b2
     (App{}, _) -> LT
     (_, App{}) -> GT
-    (Lam n1 a1, Lam n2 a2) -> compare n1 n2 <> compareA a1 a2
+    (Lam n1 t1 a1, Lam n2 t2 a2) -> compare n1 n2 <> compare t1 t2 <> compareA a1 a2
     (Lam{}, _) -> LT
     (_, Lam{}) -> GT
-    (Rec n1 a1, Rec n2 a2) -> compare n1 n2 <> compareA a1 a2
+    (Rec n1 t1 a1, Rec n2 t2 a2) -> compare n1 n2 <> compare t1 t2 <> compareA a1 a2
     (Rec{}, _) -> LT
     (_, Rec{}) -> GT
     (If c1 t1 e1, If c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
@@ -182,14 +183,14 @@ instance Show1 Term where
 
 instance Show2 Syntax where
   liftShowsPrec2 spV _ spA _ d s = case s of
-    Var n -> showsUnaryWith showsPrec "Var" d n
-    Prim v -> showsUnaryWith spV "Prim" d v
-    Op1 o a -> showsBinaryWith showsPrec spA "Op1" d o a
-    Op2 o a b -> showsTernaryWith showsPrec spA spA "Op2" d o a b
-    App a b -> showsBinaryWith spA spA "App" d a b
-    Lam n a -> showsBinaryWith showsPrec spA "Lam" d n a
-    Rec n a -> showsBinaryWith showsPrec spA "Rec" d n a
-    If c t e -> showsTernaryWith spA spA spA "If" d c t e
+    Var n -> showsConstructor "Var" d [ flip showsPrec n ]
+    Prim v -> showsConstructor "Prim" d [ flip spV v ]
+    Op1 o a -> showsConstructor "Op1" d [ flip showsPrec o, flip spA a ]
+    Op2 o a b -> showsConstructor "Op2" d [ flip showsPrec o, flip spA a, flip spA b ]
+    App a b -> showsConstructor "App" d (flip spA <$> [ a, b ])
+    Lam n t a -> showsConstructor "Lam" d [ flip showsPrec n, flip showsPrec t, flip spA a ]
+    Rec n t a -> showsConstructor  "Rec" d [ flip showsPrec n, flip showsPrec t, flip spA a ]
+    If c t e -> showsConstructor "If" d (flip spA <$> [c, t, e])
 
 instance Show a => Show1 (Syntax a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
@@ -230,14 +231,14 @@ instance Pretty2 Syntax where
     Op1 o a -> pretty o <+> pr a
     Op2 o a b -> pr a <+> pretty o <+> pr b
     App a b -> pr a <+> parens (pr b)
-    Lam n a -> parens (pretty '\\' <+> pretty n <+> pretty "->" <> nest 2 (line <> pr a))
-    Rec n a -> pretty "fix" <+> parens (pretty '\\' <+> pretty n <+> pretty "->" <> nest 2 (line <> pr a))
+    Lam n t a -> parens (pretty '\\' <+> pretty n <+> colon <+> pretty t <+> pretty "." <> nest 2 (line <> pr a))
+    Rec n t a -> pretty "fix" <+> parens (pretty '\\' <+> pretty n <+> colon <+> pretty t <+> pretty "." <> nest 2 (line <> pr a))
     If c t e -> pretty "if" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
 
 instance Pretty a => Pretty1 (Syntax a) where
   liftPretty = liftPretty2 pretty prettyList
 
-instance (Primitive a, PrimitiveOperations a m) => PrimitiveOperations (Term a) m where
+instance (Primitive a, MonadPrim a m) => MonadPrim (Term a) m where
   delta1 op = pure . unary op
   delta2 op = (pure .) . binary op
 

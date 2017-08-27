@@ -1,9 +1,13 @@
-{-# LANGUAGE DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
+{-# LANGUAGE AllowAmbiguousTypes, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, StandaloneDeriving, TypeOperators, UndecidableInstances #-}
 module Abstract.Value where
 
 import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax
+import Abstract.Type
+import Control.Monad hiding (fail)
+import Control.Monad.Effect
+import Control.Monad.Effect.Reader
 import Control.Monad.Fail
 import Data.Functor.Classes
 import qualified Data.Map as Map
@@ -19,53 +23,87 @@ envLookup :: Name -> Environment a -> Maybe a
 envLookup = (. unEnvironment) . Map.lookup
 
 envInsert :: Name -> a -> Environment a -> Environment a
-envInsert = (((Environment .) . (. unEnvironment)) .) . Map.insert
+envInsert name value (Environment m) = Environment (Map.insert name value m)
 
 
-data Value l t a
-  = I a
-  | Closure Name t (Environment (l (Value l t a)))
-  deriving (Foldable, Functor, Traversable)
+data Value l
+  = I Prim
+  | Closure Name (Term Prim) (Environment (Address l (Value l)))
 
 
-instance Address l => Eq2 (Value l) where
-  liftEq2 eqT eqA = go
+class Monad m => MonadEnv a m where
+  askEnv :: m (Environment a)
+  localEnv :: (Environment a -> Environment a) -> m b -> m b
+
+instance Reader (Environment a) :< fs => MonadEnv a (Eff fs) where
+  askEnv = ask
+  localEnv = local
+
+
+class Monad m => MonadValue l v t a m where
+  lambda :: (t a -> m v) -> Name -> Type -> t a -> m v
+  app :: (t a -> m v) -> v -> v -> m v
+
+  prim' :: a -> m v
+
+instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv (Address l (Value l)) m, MonadFail m, Semigroup (Cell l (Value l))) => MonadValue l (Value l) Term Prim m where
+  lambda _ name _ body = do
+    env <- askEnv
+    return (Closure name body (env :: Environment (Address l (Value l))))
+
+  app ev (Closure x e2 p) v1 = do
+    a <- alloc x
+    assign a v1
+    localEnv (const (envInsert x a p)) (ev e2)
+  app _ _ _ = fail "non-closure operator"
+
+  prim' = return . I
+
+instance (MonadAddress l m, MonadStore l Type m, MonadEnv (Address l Type) m, MonadFail m, Semigroup (Cell l Type)) => MonadValue l Type t Prim m where
+  lambda ev name inTy body = do
+    a <- alloc name
+    assign a inTy
+    outTy <- localEnv (envInsert name (a :: Address l Type)) (ev body)
+    return (inTy :-> outTy)
+
+  app _ (inTy :-> outTy) argTy = do
+    unless (inTy == argTy) (fail ("expected " ++ show inTy ++ " but got " ++ show argTy))
+    return outTy
+  app _ op _ = fail $ "non-function operator: " ++ show op
+
+  prim' (PInt _)  = return Int
+  prim' (PBool _) = return Bool
+
+
+instance Eq1 Value where
+  liftEq eqL = go
     where go v1 v2 = case (v1, v2) of
-            (I a, I b) -> a `eqA` b
-            (Closure s1 t1 e1, Closure s2 t2 e2) -> s1 == s2 && eqT t1 t2 && liftEq (liftEq go) e1 e2
+            (I a, I b) -> a == b
+            (Closure s1 t1 e1, Closure s2 t2 e2) -> s1 == s2 && t1 == t2 && liftEq (liftEq2 eqL go) e1 e2
             _ -> False
 
-instance (Address l, Eq t) => Eq1 (Value l t) where
-  liftEq = liftEq2 (==)
-
-instance (Eq a, Eq t, Address l) => Eq (Value l t a) where
+instance Eq l => Eq (Value l) where
   (==) = eq1
 
-instance Address l => Ord2 (Value l) where
-  liftCompare2 compareT compareA = go
+instance Ord1 Value where
+  liftCompare compareL = go
     where go v1 v2 = case (v1, v2) of
-            (I a, I b) -> compareA a b
-            (Closure s1 t1 e1, Closure s2 t2 e2) -> compare s1 s2 <> compareT t1 t2 <> liftCompare (liftCompare go) e1 e2
+            (I a, I b) -> compare a b
+            (Closure s1 t1 e1, Closure s2 t2 e2) -> compare s1 s2 <> compare t1 t2 <> liftCompare (liftCompare2 compareL go) e1 e2
             (I _, _) -> LT
             _ -> GT
 
-instance (Address l, Ord t) => Ord1 (Value l t) where
-  liftCompare = liftCompare2 compare
-
-instance (Ord a, Ord t, Address l) => Ord (Value l t a) where
+instance Ord l => Ord (Value l) where
   compare = compare1
 
 
-instance Address l => Show2 (Value l) where
-  liftShowsPrec2 spT _ spA _ = go
+instance Show1 Value where
+  liftShowsPrec spL slL = go
     where go d v = case v of
-            I a -> showsUnaryWith spA "I" d a
-            Closure s t e -> showsTernaryWith showsPrec spT (liftShowsPrec (liftShowsPrec go (showListWith (go 0))) (liftShowList go (showListWith (go 0)))) "Closure" d s t e
+            I a -> showsUnaryWith showsPrec "I" d a
+            Closure s t e -> showsConstructor "Closure" d [flip showsPrec s, flip showsPrec t, flip (liftShowsPrec (liftShowsPrec2 spL slL go (showListWith (go 0))) (liftShowList2 spL slL go (showListWith (go 0)))) e]
 
-instance (Address l, Show t) => Show1 (Value l t) where
-  liftShowsPrec = liftShowsPrec2 showsPrec showList
-
-instance (Show a, Show t, Address l) => Show (Value l t a) where
+instance Show l => Show (Value l) where
   showsPrec = showsPrec1
 
 
@@ -75,20 +113,17 @@ instance Pretty1 Environment where
 instance Pretty a => Pretty (Environment a) where
   pretty = liftPretty pretty prettyList
 
-instance Pretty1 l => Pretty2 (Value l) where
-  liftPretty2 pT _ pA _ = go
-    where go (I a) = pA a
-          go (Closure n t e) = pretty n <> colon <+> pT t <> line
-                                <> liftPretty (liftPretty go (list . map go)) (list . map (liftPretty go (list . map go))) e
+instance Pretty1 Value where
+  liftPretty pL plL = go
+    where go (I a) = pretty a
+          go (Closure n t e) = pretty "Closure" <+> pretty n <+> dot <+> pretty t <> line
+                                 <> liftPretty (liftPretty2 pL plL go (list . map go)) (list . map (liftPretty2 pL plL go (list . map go))) e
 
-instance (Pretty1 l, Pretty t) => Pretty1 (Value l t) where
-  liftPretty = liftPretty2 pretty prettyList
-
-instance (Pretty1 l, Pretty t, Pretty a) => Pretty (Value l t a) where
+instance Pretty l => Pretty (Value l) where
   pretty = liftPretty pretty prettyList
 
 
-instance (MonadFail m, PrimitiveOperations a m) => PrimitiveOperations (Value l t a) m where
+instance MonadFail m => MonadPrim (Value l) m where
   delta1 o   (I a) = fmap I (delta1 o a)
   delta1 Not _     = nonBoolean
   delta1 _   _     = nonNumeric

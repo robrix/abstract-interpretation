@@ -37,7 +37,7 @@ ev ev term = case out term of
   Var x -> do
     p <- askEnv
     maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment l v))
-  Prim n -> prim' @l @v @Term n
+  Prim n -> literal @l @v @Term n
   Op1 o a -> do
     va <- ev a
     delta1 o va

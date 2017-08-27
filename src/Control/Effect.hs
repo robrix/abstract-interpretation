@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Control.Effect where
 
+import Abstract.Set
 import qualified Control.Monad.Effect as Effect
 import Control.Monad.Effect.Failure
 import Control.Monad.Effect.Internal hiding (run)
@@ -8,6 +9,7 @@ import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Control.Monad.Effect.Writer
+import Data.Pointed
 
 run :: RunEffects fs a => Eff fs a -> Final fs a
 run = Effect.run . runEffects
@@ -45,6 +47,8 @@ instance Monoid w => RunEffect (Writer w) a where
   type Out (Writer w) a = (a, w)
   runEffect = runWriter
 
-instance RunEffect NonDetEff a where
-  type Out NonDetEff a = [a]
-  runEffect = makeChoiceA
+instance Ord a => RunEffect NonDetEff a where
+  type Out NonDetEff a = Set a
+  runEffect = relay (pure . point) (\ m k -> case m of
+    MZero -> pure mempty
+    MPlus -> mappend <$> k True <*> k False)

@@ -3,6 +3,7 @@ module Abstract.Interpreter.Symbolic where
 
 import Abstract.Interpreter
 import Abstract.Primitive
+import Abstract.Syntax
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Effect
@@ -55,7 +56,7 @@ instance State (PathCondition t) :< fs => MonadPathCondition t (Eff fs) where
 modifyPathCondition :: MonadPathCondition t m => (PathCondition t -> PathCondition t) -> m ()
 modifyPathCondition f = getPathCondition >>= putPathCondition . f
 
-instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, MonadFail m, MonadPrim a m, MonadPathCondition t m, Alternative m) => MonadPrim (Sym t a) m where
+instance (Num a, Ord a, Primitive a, MonadFail m, MonadPrim a m, MonadPathCondition (Term a) m, Alternative m) => MonadPrim (Sym (Term a) a) m where
   delta1 o a = case o of
     Negate -> pure (negate a)
     Abs    -> pure (abs a)
@@ -91,7 +92,7 @@ instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, MonadFail m, 
         ((refine (E e)    >> return True)
      <|> (refine (NotE e) >> return False))
 
-instance (Num a, Num t, AbstractPrimitive a t) => Num (Sym t a) where
+instance (Num a, Primitive a) => Num (Sym (Term a) a) where
   fromInteger = V . fromInteger
 
   signum (V a)   = V   (signum a)

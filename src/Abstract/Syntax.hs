@@ -31,6 +31,9 @@ newtype Term a = In { out :: Syntax a (Term a) }
 var :: Name -> Term a
 var = In . Var
 
+prim :: a -> Term a
+prim = In . Prim
+
 infixl 9 #
 (#) :: Term a -> Term a -> Term a
 (#) = (In .) . App
@@ -212,10 +215,6 @@ instance Primitive a => Primitive (Term a) where
   binary o a b = In (Op2 o a b)
 
   fromIntegerPrim = prim . fromIntegerPrim
-
-
-instance Primitive a => AbstractPrimitive a (Term a) where
-  prim = In . Prim
 
 
 instance Pretty1 Term where

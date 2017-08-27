@@ -52,10 +52,6 @@ not' :: Primitive t => t -> t
 not' = unary Not
 
 
-class Primitive t => AbstractPrimitive a t | t -> a where
-  prim :: a -> t
-
-
 class Monad m => MonadPrim a m where
   delta1 :: Op1 -> a -> m a
   delta2 :: Op2 -> a -> a -> m a

@@ -62,24 +62,24 @@ instance (Num a, Ord a, Primitive a, MonadFail m, MonadPrim a m, MonadPathCondit
     Abs    -> pure (abs a)
     Signum -> pure (signum a)
     Not    -> case a of
-      Sym t -> pure (Sym (unary Not t))
+      Sym t -> pure (Sym (not' t))
       V a -> V <$> delta1 Not a
 
   delta2 o a b = case o of
     Plus  -> pure (a + b)
     Minus -> pure (a - b)
     Times -> pure (a * b)
-    DividedBy -> isZero b >>= flip when divisionByZero >> sym2 (delta2 DividedBy) prim (binary DividedBy) a b
-    Quotient  -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Quotient)  prim (binary Quotient)  a b
-    Remainder -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Remainder) prim (binary Remainder) a b
-    Modulus   -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Modulus)   prim (binary Modulus)   a b
-    And -> sym2 (delta2 And) prim (binary And) a b
-    Or  -> sym2 (delta2 Or)  prim (binary Or)  a b
-    Eq  -> sym2 (delta2 Eq)  prim (binary Eq)  a b
-    Lt  -> sym2 (delta2 Lt)  prim (binary Lt)  a b
-    LtE -> sym2 (delta2 LtE) prim (binary LtE) a b
-    Gt  -> sym2 (delta2 Gt)  prim (binary Gt)  a b
-    GtE -> sym2 (delta2 GtE) prim (binary GtE) a b
+    DividedBy -> isZero b >>= flip when divisionByZero >> sym2 (delta2 DividedBy) prim div'  a b
+    Quotient  -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Quotient)  prim quot' a b
+    Remainder -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Remainder) prim rem'  a b
+    Modulus   -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Modulus)   prim mod'  a b
+    And -> sym2 (delta2 And) prim and' a b
+    Or  -> sym2 (delta2 Or)  prim or'  a b
+    Eq  -> sym2 (delta2 Eq)  prim eq   a b
+    Lt  -> sym2 (delta2 Lt)  prim lt   a b
+    LtE -> sym2 (delta2 LtE) prim lte  a b
+    Gt  -> sym2 (delta2 Gt)  prim gt   a b
+    GtE -> sym2 (delta2 GtE) prim gte  a b
 
   truthy (V a) = truthy a
   truthy (Sym e) = do

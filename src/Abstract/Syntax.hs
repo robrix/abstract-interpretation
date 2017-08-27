@@ -38,6 +38,44 @@ infixl 9 #
 (#) :: Term a -> Term a -> Term a
 (#) = (In .) . App
 
+
+eq :: Term a -> Term a -> Term a
+eq = (In .) . Op2 Eq
+
+lt :: Term a -> Term a -> Term a
+lt = (In .) . Op2 Lt
+
+lte :: Term a -> Term a -> Term a
+lte = (In .) . Op2 LtE
+
+gt :: Term a -> Term a -> Term a
+gt = (In .) . Op2 Gt
+
+gte :: Term a -> Term a -> Term a
+gte = (In .) . Op2 GtE
+
+and' :: Term a -> Term a -> Term a
+and' = (In .) . Op2 And
+
+or' :: Term a -> Term a -> Term a
+or' = (In .) . Op2 Or
+
+not' :: Term a -> Term a
+not' = In . Op1 Not
+
+div' :: Term a -> Term a -> Term a
+div' = (In .) . Op2 DividedBy
+
+quot' :: Term a -> Term a -> Term a
+quot' = (In .) . Op2 Quotient
+
+rem' :: Term a -> Term a -> Term a
+rem' = (In .) . Op2 Remainder
+
+mod' :: Term a -> Term a -> Term a
+mod' = (In .) . Op2 Modulus
+
+
 lam :: Name -> Type -> (Term a -> Term a) -> Term a
 lam s ty f = makeLam s ty (f (var s))
 
@@ -208,13 +246,6 @@ instance Num a => Num (Term a) where
   (+) = (In .) . Op2 Plus
   (-) = (In .) . Op2 Minus
   (*) = (In .) . Op2 Times
-
-instance Primitive a => Primitive (Term a) where
-  unary o a = In (Op1 o a)
-
-  binary o a b = In (Op2 o a b)
-
-  fromIntegerPrim = prim . fromIntegerPrim
 
 
 instance Pretty1 Term where

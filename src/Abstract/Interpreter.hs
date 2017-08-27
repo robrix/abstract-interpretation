@@ -27,10 +27,7 @@ type Eval t m = t -> m
 -- Evaluation
 
 eval :: forall l v a . (MonadAddress l (Eff (Interpreter l v)), MonadValue l v Term a (Eff (Interpreter l v)), MonadPrim v (Eff (Interpreter l v)), Semigroup (Cell l v)) => Term a -> EvalResult l v
-eval = run @(Interpreter l v) . runEval @l
-
-runEval :: forall l v a m . (MonadAddress l m, MonadValue l v Term a m, MonadInterpreter l v m, MonadPrim v m, Semigroup (Cell l v)) => Eval (Term a) (m v)
-runEval = fix (ev @l)
+eval = run @(Interpreter l v) . fix (ev @l)
 
 ev :: forall l v a m
    .  (MonadAddress l m, MonadValue l v Term a m, MonadInterpreter l v m, MonadPrim v m, Semigroup (Cell l v))

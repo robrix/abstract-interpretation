@@ -34,6 +34,13 @@ var = In . Var
 prim :: a -> Term a
 prim = In . Prim
 
+true :: Term Prim
+true = prim (PBool True)
+
+false :: Term Prim
+false = prim (PBool False)
+
+
 infixl 9 #
 (#) :: Term a -> Term a -> Term a
 (#) = (In .) . App

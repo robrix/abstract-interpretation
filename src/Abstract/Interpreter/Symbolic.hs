@@ -92,7 +92,7 @@ instance (Num a, Ord a, Primitive a, MonadFail m, MonadPrim a m, MonadPathCondit
         ((refine (E e)    >> return True)
      <|> (refine (NotE e) >> return False))
 
-instance (Num a, Primitive a) => Num (Sym (Term a) a) where
+instance Num a => Num (Sym (Term a) a) where
   fromInteger = V . fromInteger
 
   signum (V a)   = V   (signum a)

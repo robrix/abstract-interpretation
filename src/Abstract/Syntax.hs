@@ -199,15 +199,15 @@ instance Show a => Show1 (Syntax a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
 
 
-instance Primitive a => Num (Term a) where
-  fromInteger = fromIntegerPrim
+instance Num a => Num (Term a) where
+  fromInteger = prim . fromInteger
 
-  signum = unary Signum
-  abs = unary Abs
-  negate = unary Negate
-  (+) = binary Plus
-  (-) = binary Minus
-  (*) = binary Times
+  signum = In . Op1 Signum
+  abs    = In . Op1 Abs
+  negate = In . Op1 Negate
+  (+) = (In .) . Op2 Plus
+  (-) = (In .) . Op2 Minus
+  (*) = (In .) . Op2 Times
 
 instance Primitive a => Primitive (Term a) where
   unary o a = In (Op1 o a)

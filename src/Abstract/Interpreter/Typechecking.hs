@@ -19,11 +19,7 @@ type TypecheckingResult l = Final (TypecheckingInterpreter l) Type
 evalCheck :: forall l
           .  (Ord l, MonadAddress l (Eff (TypecheckingInterpreter l)), Semigroup (Cell l Type))
           => Eval (Term Prim) (TypecheckingResult l)
-evalCheck = run @(TypecheckingInterpreter l) . runCheck (ev @l)
-
-runCheck :: (Eval t (m Type) -> Eval t (m Type))
-         -> Eval t (m Type)
-runCheck ev e0 = fix (evCheck ev) e0
+evalCheck = run @(TypecheckingInterpreter l) . fix (evCheck (ev @l))
 
 evCheck :: (Eval t (m Type) -> Eval t (m Type))
         -> Eval t (m Type)

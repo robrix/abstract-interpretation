@@ -66,6 +66,15 @@ modifyCache :: MonadCacheOut l t v m => (Cache l t v -> Cache l t v) -> m ()
 modifyCache f = fmap f getCache >>= putCache
 
 
+class (Alternative m, Monad m) => MonadNonDet m where
+  collect :: Monoid b => (a -> b) -> m a -> m b
+
+instance NonDetEff :< fs => MonadNonDet (Eff fs) where
+  collect f = interpose (pure . f) (\ m k -> case m of
+    MZero -> pure mempty
+    MPlus -> mappend <$> k True <*> k False)
+
+
 -- Coinductively-cached evaluation
 
 evalCache :: forall l v a
@@ -107,17 +116,11 @@ fixCache eval e = do
   pairs <- mlfp mempty (\ dollar -> do
     putCache (mempty :: Cache l t v)
     putStore store
-    _ <- localCache (const dollar) (collect (eval e) :: Eff fs (Set v))
+    _ <- localCache (const dollar) (collect point (eval e) :: Eff fs (Set v))
     getCache)
   asum . flip map (toList (cacheLookup c pairs)) $ \ (value, store') -> do
     putStore store'
     return value
-
-
-collect :: (Ord a, NonDetEff :< fs) => Eff fs a -> Eff fs (Set a)
-collect = interpose (pure . point) (\ m k -> case m of
-  MZero -> pure mempty
-  MPlus -> mappend <$> k True <*> k False)
 
 
 mlfp :: (Eq a, Monad m) => a -> (a -> m a) -> m a

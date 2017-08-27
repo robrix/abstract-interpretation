@@ -154,7 +154,6 @@ instance MonadFail m => MonadPrim (Value l) m where
   delta2 o   (I a)     (I b)     = fmap I (delta2 o a b)
   delta2 And _         _         = nonBoolean
   delta2 Or  _         _         = nonBoolean
-  delta2 XOr _         _         = nonBoolean
   delta2 Eq  Closure{} Closure{} = undefinedComparison
   delta2 Eq  _         _         = disjointComparison
   delta2 Lt  Closure{} Closure{} = undefinedComparison

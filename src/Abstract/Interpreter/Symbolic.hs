@@ -74,7 +74,6 @@ instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, MonadFail m, 
     Modulus   -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Modulus)   prim (binary Modulus)   a b
     And -> sym2 (delta2 And) prim (binary And) a b
     Or  -> sym2 (delta2 Or)  prim (binary Or)  a b
-    XOr -> sym2 (delta2 XOr) prim (binary XOr) a b
     Eq  -> sym2 (delta2 Eq)  prim (binary Eq)  a b
     Lt  -> sym2 (delta2 Eq)  prim (binary Lt)  a b
     LtE -> sym2 (delta2 Eq)  prim (binary LtE) a b

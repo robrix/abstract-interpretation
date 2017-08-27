@@ -11,7 +11,7 @@ import Prelude hiding (fail)
 data Op1 = Negate | Abs | Signum | Not
   deriving (Eq, Ord, Show)
 
-data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder | Modulus | And | Or | XOr | Eq | Lt | LtE | Gt | GtE
+data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder | Modulus | And | Or | Eq | Lt | LtE | Gt | GtE
   deriving (Eq, Ord, Show)
 
 
@@ -100,7 +100,6 @@ instance MonadFail m => MonadPrim Prim m where
     Modulus   -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `mod` b))
     And       -> nonBoolean
     Or        -> nonBoolean
-    XOr       -> nonBoolean
     Eq        -> pure (PBool (a == b))
     Lt        -> pure (PBool (a < b))
     LtE       -> pure (PBool (a <= b))
@@ -110,8 +109,6 @@ instance MonadFail m => MonadPrim Prim m where
   delta2 And _         _         = nonBoolean
   delta2 Or  (PBool a) (PBool b) = pure (PBool (a || b))
   delta2 Or  _         _         = nonBoolean
-  delta2 XOr (PBool a) (PBool b) = pure (PBool ((a || b) && not (a && b)))
-  delta2 XOr _         _         = nonBoolean
   delta2 Eq  (PBool a) (PBool b) = pure (PBool (a == b))
   delta2 Eq  _         _         = disjointComparison
   delta2 Lt  (PBool a) (PBool b) = pure (PBool (a < b))
@@ -137,8 +134,6 @@ instance (MonadFail m, Alternative m) => MonadPrim Type m where
   delta2 And       _    _    = nonBoolean
   delta2 Or        Bool Bool = pure Bool
   delta2 Or        _    _    = nonBoolean
-  delta2 XOr       Bool Bool = pure Bool
-  delta2 XOr       _    _    = nonBoolean
   delta2 Eq        Bool Bool = pure Bool
   delta2 Eq        Int  Int  = pure Bool
   delta2 Eq        _    _    = disjointComparison
@@ -194,8 +189,6 @@ instance Primitive Prim where
   binary And _          _        = error "(&&) of non-boolean primitive"
   binary Or  (PBool a) (PBool b) = PBool (a || b)
   binary Or  _          _        = error "(||) of non-boolean primitive"
-  binary XOr (PBool a) (PBool b) = PBool (a || b)
-  binary XOr _          _        = error "xor of non-boolean primitive"
 
   binary Eq  (PInt a)  (PInt b)  = PBool (a == b)
   binary Eq  (PBool a) (PBool b) = PBool (a == b)
@@ -245,8 +238,6 @@ instance Primitive Type where
   binary And _    _    = error "(&&) of non-boolean primitive"
   binary Or  Bool Bool = Bool
   binary Or  _    _    = error "(||) of non-boolean primitive"
-  binary XOr Bool Bool = Bool
-  binary XOr _    _    = error "xor of non-boolean primitive"
 
   binary Eq  Int  Int  = Bool
   binary Eq  Bool Bool = Bool
@@ -312,7 +303,6 @@ instance Pretty Op2 where
   pretty Modulus = pretty "`mod`"
   pretty And = pretty "&&"
   pretty Or  = pretty "||"
-  pretty XOr = pretty "`xor`"
   pretty Eq = pretty "=="
   pretty Lt = pretty "<"
   pretty LtE = pretty "<="

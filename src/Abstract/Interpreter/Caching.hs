@@ -10,8 +10,8 @@ import Abstract.Syntax
 import Abstract.Value
 import Control.Applicative
 import Control.Effect
-import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.Failure
+import Control.Monad.Effect.Internal hiding (run)
 import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
@@ -96,10 +96,10 @@ evCache ev0 ev e = do
       modifyCache (cacheInsert c (v, store'))
       return v
 
-fixCache :: forall l t v m
-         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadCachingInterpreter l t v m)
-         => Eval t (m v)
-         -> Eval t (m v)
+fixCache :: forall l t v fs
+         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), CachingInterpreter l t v :<: fs)
+         => Eval t (Eff fs v)
+         -> Eval t (Eff fs v)
 fixCache eval e = do
   env <- askEnv
   store <- getStore
@@ -107,11 +107,17 @@ fixCache eval e = do
   pairs <- mlfp mempty (\ dollar -> do
     putCache (mempty :: Cache l t v)
     putStore store
-    _ <- localCache (const dollar) (eval e)
+    _ <- localCache (const dollar) (force (eval e) :: Eff fs (Set v))
     getCache)
   asum . flip map (toList (cacheLookup c pairs)) $ \ (value, store') -> do
     putStore store'
     return value
+
+
+force :: (Ord a, NonDetEff :< fs) => Eff fs a -> Eff fs (Set a)
+force = interpose (pure . point) (\ m k -> case m of
+  MZero -> pure mempty
+  MPlus -> mappend <$> k True <*> k False)
 
 
 mlfp :: (Eq a, Monad m) => a -> (a -> m a) -> m a

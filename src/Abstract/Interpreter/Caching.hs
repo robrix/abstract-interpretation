@@ -107,15 +107,15 @@ fixCache eval e = do
   pairs <- mlfp mempty (\ dollar -> do
     putCache (mempty :: Cache l t v)
     putStore store
-    _ <- localCache (const dollar) (force (eval e) :: Eff fs (Set v))
+    _ <- localCache (const dollar) (collect (eval e) :: Eff fs (Set v))
     getCache)
   asum . flip map (toList (cacheLookup c pairs)) $ \ (value, store') -> do
     putStore store'
     return value
 
 
-force :: (Ord a, NonDetEff :< fs) => Eff fs a -> Eff fs (Set a)
-force = interpose (pure . point) (\ m k -> case m of
+collect :: (Ord a, NonDetEff :< fs) => Eff fs a -> Eff fs (Set a)
+collect = interpose (pure . point) (\ m k -> case m of
   MZero -> pure mempty
   MPlus -> mappend <$> k True <*> k False)
 

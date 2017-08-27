@@ -20,14 +20,6 @@ data Prim
   | PBool {-# UNPACK #-} !Bool
   deriving (Eq, Ord, Show)
 
-class Primitive t where
-  unary :: Op1 -> t -> t
-
-  binary :: Op2 -> t -> t -> t
-
-  fromIntegerPrim :: Integer -> t
-
-
 class Monad m => MonadPrim a m where
   delta1 :: Op1 -> a -> m a
   delta2 :: Op2 -> a -> a -> m a
@@ -125,129 +117,22 @@ instance (MonadFail m, Alternative m) => MonadPrim Type m where
   truthy Bool = pure True <|> pure False
   truthy _    = nonBoolean
 
-instance Primitive Prim where
-  unary Negate (PInt a)  = PInt (negate a)
-  unary Negate _         = error "negate of non-numeric primitive"
-  unary Abs    (PInt a)  = PInt (abs a)
-  unary Abs    _         = error "abs of non-numeric primitive"
-  unary Signum (PInt a)  = PInt (signum a)
-  unary Signum _         = error "signum of non-numeric primitive"
-
-  unary Not    (PBool a) = PBool (not a)
-  unary Not _            = error "not of non-boolean primitive"
-
-  binary Plus      (PInt a) (PInt b) = PInt (a + b)
-  binary Plus      _        _        = error "(+) of non-numeric primitive"
-  binary Minus     (PInt a) (PInt b) = PInt (a - b)
-  binary Minus     _        _        = error "(-) of non-numeric primitive"
-  binary Times     (PInt a) (PInt b) = PInt (a * b)
-  binary Times     _        _        = error "(*) of non-numeric primitive"
-  binary DividedBy (PInt a) (PInt b) = PInt (a `div` b)
-  binary DividedBy _        _        = error "(/) of non-numeric primitive"
-  binary Quotient  (PInt a) (PInt b) = PInt (a `div` b)
-  binary Quotient  _        _        = error "quot of non-numeric primitive"
-  binary Remainder (PInt a) (PInt b) = PInt (a `div` b)
-  binary Remainder _        _        = error "rem of non-numeric primitive"
-  binary Modulus   (PInt a) (PInt b) = PInt (a `div` b)
-  binary Modulus   _        _        = error "mod of non-numeric primitive"
-
-  binary And (PBool a) (PBool b) = PBool (a && b)
-  binary And _          _        = error "(&&) of non-boolean primitive"
-  binary Or  (PBool a) (PBool b) = PBool (a || b)
-  binary Or  _          _        = error "(||) of non-boolean primitive"
-
-  binary Eq  (PInt a)  (PInt b)  = PBool (a == b)
-  binary Eq  (PBool a) (PBool b) = PBool (a == b)
-  binary Eq  _         _         = error "(==) of disjoint primitives"
-  binary Lt  (PInt a)  (PInt b)  = PBool (a < b)
-  binary Lt  (PBool a) (PBool b) = PBool (a < b)
-  binary Lt  _         _         = error "(<) of disjoint primitives"
-  binary LtE (PInt a)  (PInt b)  = PBool (a <= b)
-  binary LtE (PBool a) (PBool b) = PBool (a <= b)
-  binary LtE _         _         = error "(<=) of disjoint primitives"
-  binary Gt  (PInt a)  (PInt b)  = PBool (a > b)
-  binary Gt  (PBool a) (PBool b) = PBool (a > b)
-  binary Gt  _         _         = error "(>) of disjoint primitives"
-  binary GtE (PInt a)  (PInt b)  = PBool (a >= b)
-  binary GtE (PBool a) (PBool b) = PBool (a >= b)
-  binary GtE _         _         = error "(>=) of disjoint primitives"
-
-  fromIntegerPrim = PInt . fromInteger
-
-instance Primitive Type where
-  unary Negate Int = Int
-  unary Negate _   = error "negate of non-numeric primitive"
-  unary Abs    Int = Int
-  unary Abs    _   = error "abs of non-numeric primitive"
-  unary Signum Int = Int
-  unary Signum _   = error "signum of non-numeric primitive"
-
-  unary Not    Bool = Bool
-  unary Not    _    = error "not of non-boolean primitive"
-
-  binary Plus      Int Int = Int
-  binary Plus      _   _   = error "(+) of non-numeric primitive"
-  binary Minus     Int Int = Int
-  binary Minus     _   _   = error "(-) of non-numeric primitive"
-  binary Times     Int Int = Int
-  binary Times     _   _   = error "(*) of non-numeric primitive"
-  binary DividedBy Int Int = Int
-  binary DividedBy _   _   = error "(/) of non-numeric primitive"
-  binary Quotient  Int Int = Int
-  binary Quotient  _   _   = error "quot of non-numeric primitive"
-  binary Remainder Int Int = Int
-  binary Remainder _   _   = error "rem of non-numeric primitive"
-  binary Modulus   Int Int = Int
-  binary Modulus   _   _   = error "mod of non-numeric primitive"
-
-  binary And Bool Bool = Bool
-  binary And _    _    = error "(&&) of non-boolean primitive"
-  binary Or  Bool Bool = Bool
-  binary Or  _    _    = error "(||) of non-boolean primitive"
-
-  binary Eq  Int  Int  = Bool
-  binary Eq  Bool Bool = Bool
-  binary Eq  _    _    = error "(==) of disjoint primitives"
-  binary Lt  Int  Int  = Bool
-  binary Lt  Bool Bool = Bool
-  binary Lt  _    _    = error "(<) of disjoint primitives"
-  binary LtE Int  Int  = Bool
-  binary LtE Bool Bool = Bool
-  binary LtE _    _    = error "(<=) of disjoint primitives"
-  binary Gt  Int  Int  = Bool
-  binary Gt  Bool Bool = Bool
-  binary Gt  _    _    = error "(>) of disjoint primitives"
-  binary GtE Int  Int  = Bool
-  binary GtE Bool Bool = Bool
-  binary GtE _    _    = error "(>=) of disjoint primitives"
-
-  fromIntegerPrim _ = Int
 
 instance Num Prim where
-  negate = unary Negate
-  signum = unary Signum
-  abs = unary Abs
+  fromInteger = PInt . fromInteger
 
-  (+) = binary Plus
-  (-) = binary Minus
-  (*) = binary Times
+  negate (PInt a) = PInt (negate a)
+  negate _        = error "negate of non-integer"
+  abs (PInt a) = PInt (abs a)
+  abs _        = error "abs of non-integer"
+  signum (PInt a) = PInt (signum a)
+  signum _        = error "signum of non-integer"
 
-  fromInteger = fromIntegerPrim
+  PInt a + PInt b = PInt (a + b)
+  _      + _      = error "(+) of non-integer"
+  PInt a * PInt b = PInt (a * b)
+  _      * _      = error "(*) of non-integer"
 
-instance Real Prim where
-  toRational (PInt a) = toRational a
-  toRational _ = error "toRational of non-numeric primitive"
-
-instance Enum Prim where
-  toEnum = PInt
-  fromEnum (PInt a) = a
-  fromEnum _ = error "fromEnum of non-numeric primitive"
-
-instance Integral Prim where
-  toInteger (PInt a) = toInteger a
-  toInteger _ = error "toInteger of non-numeric primitive"
-  PInt a `quotRem` PInt b = let (q, r) = a `quotRem` b in (PInt q, PInt r)
-  _ `quotRem` _ = error "quotRem of non-numeric primitive"
 
 instance Pretty Prim where
   pretty (PBool a) = pretty a

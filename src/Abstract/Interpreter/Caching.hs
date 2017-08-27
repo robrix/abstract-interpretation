@@ -71,13 +71,7 @@ modifyCache f = fmap f getCache >>= putCache
 evalCache :: forall l v a
           .  (Ord a, Ord v, Ord l, Ord1 (Cell l), MonadAddress l (Eff (CachingInterpreter l (Term a) v)), MonadValue l v Term a (Eff (CachingInterpreter l (Term a) v)), MonadPrim v (Eff (CachingInterpreter l (Term a) v)), Semigroup (Cell l v))
           => Eval (Term a) (CachingResult l (Term a) v)
-evalCache = run @(CachingInterpreter l (Term a) v) . runCache @l (ev @l)
-
-runCache :: forall l t v m
-         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadCachingInterpreter l t v m)
-         => (Eval t (m v) -> Eval t (m v))
-         -> Eval t (m v)
-runCache ev = fixCache @l (fix (evCache @l ev))
+evalCache = run @(CachingInterpreter l (Term a) v) . fixCache @l (fix (evCache @l (ev @l)))
 
 evCache :: forall l t v m
         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadCachingInterpreter l t v m)

@@ -76,10 +76,10 @@ instance (Num a, Ord a, Primitive a, MonadFail m, MonadPrim a m, MonadPathCondit
     And -> sym2 (delta2 And) prim (binary And) a b
     Or  -> sym2 (delta2 Or)  prim (binary Or)  a b
     Eq  -> sym2 (delta2 Eq)  prim (binary Eq)  a b
-    Lt  -> sym2 (delta2 Eq)  prim (binary Lt)  a b
-    LtE -> sym2 (delta2 Eq)  prim (binary LtE) a b
-    Gt  -> sym2 (delta2 Eq)  prim (binary Gt)  a b
-    GtE -> sym2 (delta2 Eq)  prim (binary GtE) a b
+    Lt  -> sym2 (delta2 Lt)  prim (binary Lt)  a b
+    LtE -> sym2 (delta2 LtE) prim (binary LtE) a b
+    Gt  -> sym2 (delta2 Gt)  prim (binary Gt)  a b
+    GtE -> sym2 (delta2 GtE) prim (binary GtE) a b
 
   truthy (V a) = truthy a
   truthy (Sym e) = do

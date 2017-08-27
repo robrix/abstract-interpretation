@@ -56,7 +56,7 @@ instance State (PathCondition t) :< fs => MonadPathCondition t (Eff fs) where
 modifyPathCondition :: MonadPathCondition t m => (PathCondition t -> PathCondition t) -> m ()
 modifyPathCondition f = getPathCondition >>= putPathCondition . f
 
-instance (Num a, Ord a, Primitive a, MonadFail m, MonadPrim a m, MonadPathCondition (Term a) m, Alternative m) => MonadPrim (Sym (Term a) a) m where
+instance (Num a, Ord a, MonadFail m, MonadPrim a m, MonadPathCondition (Term a) m, Alternative m) => MonadPrim (Sym (Term a) a) m where
   delta1 o a = case o of
     Negate -> pure (negate a)
     Abs    -> pure (abs a)

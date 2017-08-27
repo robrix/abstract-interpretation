@@ -98,28 +98,22 @@ instance MonadFail m => MonadPrim Prim m where
     Quotient  -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `quot` b))
     Remainder -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `rem` b))
     Modulus   -> isZero (PInt b) >>= flip when divisionByZero >> pure (PInt (a `mod` b))
-    And       -> nonBoolean
-    Or        -> nonBoolean
     Eq        -> pure (PBool (a == b))
     Lt        -> pure (PBool (a < b))
     LtE       -> pure (PBool (a <= b))
     Gt        -> pure (PBool (a > b))
     GtE       -> pure (PBool (a >= b))
-  delta2 And (PBool a) (PBool b) = pure (PBool (a && b))
-  delta2 And _         _         = nonBoolean
-  delta2 Or  (PBool a) (PBool b) = pure (PBool (a || b))
-  delta2 Or  _         _         = nonBoolean
-  delta2 Eq  (PBool a) (PBool b) = pure (PBool (a == b))
-  delta2 Eq  _         _         = disjointComparison
-  delta2 Lt  (PBool a) (PBool b) = pure (PBool (a < b))
-  delta2 Lt  _         _         = disjointComparison
-  delta2 LtE (PBool a) (PBool b) = pure (PBool (a <= b))
-  delta2 LtE _         _         = disjointComparison
-  delta2 Gt  (PBool a) (PBool b) = pure (PBool (a > b))
-  delta2 Gt  _         _         = disjointComparison
-  delta2 GtE (PBool a) (PBool b) = pure (PBool (a >= b))
-  delta2 GtE _         _         = disjointComparison
-  delta2 _ _ _ = nonNumeric
+    _         -> nonBoolean
+  delta2 o (PBool a) (PBool b) = case o of
+    And -> pure (PBool (a && b))
+    Or  -> pure (PBool (a || b))
+    Eq  -> pure (PBool (a == b))
+    Lt  -> pure (PBool (a < b))
+    LtE -> pure (PBool (a <= b))
+    Gt  -> pure (PBool (a > b))
+    GtE -> pure (PBool (a >= b))
+    _   -> nonNumeric
+  delta2 _ _ _ = disjointComparison
 
   truthy (PBool a) = pure a
   truthy _         = nonBoolean

@@ -15,9 +15,9 @@ import Data.Semigroup
 import Prelude hiding (fail)
 
 
-type Interpreter l v = '[Failure, State (Store l v), Reader (Environment (Address l v))]
+type Interpreter l v = '[Failure, State (Store l v), Reader (Environment l v)]
 
-type MonadInterpreter l v m = (MonadEnv (Address l v) m, MonadStore l v m, MonadFail m)
+type MonadInterpreter l v m = (MonadEnv l v m, MonadStore l v m, MonadFail m)
 
 type EvalResult l v = Final (Interpreter l v) v
 
@@ -39,7 +39,7 @@ ev :: forall l v a m
 ev ev term = case out term of
   Var x -> do
     p <- askEnv
-    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (Address l v)))
+    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment l v))
   Prim n -> prim' @l @v @Term n
   Op1 o a -> do
     va <- ev a

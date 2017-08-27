@@ -38,11 +38,11 @@ cacheInsert :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> (v
 cacheInsert = (((Cache .) . (. unCache)) .) . (. point) . Map.insertWith (<>)
 
 
-type CachingInterpreter l t v = '[Reader (Environment (Address l v)), Failure, NonDetEff, State (Store l v), Reader (Cache l t v), State (Cache l t v)]
+type CachingInterpreter l t v = '[Reader (Environment l v), Failure, NonDetEff, State (Store l v), Reader (Cache l t v), State (Cache l t v)]
 
 type CachingResult l t v = Final (CachingInterpreter l t v) v
 
-type MonadCachingInterpreter l t v m = (MonadEnv (Address l v) m, MonadStore l v m, MonadCacheIn l t v m, MonadCacheOut l t v m, Alternative m)
+type MonadCachingInterpreter l t v m = (MonadEnv l v m, MonadStore l v m, MonadCacheIn l t v m, MonadCacheOut l t v m, Alternative m)
 
 
 class Monad m => MonadCacheIn l t v m where

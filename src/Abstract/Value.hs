@@ -16,26 +16,26 @@ import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 import Text.Show
 
-newtype Environment a = Environment { unEnvironment :: Map.Map Name a }
-  deriving (Eq, Eq1, Foldable, Functor, Monoid, Ord, Ord1, Show, Show1, Traversable)
+newtype Environment l a = Environment { unEnvironment :: Map.Map Name (Address l a) }
+  deriving (Eq, Foldable, Functor, Monoid, Ord, Show, Traversable)
 
-envLookup :: Name -> Environment a -> Maybe a
+envLookup :: Name -> Environment l a -> Maybe (Address l a)
 envLookup = (. unEnvironment) . Map.lookup
 
-envInsert :: Name -> a -> Environment a -> Environment a
+envInsert :: Name -> Address l a -> Environment l a -> Environment l a
 envInsert name value (Environment m) = Environment (Map.insert name value m)
 
 
 data Value l
   = I Prim
-  | Closure Name (Term Prim) (Environment (Address l (Value l)))
+  | Closure Name (Term Prim) (Environment l (Value l))
 
 
-class Monad m => MonadEnv a m where
-  askEnv :: m (Environment a)
-  localEnv :: (Environment a -> Environment a) -> m b -> m b
+class Monad m => MonadEnv l a m where
+  askEnv :: m (Environment l a)
+  localEnv :: (Environment l a -> Environment l a) -> m b -> m b
 
-instance Reader (Environment a) :< fs => MonadEnv a (Eff fs) where
+instance Reader (Environment l a) :< fs => MonadEnv l a (Eff fs) where
   askEnv = ask
   localEnv = local
 
@@ -46,10 +46,10 @@ class Monad m => MonadValue l v t a m where
 
   prim' :: a -> m v
 
-instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv (Address l (Value l)) m, MonadFail m, Semigroup (Cell l (Value l))) => MonadValue l (Value l) Term Prim m where
+instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, MonadFail m, Semigroup (Cell l (Value l))) => MonadValue l (Value l) Term Prim m where
   lambda _ name _ body = do
     env <- askEnv
-    return (Closure name body (env :: Environment (Address l (Value l))))
+    return (Closure name body (env :: Environment l (Value l)))
 
   app ev (Closure x e2 p) v1 = do
     a <- alloc x
@@ -59,7 +59,7 @@ instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv (Address l (Value
 
   prim' = return . I
 
-instance (MonadAddress l m, MonadStore l Type m, MonadEnv (Address l Type) m, MonadFail m, Semigroup (Cell l Type)) => MonadValue l Type t Prim m where
+instance (MonadAddress l m, MonadStore l Type m, MonadEnv l Type m, MonadFail m, Semigroup (Cell l Type)) => MonadValue l Type t Prim m where
   lambda ev name inTy body = do
     a <- alloc name
     assign a inTy
@@ -75,21 +75,33 @@ instance (MonadAddress l m, MonadStore l Type m, MonadEnv (Address l Type) m, Mo
   prim' (PBool _) = return Bool
 
 
+instance Eq2 Environment where
+  liftEq2 eqL eqA (Environment m1) (Environment m2) = liftEq (liftEq2 eqL eqA) m1 m2
+
+instance Eq l => Eq1 (Environment l) where
+  liftEq = liftEq2 (==)
+
 instance Eq1 Value where
   liftEq eqL = go
     where go v1 v2 = case (v1, v2) of
             (I a, I b) -> a == b
-            (Closure s1 t1 e1, Closure s2 t2 e2) -> s1 == s2 && t1 == t2 && liftEq (liftEq2 eqL go) e1 e2
+            (Closure s1 t1 e1, Closure s2 t2 e2) -> s1 == s2 && t1 == t2 && liftEq2 eqL go e1 e2
             _ -> False
 
 instance Eq l => Eq (Value l) where
   (==) = eq1
 
+instance Ord2 Environment where
+  liftCompare2 compareL compareA (Environment m1) (Environment m2) = liftCompare (liftCompare2 compareL compareA) m1 m2
+
+instance Ord l => Ord1 (Environment l) where
+  liftCompare = liftCompare2 compare
+
 instance Ord1 Value where
   liftCompare compareL = go
     where go v1 v2 = case (v1, v2) of
             (I a, I b) -> compare a b
-            (Closure s1 t1 e1, Closure s2 t2 e2) -> compare s1 s2 <> compare t1 t2 <> liftCompare (liftCompare2 compareL go) e1 e2
+            (Closure s1 t1 e1, Closure s2 t2 e2) -> compare s1 s2 <> compare t1 t2 <> liftCompare2 compareL go e1 e2
             (I _, _) -> LT
             _ -> GT
 
@@ -97,27 +109,38 @@ instance Ord l => Ord (Value l) where
   compare = compare1
 
 
+instance Show2 Environment where
+  liftShowsPrec2 spL slL spA slA d (Environment m) = showsConstructor "Environment" d [ flip (liftShowsPrec showsAddress (showListWith (showsAddress 0))) m ]
+    where showsAddress = liftShowsPrec2 spL slL spA slA
+
+instance Show l => Show1 (Environment l) where
+  liftShowsPrec = liftShowsPrec2 showsPrec showList
+
 instance Show1 Value where
   liftShowsPrec spL slL = go
     where go d v = case v of
             I a -> showsUnaryWith showsPrec "I" d a
-            Closure s t e -> showsConstructor "Closure" d [flip showsPrec s, flip showsPrec t, flip (liftShowsPrec (liftShowsPrec2 spL slL go (showListWith (go 0))) (liftShowList2 spL slL go (showListWith (go 0)))) e]
+            Closure s t e -> showsConstructor "Closure" d [flip showsPrec s, flip showsPrec t, flip (liftShowsPrec2 spL slL go (showListWith (go 0))) e]
 
 instance Show l => Show (Value l) where
   showsPrec = showsPrec1
 
 
-instance Pretty1 Environment where
-  liftPretty p pl = list . map (liftPretty p pl) . Map.toList . unEnvironment
+instance Pretty2 Environment where
+  liftPretty2 pL plL pA plA = list . map (liftPretty prettyAddress (list . map prettyAddress)) . Map.toList . unEnvironment
+    where prettyAddress = liftPretty2 pL plL pA plA
 
-instance Pretty a => Pretty (Environment a) where
+instance Pretty l => Pretty1 (Environment l) where
+  liftPretty = liftPretty2 pretty prettyList
+
+instance (Pretty l, Pretty a) => Pretty (Environment l a) where
   pretty = liftPretty pretty prettyList
 
 instance Pretty1 Value where
   liftPretty pL plL = go
     where go (I a) = pretty a
           go (Closure n t e) = pretty "Closure" <+> pretty n <+> dot <+> pretty t <> line
-                                 <> liftPretty (liftPretty2 pL plL go (list . map go)) (list . map (liftPretty2 pL plL go (list . map go))) e
+                                 <> liftPretty2 pL plL go (list . map go) e
 
 instance Pretty l => Pretty (Value l) where
   pretty = liftPretty pretty prettyList

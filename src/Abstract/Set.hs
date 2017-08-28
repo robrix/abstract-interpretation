@@ -14,6 +14,9 @@ newtype Set a = Set { unSet :: Set.Set a }
 member :: Ord a => a -> Set a -> Bool
 member = (. unSet) . Set.member
 
+delete :: Ord a => a -> Set a -> Set a
+delete a = Set . Set.delete a . unSet
+
 
 instance Pretty1 Set where
   liftPretty _ pl = pl . toList

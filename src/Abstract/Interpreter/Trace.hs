@@ -24,7 +24,7 @@ type ReachableStateInterpreter l t v = TracingInterpreter l t v Set.Set
 type TraceResult l t v f = Final (TracingInterpreter l t v f) v
 
 
-class MonadTrace l t v g m where
+class Monad m => MonadTrace l t v g m where
   trace :: g (Configuration l t v) -> m ()
 
 instance Writer (g (Configuration l t v)) :< fs => MonadTrace l t v g (Eff fs) where

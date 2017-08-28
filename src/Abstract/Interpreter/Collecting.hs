@@ -16,16 +16,10 @@ class Monad m => MonadGC l a m where
 
   extraRoots :: Set (Address l a) -> m b -> m b
 
-instance (Ord l, Reader (Roots l a) :< fs) => MonadGC l a (Eff fs) where
-  askRoots = fmap rootsSet ask
+instance (Ord l, Reader (Set (Address l a)) :< fs) => MonadGC l a (Eff fs) where
+  askRoots = ask
 
-  extraRoots roots = local (modifyRootsSet (<> roots))
-
-
-data Roots l a = Roots { rootsSet :: Set (Address l a), rootsRho :: () }
-
-modifyRootsSet :: (Set (Address l a) -> Set (Address l a)) -> Roots l a -> Roots l a
-modifyRootsSet f r = r { rootsSet = f (rootsSet r) }
+  extraRoots roots = local (<> roots)
 
 
 gc :: (Ord l, Foldable (Cell l), AbstractValue l a) => Set (Address l a) -> Store l a -> Store l a
@@ -69,11 +63,3 @@ evRoots ev0 ev e = case out e of
     v1 <- extraRoots (valueRoots @l v0) (ev e1)
     delta2 o v0 v1
   _ -> ev0 ev e
-
-
-instance Ord l => Semigroup (Roots l a) where
-  r1 <> r2 = Roots (rootsSet r1 <> rootsSet r2) (rootsRho r1 <> rootsRho r2)
-
-instance Ord l => Monoid (Roots l a) where
-  mempty = Roots mempty mempty
-  mappend = (<>)

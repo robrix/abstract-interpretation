@@ -3,6 +3,7 @@ module Abstract.Set where
 
 import Data.Bifunctor (second)
 import Data.Foldable (toList)
+import Data.Function (on)
 import Data.Functor.Classes
 import Data.Pointed
 import Data.Semigroup
@@ -23,6 +24,9 @@ delete a = Set . Set.delete a . unSet
 
 split :: Ord a => Set a -> Maybe (a, Set a)
 split = fmap (second Set) . Set.minView . unSet
+
+difference :: Ord a => Set a -> Set a -> Set a
+difference = (Set .) . (Set.difference `on` unSet)
 
 
 instance Pretty1 Set where

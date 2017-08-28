@@ -1,5 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes, DataKinds, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
-module Abstract.Interpreter.Trace where
+module Abstract.Interpreter.Tracing where
 
 import Abstract.Configuration
 import Abstract.Interpreter

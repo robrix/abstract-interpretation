@@ -16,8 +16,11 @@ instance Reader (RootSet l a) :< fs => MonadGC l a (Eff fs) where
   askRoots = ask
 
 
-gc :: RootSet l a -> Store l a -> Store l a
-gc = const id
+gc :: Ord l => RootSet l a -> Store l a -> Store l a
+gc roots store = storeRestrict store (unRootSet (reachable roots store))
+
+reachable :: RootSet l a -> Store l a -> RootSet l a
+reachable = const
 
 
 evCollect :: forall l t v m

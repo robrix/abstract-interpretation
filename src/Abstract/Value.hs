@@ -6,6 +6,7 @@ import Abstract.Set
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Type
+import Control.Applicative
 import Control.Monad hiding (fail)
 import Control.Monad.Effect
 import Control.Monad.Effect.Reader
@@ -70,11 +71,11 @@ instance Ord l => AbstractValue l (Value l) where
 
   literal = I
 
-instance (MonadAddress l m, MonadStore l Type m, MonadEnv l Type m, MonadFail m, Semigroup (Cell l Type)) => MonadValue Monovariant Type t m where
+instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail m, Semigroup (Cell Monovariant Type), Alternative m) => MonadValue Monovariant Type t m where
   lambda ev name inTy body = do
     a <- alloc name
     assign a inTy
-    outTy <- localEnv (envInsert name (a :: Address l Type)) (ev body)
+    outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
     return (inTy :-> outTy)
 
   app _ (inTy :-> outTy) argTy = do

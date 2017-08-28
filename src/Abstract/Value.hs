@@ -17,7 +17,7 @@ import Prelude hiding (fail)
 import Text.Show
 
 newtype Environment l a = Environment { unEnvironment :: Map.Map Name (Address l a) }
-  deriving (Eq, Foldable, Functor, Monoid, Ord, Show, Traversable)
+  deriving (Eq, Foldable, Functor, Monoid, Ord, Semigroup, Show, Traversable)
 
 envLookup :: Name -> Environment l a -> Maybe (Address l a)
 envLookup = (. unEnvironment) . Map.lookup

@@ -11,6 +11,9 @@ import Data.Text.Prettyprint.Doc
 newtype Set a = Set { unSet :: Set.Set a }
   deriving (Eq, Eq1, Foldable, Monoid, Ord, Ord1, Pointed, Semigroup, Show, Show1)
 
+member :: Ord a => a -> Set a -> Bool
+member = (. unSet) . Set.member
+
 
 instance Pretty1 Set where
   liftPretty _ pl = pl . toList

@@ -2,6 +2,7 @@
 module Abstract.Interpreter.Trace where
 
 import Abstract.Configuration
+import Abstract.GarbageCollection
 import Abstract.Interpreter
 import Abstract.Primitive
 import Abstract.Store
@@ -9,6 +10,7 @@ import Abstract.Syntax
 import Abstract.Value
 import Control.Effect
 import Control.Monad.Effect hiding (run)
+import Control.Monad.Effect.Reader
 import Control.Monad.Effect.Writer
 import Data.Function (fix)
 import Data.Functor.Classes (Ord1)
@@ -16,7 +18,7 @@ import Data.Semigroup
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
-type TracingInterpreter l t v g = Writer (g (Configuration l t v)) ': Interpreter l v
+type TracingInterpreter l t v g = Reader (Roots l v) ': Writer (g (Configuration l t v)) ': Interpreter l v
 
 type TraceInterpreter l t v = TracingInterpreter l t v []
 type ReachableStateInterpreter l t v = TracingInterpreter l t v Set.Set
@@ -44,12 +46,13 @@ evalReach :: forall l v a
 evalReach = run @(ReachableStateInterpreter l (Term a) v) . fix (evTell @l @(Term a) @v @Set.Set (ev @l))
 
 evTell :: forall l t v g m
-       .  (Ord l, IsList (g (Configuration l t v)), Item (g (Configuration l t v)) ~ Configuration l t v, MonadTrace l t v g m, MonadEnv l v m, MonadStore l v m)
+       .  (Ord l, IsList (g (Configuration l t v)), Item (g (Configuration l t v)) ~ Configuration l t v, MonadTrace l t v g m, MonadEnv l v m, MonadStore l v m, MonadGC l v m)
        => (Eval t (m v) -> Eval t (m v))
        -> Eval t (m v)
        -> Eval t (m v)
 evTell ev0 ev e = do
   env <- askEnv
   store <- getStore
-  trace (fromList [Configuration e mempty env store] :: g (Configuration l t v))
+  roots <- askRoots
+  trace (fromList [Configuration e roots env store] :: g (Configuration l t v))
   ev0 ev e

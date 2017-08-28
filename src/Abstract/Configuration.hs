@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, StandaloneDeriving, UndecidableInstances #-}
 module Abstract.Configuration where
 
-import Abstract.Interpreter.Collecting
+import Abstract.RootSet
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value

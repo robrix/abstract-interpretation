@@ -44,12 +44,12 @@ evalReach :: forall l v a
 evalReach = run @(ReachableStateInterpreter l (Term a) v) . fix (evTell @l @(Term a) @v @Set.Set (ev @l))
 
 evTell :: forall l t v g m
-       .  (IsList (g (Configuration l t v)), Item (g (Configuration l t v)) ~ Configuration l t v, MonadTrace l t v g m, MonadEnv l v m, MonadStore l v m)
+       .  (Ord l, IsList (g (Configuration l t v)), Item (g (Configuration l t v)) ~ Configuration l t v, MonadTrace l t v g m, MonadEnv l v m, MonadStore l v m)
        => (Eval t (m v) -> Eval t (m v))
        -> Eval t (m v)
        -> Eval t (m v)
 evTell ev0 ev e = do
   env <- askEnv
   store <- getStore
-  trace (fromList [Configuration e env store] :: g (Configuration l t v))
+  trace (fromList [Configuration e mempty env store] :: g (Configuration l t v))
   ev0 ev e

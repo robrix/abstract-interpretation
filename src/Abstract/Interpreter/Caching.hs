@@ -90,7 +90,7 @@ evCache :: forall l t v m
 evCache ev0 ev e = do
   env <- askEnv
   store <- getStore
-  let c = Configuration e env store :: Configuration l t v
+  let c = Configuration e mempty env store :: Configuration l t v
   out <- getCache
   case cacheLookup c out of
     Just pairs -> asum . flip map (toList pairs) $ \ (value, store') -> do
@@ -112,7 +112,7 @@ fixCache :: forall l t v m
 fixCache eval e = do
   env <- askEnv
   store <- getStore
-  let c = Configuration e env store :: Configuration l t v
+  let c = Configuration e mempty env store :: Configuration l t v
   pairs <- mlfp mempty (\ dollar -> do
     putCache (mempty :: Cache l t v)
     putStore store

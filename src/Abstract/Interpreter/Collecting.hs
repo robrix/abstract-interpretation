@@ -14,10 +14,14 @@ import Data.Semigroup
 class Monad m => MonadGC l a m where
   askRoots :: m (Set (Address l a))
 
+  putRoots :: Set (Address l a) -> m ()
+
   extraRoots :: Set (Address l a) -> m b -> m b
 
 instance (Ord l, State (Set (Address l a)) :< fs) => MonadGC l a (Eff fs) where
   askRoots = get :: Eff fs (Set (Address l a))
+
+  putRoots = put
 
   extraRoots roots' action = do
     roots <- askRoots @l @a

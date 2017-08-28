@@ -5,7 +5,7 @@ module Abstract.Store
 , MonadAddress(alloc, Cell)
 , Store(..)
 , storeLookup
-, storeMember
+, storeLookupAll
 , storeRestrict
 , Address(..)
 , Set(..)
@@ -39,14 +39,14 @@ newtype Address l a = Address { unAddress :: l }
 storeLookup :: Ord l => Address l a -> Store l a -> Maybe (Cell l a)
 storeLookup = (. unStore) . Map.lookup
 
+storeLookupAll :: (Ord l, Foldable (Cell l)) => Address l a -> Store l a -> Maybe [a]
+storeLookupAll address = fmap toList . storeLookup address
+
 storeInsert :: (Ord l, Semigroup (Cell l a), Pointed (Cell l)) => Address l a -> a -> Store l a -> Store l a
 storeInsert = (((Store .) . (. unStore)) .) . (. point) . Map.insertWith (<>)
 
 storeSize :: Store l a -> Int
 storeSize = Map.size . unStore
-
-storeMember :: Ord l => Address l a -> Store l a -> Bool
-storeMember = (. unStore) . Map.member
 
 storeRestrict :: Ord l => Store l a -> Set (Address l a) -> Store l a
 storeRestrict (Store m) roots = Store (Map.filterWithKey (\ address _ -> address `member` roots) m)

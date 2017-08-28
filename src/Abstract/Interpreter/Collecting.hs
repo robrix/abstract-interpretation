@@ -51,6 +51,20 @@ evCollect ev0 ev e = do
   modifyStore (gc (roots <> valueRoots v))
   return v
 
+evRoots :: forall l v m
+        .  (Ord l, MonadEnv l v m, MonadGC l v m, MonadPrim v m)
+        => (Eval (Term Prim) (m v) -> Eval (Term Prim) (m v))
+        -> Eval (Term Prim) (m v)
+        -> Eval (Term Prim) (m v)
+evRoots ev0 ev e = case out e of
+  If e0 e1 e2 -> do
+    env <- askEnv @l @v
+    let psi' = envRoots env (freeVariables e1) <> envRoots env (freeVariables e2)
+    v <- extraRoots psi' (ev e0)
+    b <- truthy v
+    ev (if b then e1 else e2)
+  _ -> ev0 ev e
+
 
 instance Ord l => Semigroup (Roots l a) where
   r1 <> r2 = Roots (rootsSet r1 <> rootsSet r2) (rootsRho r1 <> rootsRho r2)

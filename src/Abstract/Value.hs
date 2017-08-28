@@ -27,6 +27,9 @@ envLookup = (. unEnvironment) . Map.lookup
 envInsert :: Name -> Address l a -> Environment l a -> Environment l a
 envInsert name value (Environment m) = Environment (Map.insert name value m)
 
+envRoots :: (Foldable t, Ord l) => Environment l a -> t Name -> Set (Address l a)
+envRoots env = foldr ((<>) . maybe mempty point . flip envLookup env) mempty
+
 
 data Value l
   = I Prim
@@ -63,7 +66,7 @@ instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, Mo
 
 instance Ord l => AbstractValue l (Value l) where
   valueRoots (I _) = mempty
-  valueRoots (Closure name body env) = foldr ((<>) . maybe mempty point . flip envLookup env) mempty (delete name (freeVariables body))
+  valueRoots (Closure name body env) = envRoots env (delete name (freeVariables body))
 
   literal = I
 

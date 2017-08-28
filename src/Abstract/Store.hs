@@ -4,6 +4,7 @@ module Abstract.Store
 , Monovariant(..)
 , MonadAddress(alloc, Cell)
 , Store(..)
+, storeLookup
 , storeMember
 , storeRestrict
 , Address(..)

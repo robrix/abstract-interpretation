@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Abstract.Set where
 
+import Data.Bifunctor (second)
 import Data.Foldable (toList)
 import Data.Functor.Classes
 import Data.Pointed
@@ -19,6 +20,9 @@ insert a = Set . Set.insert a . unSet
 
 delete :: Ord a => a -> Set a -> Set a
 delete a = Set . Set.delete a . unSet
+
+split :: Ord a => Set a -> Maybe (a, Set a)
+split = fmap (second Set) . Set.minView . unSet
 
 
 instance Pretty1 Set where

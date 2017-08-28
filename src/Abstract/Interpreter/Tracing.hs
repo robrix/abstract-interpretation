@@ -19,7 +19,7 @@ import Data.Semigroup
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
-type TracingInterpreter l t v g = Reader (Roots l v) ': Writer (g (Configuration l t v)) ': Interpreter l v
+type TracingInterpreter l t v g = Reader (RootSet l v) ': Writer (g (Configuration l t v)) ': Interpreter l v
 
 type TraceInterpreter l t v = TracingInterpreter l t v []
 type ReachableStateInterpreter l t v = TracingInterpreter l t v Set.Set

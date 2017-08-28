@@ -11,7 +11,7 @@ import Data.Text.Prettyprint.Doc
 data Configuration l t v
   = Configuration
     { configurationTerm :: t
-    , configurationRoots :: Roots l v
+    , configurationRoots :: RootSet l v
     , configurationEnvironment :: Environment l v
     , configurationStore :: Store l v
     }

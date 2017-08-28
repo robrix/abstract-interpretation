@@ -6,7 +6,7 @@ import Control.Monad.Effect
 import Control.Monad.Effect.Reader
 
 class MonadGC l a m where
-  askRoots :: m (Roots l a)
+  askRoots :: m (RootSet l a)
 
-instance Reader (Roots l a) :< fs => MonadGC l a (Eff fs) where
+instance Reader (RootSet l a) :< fs => MonadGC l a (Eff fs) where
   askRoots = ask

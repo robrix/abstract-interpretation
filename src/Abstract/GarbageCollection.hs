@@ -18,3 +18,9 @@ instance Eq2 Roots where
 
 instance Eq l => Eq1 (Roots l) where
   liftEq = liftEq2 (==)
+
+instance Ord2 Roots where
+  liftCompare2 compareL compareA (Roots s1) (Roots s2) = liftCompare (liftCompare2 compareL compareA) s1 s2
+
+instance Ord l => Ord1 (Roots l) where
+  liftCompare = liftCompare2 compare

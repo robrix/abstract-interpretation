@@ -26,13 +26,13 @@ type Eval t m = t -> m
 
 -- Evaluation
 
-eval :: forall l v a . (MonadAddress l (Eff (Interpreter l v)), MonadValue l v Term a (Eff (Interpreter l v)), MonadPrim v (Eff (Interpreter l v)), Semigroup (Cell l v)) => Term a -> EvalResult l v
+eval :: forall l v . (MonadAddress l (Eff (Interpreter l v)), MonadValue l v (Term Prim) (Eff (Interpreter l v)), MonadPrim v (Eff (Interpreter l v)), Semigroup (Cell l v)) => Term Prim -> EvalResult l v
 eval = run @(Interpreter l v) . fix (ev @l)
 
-ev :: forall l v a m
-   .  (MonadAddress l m, MonadValue l v Term a m, MonadInterpreter l v m, MonadPrim v m, Semigroup (Cell l v))
-   => Eval (Term a) (m v)
-   -> Eval (Term a) (m v)
+ev :: forall l v m
+   .  (MonadAddress l m, MonadValue l v (Term Prim) m, MonadInterpreter l v m, MonadPrim v m, Semigroup (Cell l v))
+   => Eval (Term Prim) (m v)
+   -> Eval (Term Prim) (m v)
 ev ev term = case out term of
   Var x -> do
     p <- askEnv

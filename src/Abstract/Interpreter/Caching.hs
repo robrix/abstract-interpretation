@@ -80,9 +80,9 @@ instance NonDetEff :< fs => MonadNonDet (Eff fs) where
 -- Coinductively-cached evaluation
 
 evalCache :: forall l v a
-          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), MonadAddress l (Eff (CachingInterpreter l (Term a) v)), MonadValue l v Term a (Eff (CachingInterpreter l (Term a) v)), MonadPrim v (Eff (CachingInterpreter l (Term a) v)), Semigroup (Cell l v))
-          => Eval (Term a) (CachingResult l (Term a) v)
-evalCache = run @(CachingInterpreter l (Term a) v) . fixCache @l (fix (evCache @l (ev @l)))
+          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), MonadAddress l (Eff (CachingInterpreter l (Term Prim) v)), MonadValue l v (Term Prim) (Eff (CachingInterpreter l (Term Prim) v)), MonadPrim v (Eff (CachingInterpreter l (Term Prim) v)), Semigroup (Cell l v))
+          => Eval (Term Prim) (CachingResult l (Term Prim) v)
+evalCache = run @(CachingInterpreter l (Term Prim) v) . fixCache @l (fix (evCache @l (ev @l)))
 
 evCache :: forall l t v m
         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadCachingInterpreter l t v m)

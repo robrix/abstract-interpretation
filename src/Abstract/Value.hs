@@ -32,9 +32,9 @@ data Value l
   | Closure Name (Term Prim) (Environment l (Value l))
 
 
-class AbstractValue l a v | v -> a, v -> l where
-  literal :: a -> v
-  valueRoots :: v -> RootSet l a
+class AbstractValue l v | v -> l where
+  literal :: Prim -> v
+  valueRoots :: v -> RootSet l v
 
 class Monad m => MonadEnv l a m where
   askEnv :: m (Environment l a)
@@ -45,11 +45,11 @@ instance Reader (Environment l a) :< fs => MonadEnv l a (Eff fs) where
   localEnv = local
 
 
-class (AbstractValue l a v, Monad m) => MonadValue l v t a m where
-  lambda :: (t a -> m v) -> Name -> Type -> t a -> m v
-  app :: (t a -> m v) -> v -> v -> m v
+class (AbstractValue l v, Monad m) => MonadValue l v t m where
+  lambda :: (t -> m v) -> Name -> Type -> t -> m v
+  app :: (t -> m v) -> v -> v -> m v
 
-instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, MonadFail m, Semigroup (Cell l (Value l))) => MonadValue l (Value l) Term Prim m where
+instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, MonadFail m, Semigroup (Cell l (Value l))) => MonadValue l (Value l) (Term Prim) m where
   lambda _ name _ body = do
     env <- askEnv
     return (Closure name body (env :: Environment l (Value l)))
@@ -60,13 +60,13 @@ instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, Mo
     localEnv (const (envInsert x a p)) (ev e2)
   app _ _ _ = fail "non-closure operator"
 
-instance Ord l => AbstractValue l Prim (Value l) where
+instance Ord l => AbstractValue l (Value l) where
   valueRoots (I _) = mempty
   valueRoots (Closure _ _ _) = mempty
 
   literal = I
 
-instance (MonadAddress l m, MonadStore l Type m, MonadEnv l Type m, MonadFail m, Semigroup (Cell l Type)) => MonadValue Monovariant Type t Prim m where
+instance (MonadAddress l m, MonadStore l Type m, MonadEnv l Type m, MonadFail m, Semigroup (Cell l Type)) => MonadValue Monovariant Type t m where
   lambda ev name inTy body = do
     a <- alloc name
     assign a inTy
@@ -78,7 +78,7 @@ instance (MonadAddress l m, MonadStore l Type m, MonadEnv l Type m, MonadFail m,
     return outTy
   app _ op _ = fail $ "non-function operator: " ++ show op
 
-instance AbstractValue Monovariant Prim Type where
+instance AbstractValue Monovariant Type where
   valueRoots _ = mempty
 
   literal (PInt _)  = Int

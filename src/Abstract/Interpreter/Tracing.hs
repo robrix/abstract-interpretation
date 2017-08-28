@@ -36,15 +36,15 @@ instance Writer (g (Configuration l t v)) :< fs => MonadTrace l t v g (Eff fs) w
 
 -- Tracing and reachable state analyses
 
-evalTrace :: forall l v a
-          .  (MonadAddress l (Eff (TraceInterpreter l (Term a) v)), MonadValue l v Term a (Eff (TraceInterpreter l (Term a) v)), MonadPrim v (Eff (TraceInterpreter l (Term a) v)), Semigroup (Cell l v))
-          => Eval (Term a) (TraceResult l (Term a) v [])
-evalTrace = run @(TraceInterpreter l (Term a) v) . fix (evTell @l @(Term a) @v @[] (ev @l))
+evalTrace :: forall l v
+          .  (MonadAddress l (Eff (TraceInterpreter l (Term Prim) v)), MonadValue l v (Term Prim) (Eff (TraceInterpreter l (Term Prim) v)), MonadPrim v (Eff (TraceInterpreter l (Term Prim) v)), Semigroup (Cell l v))
+          => Eval (Term Prim) (TraceResult l (Term Prim) v [])
+evalTrace = run @(TraceInterpreter l (Term Prim) v) . fix (evTell @l @(Term Prim) @v @[] (ev @l))
 
 evalReach :: forall l v a
-          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), MonadAddress l (Eff (ReachableStateInterpreter l (Term a) v)), MonadValue l v Term a (Eff (ReachableStateInterpreter l (Term a) v)), MonadPrim v (Eff (ReachableStateInterpreter l (Term a) v)), Semigroup (Cell l v))
-          => Eval (Term a) (TraceResult l (Term a) v Set.Set)
-evalReach = run @(ReachableStateInterpreter l (Term a) v) . fix (evTell @l @(Term a) @v @Set.Set (ev @l))
+          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), MonadAddress l (Eff (ReachableStateInterpreter l (Term Prim) v)), MonadValue l v (Term Prim) (Eff (ReachableStateInterpreter l (Term Prim) v)), MonadPrim v (Eff (ReachableStateInterpreter l (Term Prim) v)), Semigroup (Cell l v))
+          => Eval (Term Prim) (TraceResult l (Term Prim) v Set.Set)
+evalReach = run @(ReachableStateInterpreter l (Term Prim) v) . fix (evTell @l @(Term Prim) @v @Set.Set (ev @l))
 
 evTell :: forall l t v g m
        .  (Ord l, IsList (g (Configuration l t v)), Item (g (Configuration l t v)) ~ Configuration l t v, MonadTrace l t v g m, MonadEnv l v m, MonadStore l v m, MonadGC l v m)

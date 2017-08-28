@@ -21,7 +21,6 @@ library
                      , Abstract.Interpreter.Symbolic
                      , Abstract.Interpreter.Tracing
                      , Abstract.Primitive
-                     , Abstract.RootSet
                      , Abstract.Set
                      , Abstract.Store
                      , Abstract.Syntax

@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeOperators, UndecidableInstances #-}
-module Abstract.GarbageCollection where
+module Abstract.Interpreter.Collecting where
 
 import Abstract.Set
 import Abstract.Store

@@ -2,8 +2,8 @@
 module Abstract.Interpreter.Caching where
 
 import Abstract.Configuration
-import Abstract.GarbageCollection
 import Abstract.Interpreter
+import Abstract.Interpreter.Collecting
 import Abstract.Primitive
 import Abstract.Set
 import Abstract.Store

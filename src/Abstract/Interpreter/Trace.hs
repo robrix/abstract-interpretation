@@ -2,8 +2,8 @@
 module Abstract.Interpreter.Trace where
 
 import Abstract.Configuration
-import Abstract.GarbageCollection
 import Abstract.Interpreter
+import Abstract.Interpreter.Collecting
 import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax

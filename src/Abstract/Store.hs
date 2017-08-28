@@ -4,6 +4,7 @@ module Abstract.Store
 , Monovariant(..)
 , MonadAddress(alloc, Cell)
 , Store(..)
+, storeRestrict
 , Address(..)
 , Set(..)
 , deref
@@ -41,6 +42,9 @@ storeInsert = (((Store .) . (. unStore)) .) . (. point) . Map.insertWith (<>)
 
 storeSize :: Store l a -> Int
 storeSize = Map.size . unStore
+
+storeRestrict :: Ord l => Store l a -> Set (Address l a) -> Store l a
+storeRestrict (Store m) roots = Store (Map.filterWithKey (\ address _ -> address `member` roots) m)
 
 
 assign :: (Ord l, Semigroup (Cell l a), Pointed (Cell l), MonadStore l a m) => Address l a -> a -> m ()

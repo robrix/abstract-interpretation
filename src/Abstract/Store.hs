@@ -43,9 +43,6 @@ storeSize :: Store l a -> Int
 storeSize = Map.size . unStore
 
 
-deref :: forall l a m. (MonadAddress l m, MonadStore l a m, MonadFail m) => Address l a -> m a
-deref = maybe uninitializedAddress (readCell @l) <=< flip fmap getStore . storeLookup
-
 assign :: (Ord l, Semigroup (Cell l a), Pointed (Cell l), MonadStore l a m) => Address l a -> a -> m ()
 assign = (modifyStore .) . storeInsert
 
@@ -65,7 +62,7 @@ modifyStore f = getStore >>= putStore . f
 class (Ord l, Pointed (Cell l), Monad m) => MonadAddress l m where
   type Cell l :: * -> *
 
-  readCell :: Cell l a -> m a
+  deref :: (MonadStore l a m, MonadFail m) => Address l a -> m a
 
   alloc :: MonadStore l a m => Name -> m (Address l a)
 
@@ -82,7 +79,7 @@ newtype I a = I { unI :: a }
 instance Monad m => MonadAddress Precise m where
   type Cell Precise = I
 
-  readCell = pure . unI
+  deref = maybe uninitializedAddress (pure . unI) <=< flip fmap getStore . storeLookup
 
   alloc _ = fmap allocPrecise getStore
 
@@ -93,7 +90,7 @@ newtype Monovariant = Monovariant { unMonovariant :: Name }
 instance (Alternative m, Monad m) => MonadAddress Monovariant m where
   type Cell Monovariant = Set
 
-  readCell = asum . map pure . toList
+  deref = asum . maybe [] (map pure . toList) <=< flip fmap getStore . storeLookup
 
   alloc = pure . Address . Monovariant
 

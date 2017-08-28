@@ -15,9 +15,9 @@ import Data.Semigroup
 import Prelude hiding (fail)
 
 
-type Interpreter l v = '[Failure, State (Store l v), Reader (Environment (Address l v))]
+type Interpreter l v = '[Failure, State (Store l v), Reader (Environment l v)]
 
-type MonadInterpreter l v m = (MonadEnv (Address l v) m, MonadStore l v m, MonadFail m)
+type MonadInterpreter l v m = (MonadEnv l v m, MonadStore l v m, MonadFail m)
 
 type EvalResult l v = Final (Interpreter l v) v
 
@@ -27,10 +27,7 @@ type Eval t m = t -> m
 -- Evaluation
 
 eval :: forall l v a . (MonadAddress l (Eff (Interpreter l v)), MonadValue l v Term a (Eff (Interpreter l v)), MonadPrim v (Eff (Interpreter l v)), Semigroup (Cell l v)) => Term a -> EvalResult l v
-eval = run @(Interpreter l v) . runEval @l
-
-runEval :: forall l v a m . (MonadAddress l m, MonadValue l v Term a m, MonadInterpreter l v m, MonadPrim v m, Semigroup (Cell l v)) => Eval (Term a) (m v)
-runEval = fix (ev @l)
+eval = run @(Interpreter l v) . fix (ev @l)
 
 ev :: forall l v a m
    .  (MonadAddress l m, MonadValue l v Term a m, MonadInterpreter l v m, MonadPrim v m, Semigroup (Cell l v))
@@ -39,8 +36,8 @@ ev :: forall l v a m
 ev ev term = case out term of
   Var x -> do
     p <- askEnv
-    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment (Address l v)))
-  Prim n -> prim' @l @v @Term n
+    maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment l v))
+  Prim n -> literal @l @v @Term n
   Op1 o a -> do
     va <- ev a
     delta1 o va

@@ -3,6 +3,7 @@ module Abstract.Interpreter.Symbolic where
 
 import Abstract.Interpreter
 import Abstract.Primitive
+import Abstract.Syntax
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Effect
@@ -55,31 +56,30 @@ instance State (PathCondition t) :< fs => MonadPathCondition t (Eff fs) where
 modifyPathCondition :: MonadPathCondition t m => (PathCondition t -> PathCondition t) -> m ()
 modifyPathCondition f = getPathCondition >>= putPathCondition . f
 
-instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, MonadFail m, MonadPrim a m, MonadPathCondition t m, Alternative m) => MonadPrim (Sym t a) m where
+instance (Num a, Ord a, MonadFail m, MonadPrim a m, MonadPathCondition (Term a) m, Alternative m) => MonadPrim (Sym (Term a) a) m where
   delta1 o a = case o of
     Negate -> pure (negate a)
     Abs    -> pure (abs a)
     Signum -> pure (signum a)
     Not    -> case a of
-      Sym t -> pure (Sym (unary Not t))
+      Sym t -> pure (Sym (not' t))
       V a -> V <$> delta1 Not a
 
   delta2 o a b = case o of
     Plus  -> pure (a + b)
     Minus -> pure (a - b)
     Times -> pure (a * b)
-    DividedBy -> isZero b >>= flip when divisionByZero >> sym2 (delta2 DividedBy) prim (binary DividedBy) a b
-    Quotient  -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Quotient)  prim (binary Quotient)  a b
-    Remainder -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Remainder) prim (binary Remainder) a b
-    Modulus   -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Modulus)   prim (binary Modulus)   a b
-    And -> sym2 (delta2 And) prim (binary And) a b
-    Or  -> sym2 (delta2 Or)  prim (binary Or)  a b
-    XOr -> sym2 (delta2 XOr) prim (binary XOr) a b
-    Eq  -> sym2 (delta2 Eq)  prim (binary Eq)  a b
-    Lt  -> sym2 (delta2 Eq)  prim (binary Lt)  a b
-    LtE -> sym2 (delta2 Eq)  prim (binary LtE) a b
-    Gt  -> sym2 (delta2 Eq)  prim (binary Gt)  a b
-    GtE -> sym2 (delta2 Eq)  prim (binary GtE) a b
+    DividedBy -> isZero b >>= flip when divisionByZero >> sym2 (delta2 DividedBy) prim div'  a b
+    Quotient  -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Quotient)  prim quot' a b
+    Remainder -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Remainder) prim rem'  a b
+    Modulus   -> isZero b >>= flip when divisionByZero >> sym2 (delta2 Modulus)   prim mod'  a b
+    And -> sym2 (delta2 And) prim and' a b
+    Or  -> sym2 (delta2 Or)  prim or'  a b
+    Eq  -> sym2 (delta2 Eq)  prim eq   a b
+    Lt  -> sym2 (delta2 Lt)  prim lt   a b
+    LtE -> sym2 (delta2 LtE) prim lte  a b
+    Gt  -> sym2 (delta2 Gt)  prim gt   a b
+    GtE -> sym2 (delta2 GtE) prim gte  a b
 
   truthy (V a) = truthy a
   truthy (Sym e) = do
@@ -92,7 +92,7 @@ instance (Num a, Num t, Primitive a, AbstractPrimitive a t, Ord t, MonadFail m, 
         ((refine (E e)    >> return True)
      <|> (refine (NotE e) >> return False))
 
-instance (Num a, Num t, AbstractPrimitive a t) => Num (Sym t a) where
+instance Num a => Num (Sym (Term a) a) where
   fromInteger = V . fromInteger
 
   signum (V a)   = V   (signum a)

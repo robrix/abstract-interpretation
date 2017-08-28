@@ -28,8 +28,8 @@ newtype Cache l t v = Cache { unCache :: Map.Map (Configuration l t v) (Set (v, 
 
 deriving instance (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Monoid (Cache l t v)
 
-cacheLookup :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> Cache l t v -> Set (v, Store l v)
-cacheLookup key = fromMaybe mempty . Map.lookup key . unCache
+cacheLookup :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> Cache l t v -> Maybe (Set (v, Store l v))
+cacheLookup key = Map.lookup key . unCache
 
 cacheSet :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> Set (v, Store l v) -> Cache l t v -> Cache l t v
 cacheSet = (((Cache .) . (. unCache)) .) . Map.insert
@@ -38,11 +38,11 @@ cacheInsert :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> (v
 cacheInsert = (((Cache .) . (. unCache)) .) . (. point) . Map.insertWith (<>)
 
 
-type CachingInterpreter l t v = '[Reader (Environment (Address l v)), Failure, NonDetEff, State (Store l v), Reader (Cache l t v), State (Cache l t v)]
+type CachingInterpreter l t v = '[Reader (Environment l v), Failure, NonDetEff, State (Store l v), Reader (Cache l t v), State (Cache l t v)]
 
 type CachingResult l t v = Final (CachingInterpreter l t v) v
 
-type MonadCachingInterpreter l t v m = (MonadEnv (Address l v) m, MonadStore l v m, MonadCacheIn l t v m, MonadCacheOut l t v m, Alternative m)
+type MonadCachingInterpreter l t v m = (MonadEnv l v m, MonadStore l v m, MonadCacheIn l t v m, MonadCacheOut l t v m, Alternative m)
 
 
 class Monad m => MonadCacheIn l t v m where
@@ -92,13 +92,13 @@ evCache ev0 ev e = do
   store <- getStore
   let c = Configuration e env store :: Configuration l t v
   out <- getCache
-  case toList (cacheLookup c out) of
-    pairs@(_:_) -> asum . flip map (toList pairs) $ \ (value, store') -> do
+  case cacheLookup c out of
+    Just pairs -> asum . flip map (toList pairs) $ \ (value, store') -> do
       putStore store'
       return value
-    [] -> do
+    Nothing -> do
       in' <- askCache
-      let pairs = cacheLookup c in'
+      let pairs = fromMaybe mempty (cacheLookup c in')
       putCache (cacheSet c pairs out)
       v <- ev0 ev e
       store' <- getStore
@@ -118,7 +118,7 @@ fixCache eval e = do
     putStore store
     _ <- localCache (const dollar) (collect point (eval e) :: m (Set v))
     getCache)
-  asum . flip map (toList (cacheLookup c pairs)) $ \ (value, store') -> do
+  asum . flip map (maybe [] toList (cacheLookup c pairs)) $ \ (value, store') -> do
     putStore store'
     return value
 

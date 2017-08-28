@@ -19,7 +19,6 @@ library
                      , Abstract.Interpreter.Dead
                      , Abstract.Interpreter.Symbolic
                      , Abstract.Interpreter.Trace
-                     , Abstract.Interpreter.Typechecking
                      , Abstract.Primitive
                      , Abstract.Set
                      , Abstract.Store

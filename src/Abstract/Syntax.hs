@@ -31,9 +31,57 @@ newtype Term a = In { out :: Syntax a (Term a) }
 var :: Name -> Term a
 var = In . Var
 
+prim :: a -> Term a
+prim = In . Prim
+
+true :: Term Prim
+true = prim (PBool True)
+
+false :: Term Prim
+false = prim (PBool False)
+
+
 infixl 9 #
 (#) :: Term a -> Term a -> Term a
 (#) = (In .) . App
+
+
+eq :: Term a -> Term a -> Term a
+eq = (In .) . Op2 Eq
+
+lt :: Term a -> Term a -> Term a
+lt = (In .) . Op2 Lt
+
+lte :: Term a -> Term a -> Term a
+lte = (In .) . Op2 LtE
+
+gt :: Term a -> Term a -> Term a
+gt = (In .) . Op2 Gt
+
+gte :: Term a -> Term a -> Term a
+gte = (In .) . Op2 GtE
+
+and' :: Term a -> Term a -> Term a
+and' = (In .) . Op2 And
+
+or' :: Term a -> Term a -> Term a
+or' = (In .) . Op2 Or
+
+not' :: Term a -> Term a
+not' = In . Op1 Not
+
+div' :: Term a -> Term a -> Term a
+div' = (In .) . Op2 DividedBy
+
+quot' :: Term a -> Term a -> Term a
+quot' = (In .) . Op2 Quotient
+
+rem' :: Term a -> Term a -> Term a
+rem' = (In .) . Op2 Remainder
+
+mod' :: Term a -> Term a -> Term a
+mod' = (In .) . Op2 Modulus
+
 
 lam :: Name -> Type -> (Term a -> Term a) -> Term a
 lam s ty f = makeLam s ty (f (var s))
@@ -196,26 +244,15 @@ instance Show a => Show1 (Syntax a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
 
 
-instance Primitive a => Num (Term a) where
-  fromInteger = fromIntegerPrim
+instance Num a => Num (Term a) where
+  fromInteger = prim . fromInteger
 
-  signum = unary Signum
-  abs = unary Abs
-  negate = unary Negate
-  (+) = binary Plus
-  (-) = binary Minus
-  (*) = binary Times
-
-instance Primitive a => Primitive (Term a) where
-  unary o a = In (Op1 o a)
-
-  binary o a b = In (Op2 o a b)
-
-  fromIntegerPrim = prim . fromIntegerPrim
-
-
-instance Primitive a => AbstractPrimitive a (Term a) where
-  prim = In . Prim
+  signum = In . Op1 Signum
+  abs    = In . Op1 Abs
+  negate = In . Op1 Negate
+  (+) = (In .) . Op2 Plus
+  (-) = (In .) . Op2 Minus
+  (*) = (In .) . Op2 Times
 
 
 instance Pretty1 Term where
@@ -237,10 +274,3 @@ instance Pretty2 Syntax where
 
 instance Pretty a => Pretty1 (Syntax a) where
   liftPretty = liftPretty2 pretty prettyList
-
-instance (Primitive a, MonadPrim a m) => MonadPrim (Term a) m where
-  delta1 op = pure . unary op
-  delta2 op = (pure .) . binary op
-
-  truthy (In (Prim a)) = truthy a
-  truthy _ = fail "testing truthiness of unevaluated term"

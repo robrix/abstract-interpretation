@@ -36,27 +36,15 @@ instance Writer (g (Configuration l t v)) :< fs => MonadTrace l t v g (Eff fs) w
 evalTrace :: forall l v a
           .  (MonadAddress l (Eff (TraceInterpreter l (Term a) v)), MonadValue l v Term a (Eff (TraceInterpreter l (Term a) v)), MonadPrim v (Eff (TraceInterpreter l (Term a) v)), Semigroup (Cell l v))
           => Eval (Term a) (TraceResult l (Term a) v [])
-evalTrace = run @(TraceInterpreter l (Term a) v) . runTrace @l (ev @l)
-
-runTrace :: forall l t v m
-         .  (MonadTrace l t v [] m, MonadEnv (Address l v) m, MonadStore l v m)
-         => (Eval t (m v) -> Eval t (m v))
-         -> Eval t (m v)
-runTrace ev = fix (evTell @l @t @v @[] ev)
+evalTrace = run @(TraceInterpreter l (Term a) v) . fix (evTell @l @(Term a) @v @[] (ev @l))
 
 evalReach :: forall l v a
           .  (Ord a, Ord v, Ord l, Ord1 (Cell l), MonadAddress l (Eff (ReachableStateInterpreter l (Term a) v)), MonadValue l v Term a (Eff (ReachableStateInterpreter l (Term a) v)), MonadPrim v (Eff (ReachableStateInterpreter l (Term a) v)), Semigroup (Cell l v))
           => Eval (Term a) (TraceResult l (Term a) v Set.Set)
-evalReach = run @(ReachableStateInterpreter l (Term a) v) . runReach @l (ev @l)
-
-runReach :: forall l t v m
-         .  (Ord t, Ord v, Ord l, Ord1 (Cell l), MonadTrace l t v Set.Set m, MonadEnv (Address l v) m, MonadStore l v m)
-         => (Eval t (m v) -> Eval t (m v))
-         -> Eval t (m v)
-runReach ev = fix (evTell @l @t @v @Set.Set ev)
+evalReach = run @(ReachableStateInterpreter l (Term a) v) . fix (evTell @l @(Term a) @v @Set.Set (ev @l))
 
 evTell :: forall l t v g m
-       .  (IsList (g (Configuration l t v)), Item (g (Configuration l t v)) ~ Configuration l t v, MonadTrace l t v g m, MonadEnv (Address l v) m, MonadStore l v m)
+       .  (IsList (g (Configuration l t v)), Item (g (Configuration l t v)) ~ Configuration l t v, MonadTrace l t v g m, MonadEnv l v m, MonadStore l v m)
        => (Eval t (m v) -> Eval t (m v))
        -> Eval t (m v)
        -> Eval t (m v)

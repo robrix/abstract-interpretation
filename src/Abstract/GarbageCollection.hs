@@ -5,6 +5,7 @@ import Abstract.Set
 import Abstract.Store
 import Data.Functor.Classes
 import Data.Semigroup
+import Data.Text.Prettyprint.Doc
 
 newtype Roots l a = Roots { unRoots :: Set (Address l a) }
   deriving (Eq, Foldable, Monoid, Ord, Semigroup, Show)
@@ -31,3 +32,14 @@ instance Show2 Roots where
 
 instance Show l => Show1 (Roots l) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
+
+
+instance Pretty2 Roots where
+  liftPretty2 pL plL pA plA = liftPretty prettySet (list . map prettySet) . unRoots
+    where prettySet = liftPretty2 pL plL pA plA
+
+instance Pretty l => Pretty1 (Roots l) where
+  liftPretty = liftPretty2 pretty prettyList
+
+instance (Pretty l, Pretty a) => Pretty (Roots l a) where
+  pretty = liftPretty pretty prettyList

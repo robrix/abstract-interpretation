@@ -2,6 +2,7 @@
 module Abstract.Interpreter.Collecting where
 
 import Abstract.Interpreter
+import Abstract.Set
 import Abstract.Store
 import Abstract.Value
 import Control.Monad.Effect

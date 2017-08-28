@@ -34,6 +34,7 @@ data Value l
 
 class AbstractValue l a v | v -> a, v -> l where
   literal :: a -> v
+  valueRoots :: v -> RootSet l a
 
 class Monad m => MonadEnv l a m where
   askEnv :: m (Environment l a)
@@ -60,6 +61,8 @@ instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, Mo
   app _ _ _ = fail "non-closure operator"
 
 instance Ord l => AbstractValue l Prim (Value l) where
+  valueRoots (I _) = mempty
+  valueRoots (Closure _ _ _) = mempty
 
   literal = I
 
@@ -76,6 +79,8 @@ instance (MonadAddress l m, MonadStore l Type m, MonadEnv l Type m, MonadFail m,
   app _ op _ = fail $ "non-function operator: " ++ show op
 
 instance AbstractValue Monovariant Prim Type where
+  valueRoots _ = mempty
+
   literal (PInt _)  = Int
   literal (PBool _) = Bool
 

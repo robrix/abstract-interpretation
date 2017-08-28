@@ -14,6 +14,7 @@ import Data.Function (fix)
 import Data.Functor.Foldable
 import Data.Pointed
 import Data.Semigroup
+import Data.Text.Prettyprint.Doc
 
 type DeadCodeInterpreter l t v = State (Dead t) ': Interpreter l v
 
@@ -51,3 +52,10 @@ evDead :: (Ord t, MonadDead t m)
 evDead ev0 ev e = do
   revive e
   ev0 ev e
+
+
+instance Pretty1 Dead where
+  liftPretty p pl (Dead s) = pretty "Dead" <+> liftPretty p pl s
+
+instance Pretty t => Pretty (Dead t) where
+  pretty = liftPretty pretty prettyList

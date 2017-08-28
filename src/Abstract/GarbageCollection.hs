@@ -1,8 +1,10 @@
-{-# LANGUAGE DeriveFoldable, DeriveFunctor, DeriveTraversable, GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeOperators, UndecidableInstances #-}
 module Abstract.GarbageCollection where
 
 import Abstract.Set
 import Abstract.Store
+import Control.Monad.Effect
+import Control.Monad.Effect.Reader
 import Data.Functor.Classes
 import Data.Semigroup
 import Data.Text.Prettyprint.Doc
@@ -10,8 +12,12 @@ import Data.Text.Prettyprint.Doc
 newtype Roots l a = Roots { unRoots :: Set (Address l a) }
   deriving (Eq, Foldable, Monoid, Ord, Semigroup, Show)
 
+
 class MonadGC l a m where
   askRoots :: m (Roots l a)
+
+instance Reader (Roots l a) :< fs => MonadGC l a (Eff fs) where
+  askRoots = ask
 
 
 instance Eq2 Roots where

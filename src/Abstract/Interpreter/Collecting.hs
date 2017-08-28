@@ -16,15 +16,20 @@ instance Reader (Set (Address l a)) :< fs => MonadGC l a (Eff fs) where
   askRoots = ask
 
 
-gc :: Ord l => Set (Address l a) -> Store l a -> Store l a
+gc :: (Ord l, Foldable (Cell l), AbstractValue l a) => Set (Address l a) -> Store l a -> Store l a
 gc roots store = storeRestrict store (reachable roots store)
 
-reachable :: Ord l => Set (Address l a) -> Store l a -> Set (Address l a)
-reachable roots _ = roots
+reachable :: (Ord l, Foldable (Cell l), AbstractValue l a) => Set (Address l a) -> Store l a -> Set (Address l a)
+reachable roots store = go roots mempty
+  where go set seen = case split set of
+          Nothing -> seen
+          Just (a, as)
+            | Just values <- storeLookupAll a store -> go (difference (foldr ((<>) . valueRoots) mempty values <> as) seen) (insert a seen)
+            | otherwise -> go seen (insert a seen)
 
 
 evCollect :: forall l t v m
-          .  (Ord l, MonadStore l v m, MonadGC l v m, MonadValue l v t m)
+          .  (Ord l, Foldable (Cell l), MonadStore l v m, MonadGC l v m, MonadValue l v t m)
           => (Eval t (m v) -> Eval t (m v))
           -> Eval t (m v)
           -> Eval t (m v)

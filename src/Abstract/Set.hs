@@ -14,6 +14,9 @@ newtype Set a = Set { unSet :: Set.Set a }
 member :: Ord a => a -> Set a -> Bool
 member = (. unSet) . Set.member
 
+insert :: Ord a => a -> Set a -> Set a
+insert a = Set . Set.insert a . unSet
+
 delete :: Ord a => a -> Set a -> Set a
 delete a = Set . Set.delete a . unSet
 

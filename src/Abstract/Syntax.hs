@@ -8,7 +8,6 @@ import Data.Bifunctor
 import Data.Bitraversable
 import Data.Functor.Classes
 import Data.Functor.Foldable
-import qualified Data.Set as Set
 import Data.Text.Prettyprint.Doc
 
 data Syntax a r
@@ -100,9 +99,6 @@ if' c t e = In (If c t e)
 
 let' :: Name -> Term a -> Type -> (Term a -> Term a) -> Term a
 let' var val ty body = lam var ty body # val
-
-immediateSubterms :: Ord a => Term a -> Set.Set (Term a)
-immediateSubterms = foldMap Set.singleton . out
 
 
 showsConstructor :: String -> Int -> [Int -> ShowS] -> ShowS

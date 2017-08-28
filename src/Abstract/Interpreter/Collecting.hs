@@ -14,8 +14,12 @@ import Data.Semigroup
 class Monad m => MonadGC l a m where
   askRoots :: m (Set (Address l a))
 
+  extraRoots :: Set (Address l a) -> m b -> m b
+
 instance (Ord l, Reader (Roots l a) :< fs) => MonadGC l a (Eff fs) where
   askRoots = fmap rootsSet ask
+
+  extraRoots roots = local (modifyRootsSet (<> roots))
 
 
 data Roots l a = Roots { rootsSet :: Set (Address l a), rootsRho :: () }

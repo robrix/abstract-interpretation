@@ -9,4 +9,4 @@ newtype Roots l a = Roots { unRoots :: Set (Address l a) }
   deriving (Eq, Foldable, Monoid, Ord, Semigroup, Show)
 
 class MonadGC l a m where
-  askRoots :: m (Set (Address l a))
+  askRoots :: m (Roots l a)

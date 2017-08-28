@@ -1,7 +1,8 @@
-{-# LANGUAGE AllowAmbiguousTypes, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, StandaloneDeriving, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, FunctionalDependencies, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, StandaloneDeriving, TypeOperators, UndecidableInstances #-}
 module Abstract.Value where
 
 import Abstract.Primitive
+import Abstract.RootSet
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Type
@@ -31,6 +32,9 @@ data Value l
   | Closure Name (Term Prim) (Environment l (Value l))
 
 
+class AbstractValue l a v | v -> a, v -> l where
+  literal :: a -> v
+
 class Monad m => MonadEnv l a m where
   askEnv :: m (Environment l a)
   localEnv :: (Environment l a -> Environment l a) -> m b -> m b
@@ -40,11 +44,9 @@ instance Reader (Environment l a) :< fs => MonadEnv l a (Eff fs) where
   localEnv = local
 
 
-class Monad m => MonadValue l v t a m where
+class (AbstractValue l a v, Monad m) => MonadValue l v t a m where
   lambda :: (t a -> m v) -> Name -> Type -> t a -> m v
   app :: (t a -> m v) -> v -> v -> m v
-
-  literal :: a -> m v
 
 instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, MonadFail m, Semigroup (Cell l (Value l))) => MonadValue l (Value l) Term Prim m where
   lambda _ name _ body = do
@@ -57,9 +59,11 @@ instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, Mo
     localEnv (const (envInsert x a p)) (ev e2)
   app _ _ _ = fail "non-closure operator"
 
-  literal = return . I
+instance Ord l => AbstractValue l Prim (Value l) where
 
-instance (MonadAddress l m, MonadStore l Type m, MonadEnv l Type m, MonadFail m, Semigroup (Cell l Type)) => MonadValue l Type t Prim m where
+  literal = I
+
+instance (MonadAddress l m, MonadStore l Type m, MonadEnv l Type m, MonadFail m, Semigroup (Cell l Type)) => MonadValue Monovariant Type t Prim m where
   lambda ev name inTy body = do
     a <- alloc name
     assign a inTy
@@ -71,8 +75,9 @@ instance (MonadAddress l m, MonadStore l Type m, MonadEnv l Type m, MonadFail m,
     return outTy
   app _ op _ = fail $ "non-function operator: " ++ show op
 
-  literal (PInt _)  = return Int
-  literal (PBool _) = return Bool
+instance AbstractValue Monovariant Prim Type where
+  literal (PInt _)  = Int
+  literal (PBool _) = Bool
 
 
 instance Eq2 Environment where

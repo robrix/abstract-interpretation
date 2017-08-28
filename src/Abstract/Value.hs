@@ -12,6 +12,7 @@ import Control.Monad.Effect.Reader
 import Control.Monad.Fail
 import Data.Functor.Classes
 import qualified Data.Map as Map
+import Data.Pointed
 import Data.Semigroup
 import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
@@ -62,7 +63,7 @@ instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, Mo
 
 instance Ord l => AbstractValue l (Value l) where
   valueRoots (I _) = mempty
-  valueRoots (Closure _ _ _) = mempty
+  valueRoots (Closure name body env) = foldr ((<>) . maybe mempty point . flip envLookup env) mempty (delete name (freeVariables body))
 
   literal = I
 

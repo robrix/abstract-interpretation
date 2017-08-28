@@ -3,6 +3,7 @@ module Abstract.Interpreter.Dead where
 
 import Abstract.Interpreter
 import Abstract.Primitive
+import Abstract.Set
 import Abstract.Store
 import Abstract.Syntax hiding (subterms)
 import Abstract.Value
@@ -11,15 +12,15 @@ import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.State
 import Data.Function (fix)
 import Data.Functor.Foldable
+import Data.Pointed
 import Data.Semigroup
-import qualified Data.Set as Set
 
 type DeadCodeInterpreter l t v = State (Dead t) ': Interpreter l v
 
 type DeadCodeResult l t v = Final (DeadCodeInterpreter l t v) v
 
 
-newtype Dead a = Dead { unDead :: Set.Set a }
+newtype Dead a = Dead { unDead :: Set a }
   deriving (Eq, Foldable, Monoid, Ord, Show)
 
 
@@ -29,11 +30,11 @@ class Monad m => MonadDead t m where
 
 instance State (Dead t) :< fs => MonadDead t (Eff fs) where
   killAll = put
-  revive = modify . (Dead .) . (. unDead) . Set.delete
+  revive = modify . (Dead .) . (. unDead) . delete
 
 
-subterms :: (Ord a, Recursive a, Foldable (Base a)) => a -> Set.Set a
-subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.singleton term
+subterms :: (Ord a, Recursive a, Foldable (Base a)) => a -> Set a
+subterms term = para (foldMap (uncurry ((<>) . point))) term <> point term
 
 
 -- Dead code analysis

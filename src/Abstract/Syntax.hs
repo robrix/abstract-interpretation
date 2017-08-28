@@ -2,12 +2,15 @@
 module Abstract.Syntax where
 
 import Abstract.Primitive
+import Abstract.Set
 import Abstract.Type
 import Data.Bifoldable
 import Data.Bifunctor
 import Data.Bitraversable
+import Data.Foldable (fold)
 import Data.Functor.Classes
-import Data.Functor.Foldable
+import Data.Functor.Foldable hiding (fold)
+import Data.Pointed
 import Data.Text.Prettyprint.Doc
 
 data Syntax a r
@@ -99,6 +102,14 @@ if' c t e = In (If c t e)
 
 let' :: Name -> Term a -> Type -> (Term a -> Term a) -> Term a
 let' var val ty body = lam var ty body # val
+
+
+freeVariables :: Term a -> Set Name
+freeVariables = cata (\ syntax -> case syntax of
+  Var n -> point n
+  Lam n _ body -> delete n body
+  Rec n _ body -> delete n body
+  _ -> fold syntax)
 
 
 showsConstructor :: String -> Int -> [Int -> ShowS] -> ShowS

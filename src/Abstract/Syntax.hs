@@ -104,9 +104,6 @@ let' var val ty body = lam var ty body # val
 immediateSubterms :: Ord a => Term a -> Set.Set (Term a)
 immediateSubterms = foldMap Set.singleton . out
 
-subterms :: Ord a => Term a -> Set.Set (Term a)
-subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.singleton term
-
 
 showsConstructor :: String -> Int -> [Int -> ShowS] -> ShowS
 showsConstructor name d fields = showParen (d > 10) $ showString name . showChar ' ' . foldr (.) id ([($ 11)] <*> fields)

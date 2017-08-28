@@ -24,3 +24,10 @@ instance Ord2 Roots where
 
 instance Ord l => Ord1 (Roots l) where
   liftCompare = liftCompare2 compare
+
+
+instance Show2 Roots where
+  liftShowsPrec2 spL slL spA slA d (Roots s) = showsUnaryWith (liftShowsPrec (liftShowsPrec2 spL slL spA slA) (liftShowList2 spL slL spA slA)) "Roots" d s
+
+instance Show l => Show1 (Roots l) where
+  liftShowsPrec = liftShowsPrec2 showsPrec showList

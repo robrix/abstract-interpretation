@@ -5,7 +5,7 @@ import Abstract.Configuration
 import Abstract.Interpreter
 import Abstract.Interpreter.Collecting
 import Abstract.Primitive
-import Abstract.RootSet
+import Abstract.Set
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value
@@ -19,7 +19,7 @@ import Data.Semigroup
 import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
 
-type TracingInterpreter l t v g = Reader (RootSet l v) ': Writer (g (Configuration l t v)) ': Interpreter l v
+type TracingInterpreter l t v g = Reader (Set (Address l v)) ': Writer (g (Configuration l t v)) ': Interpreter l v
 
 type TraceInterpreter l t v = TracingInterpreter l t v []
 type ReachableStateInterpreter l t v = TracingInterpreter l t v Set.Set

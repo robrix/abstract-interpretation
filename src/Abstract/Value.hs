@@ -2,7 +2,7 @@
 module Abstract.Value where
 
 import Abstract.Primitive
-import Abstract.RootSet
+import Abstract.Set
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Type
@@ -34,7 +34,7 @@ data Value l
 
 class AbstractValue l v | v -> l where
   literal :: Prim -> v
-  valueRoots :: v -> RootSet l v
+  valueRoots :: v -> Set (Address l v)
 
 class Monad m => MonadEnv l a m where
   askEnv :: m (Environment l a)

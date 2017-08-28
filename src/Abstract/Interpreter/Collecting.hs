@@ -2,7 +2,6 @@
 module Abstract.Interpreter.Collecting where
 
 import Abstract.Interpreter
-import Abstract.RootSet
 import Abstract.Store
 import Abstract.Value
 import Control.Monad.Effect
@@ -10,17 +9,17 @@ import Control.Monad.Effect.Reader
 import Data.Semigroup
 
 class Monad m => MonadGC l a m where
-  askRoots :: m (RootSet l a)
+  askRoots :: m (Set (Address l a))
 
-instance Reader (RootSet l a) :< fs => MonadGC l a (Eff fs) where
+instance Reader (Set (Address l a)) :< fs => MonadGC l a (Eff fs) where
   askRoots = ask
 
 
-gc :: Ord l => RootSet l a -> Store l a -> Store l a
-gc roots store = storeRestrict store (unRootSet (reachable roots store))
+gc :: Ord l => Set (Address l a) -> Store l a -> Store l a
+gc roots store = storeRestrict store (reachable roots store)
 
-reachable :: RootSet l a -> Store l a -> RootSet l a
-reachable = const
+reachable :: Ord l => Set (Address l a) -> Store l a -> Set (Address l a)
+reachable roots _ = roots
 
 
 evCollect :: forall l t v m
@@ -29,7 +28,7 @@ evCollect :: forall l t v m
           -> Eval t (m v)
           -> Eval t (m v)
 evCollect ev0 ev e = do
-  roots <- askRoots :: m (RootSet l v)
+  roots <- askRoots :: m (Set (Address l v))
   v <- ev0 ev e
   modifyStore (gc (roots <> valueRoots v))
   return v

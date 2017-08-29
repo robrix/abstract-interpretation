@@ -2,13 +2,16 @@
 module Abstract.Syntax where
 
 import Abstract.Primitive
+import Abstract.Set
 import Abstract.Type
 import Data.Bifoldable
 import Data.Bifunctor
 import Data.Bitraversable
+import Data.Foldable (fold)
 import Data.Functor.Classes
-import Data.Functor.Foldable
-import qualified Data.Set as Set
+import Data.Functor.Foldable hiding (fold)
+import Data.List (intersperse)
+import Data.Pointed
 import Data.Text.Prettyprint.Doc
 
 data Syntax a r
@@ -25,7 +28,7 @@ data Syntax a r
 type Name = String
 
 newtype Term a = In { out :: Syntax a (Term a) }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
 
 
 var :: Name -> Term a
@@ -89,8 +92,8 @@ lam s ty f = makeLam s ty (f (var s))
 makeLam :: Name -> Type -> Term a -> Term a
 makeLam name ty body = In (Lam name ty body)
 
-rec :: Name -> Type -> (Term a -> Term a) -> Term a
-rec f ty1 b = makeRec f ty1 (b (var f))
+mu :: Name -> Type -> (Term a -> Term a) -> Term a
+mu f ty1 b = makeRec f ty1 (b (var f))
 
 makeRec :: Name -> Type -> Term a -> Term a
 makeRec name ty body = In (Rec name ty body)
@@ -101,15 +104,17 @@ if' c t e = In (If c t e)
 let' :: Name -> Term a -> Type -> (Term a -> Term a) -> Term a
 let' var val ty body = lam var ty body # val
 
-immediateSubterms :: Ord a => Term a -> Set.Set (Term a)
-immediateSubterms = foldMap Set.singleton . out
 
-subterms :: Ord a => Term a -> Set.Set (Term a)
-subterms term = para (foldMap (uncurry ((<>) . Set.singleton))) term <> Set.singleton term
+freeVariables :: Term a -> Set Name
+freeVariables = cata (\ syntax -> case syntax of
+  Var n -> point n
+  Lam n _ body -> delete n body
+  Rec n _ body -> delete n body
+  _ -> fold syntax)
 
 
 showsConstructor :: String -> Int -> [Int -> ShowS] -> ShowS
-showsConstructor name d fields = showParen (d > 10) $ showString name . showChar ' ' . foldr (.) id ([($ 11)] <*> fields)
+showsConstructor name d fields = showParen (d > 10) $ showString name . showChar ' ' . foldr (.) id (intersperse (showChar ' ') ([($ 11)] <*> fields))
 
 
 -- Instances
@@ -229,6 +234,9 @@ instance Ord a => Ord1 (Syntax a) where
 instance Show1 Term where
   liftShowsPrec spA slA = go where go d t = showsUnaryWith (liftShowsPrec2 spA slA go (liftShowList spA slA)) "In" d (out t)
 
+instance Show a => Show (Term a) where
+  showsPrec = showsPrec1
+
 instance Show2 Syntax where
   liftShowsPrec2 spV _ spA _ d s = case s of
     Var n -> showsConstructor "Var" d [ flip showsPrec n ]
@@ -269,7 +277,7 @@ instance Pretty2 Syntax where
     Op2 o a b -> pr a <+> pretty o <+> pr b
     App a b -> pr a <+> parens (pr b)
     Lam n t a -> parens (pretty '\\' <+> pretty n <+> colon <+> pretty t <+> pretty "." <> nest 2 (line <> pr a))
-    Rec n t a -> pretty "fix" <+> parens (pretty '\\' <+> pretty n <+> colon <+> pretty t <+> pretty "." <> nest 2 (line <> pr a))
+    Rec n t a -> pretty "mu" <+> parens (pretty '\\' <+> pretty n <+> colon <+> pretty t <+> pretty "." <> nest 2 (line <> pr a))
     If c t e -> pretty "if" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
 
 instance Pretty a => Pretty1 (Syntax a) where

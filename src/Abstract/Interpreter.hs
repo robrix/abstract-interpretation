@@ -26,18 +26,18 @@ type Eval t m = t -> m
 
 -- Evaluation
 
-eval :: forall l v a . (MonadAddress l (Eff (Interpreter l v)), MonadValue l v Term a (Eff (Interpreter l v)), MonadPrim v (Eff (Interpreter l v)), Semigroup (Cell l v)) => Term a -> EvalResult l v
+eval :: forall l v . (MonadAddress l (Eff (Interpreter l v)), MonadValue l v (Term Prim) (Eff (Interpreter l v)), MonadPrim v (Eff (Interpreter l v)), Semigroup (Cell l v)) => Term Prim -> EvalResult l v
 eval = run @(Interpreter l v) . fix (ev @l)
 
-ev :: forall l v a m
-   .  (MonadAddress l m, MonadValue l v Term a m, MonadInterpreter l v m, MonadPrim v m, Semigroup (Cell l v))
-   => Eval (Term a) (m v)
-   -> Eval (Term a) (m v)
+ev :: forall l v m
+   .  (MonadAddress l m, MonadValue l v (Term Prim) m, MonadInterpreter l v m, MonadPrim v m, Semigroup (Cell l v))
+   => Eval (Term Prim) (m v)
+   -> Eval (Term Prim) (m v)
 ev ev term = case out term of
   Var x -> do
     p <- askEnv
     maybe (fail ("free variable: " ++ x)) deref (envLookup x (p :: Environment l v))
-  Prim n -> literal @l @v @Term n
+  Prim n -> return (literal n)
   Op1 o a -> do
     va <- ev a
     delta1 o va
@@ -50,11 +50,7 @@ ev ev term = case out term of
     v1 <- ev e1
     app @l ev closure v1
   Lam x ty e0 -> lambda @l ev x ty e0
-  Rec f _ e -> do
-    a <- alloc f
-    v <- localEnv (envInsert f (a :: Address l v)) (ev e)
-    assign a v
-    return v
+  Rec x ty e0 -> rec @l ev x ty e0
   If c t e -> do
     v <- ev c
     c' <- truthy v

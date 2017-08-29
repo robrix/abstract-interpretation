@@ -3,6 +3,7 @@ module Abstract.Interpreter.Caching where
 
 import Abstract.Configuration
 import Abstract.Interpreter
+import Abstract.Interpreter.Collecting
 import Abstract.Primitive
 import Abstract.Set
 import Abstract.Store
@@ -38,11 +39,11 @@ cacheInsert :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> (v
 cacheInsert = (((Cache .) . (. unCache)) .) . (. point) . Map.insertWith (<>)
 
 
-type CachingInterpreter l t v = '[Reader (Environment l v), Failure, NonDetEff, State (Store l v), Reader (Cache l t v), State (Cache l t v)]
+type CachingInterpreter l t v = '[Reader (Set (Address l v)), Reader (Environment l v), Failure, NonDetEff, State (Store l v), Reader (Cache l t v), State (Cache l t v)]
 
 type CachingResult l t v = Final (CachingInterpreter l t v) v
 
-type MonadCachingInterpreter l t v m = (MonadEnv l v m, MonadStore l v m, MonadCacheIn l t v m, MonadCacheOut l t v m, Alternative m)
+type MonadCachingInterpreter l t v m = (MonadEnv l v m, MonadStore l v m, MonadCacheIn l t v m, MonadCacheOut l t v m, MonadGC l v m, Alternative m)
 
 
 class Monad m => MonadCacheIn l t v m where
@@ -78,9 +79,9 @@ instance NonDetEff :< fs => MonadNonDet (Eff fs) where
 -- Coinductively-cached evaluation
 
 evalCache :: forall l v a
-          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), MonadAddress l (Eff (CachingInterpreter l (Term a) v)), MonadValue l v Term a (Eff (CachingInterpreter l (Term a) v)), MonadPrim v (Eff (CachingInterpreter l (Term a) v)), Semigroup (Cell l v))
-          => Eval (Term a) (CachingResult l (Term a) v)
-evalCache = run @(CachingInterpreter l (Term a) v) . fixCache @l (fix (evCache @l (ev @l)))
+          .  (Ord a, Ord v, Ord l, Ord1 (Cell l), Foldable (Cell l), MonadAddress l (Eff (CachingInterpreter l (Term Prim) v)), MonadValue l v (Term Prim) (Eff (CachingInterpreter l (Term Prim) v)), MonadPrim v (Eff (CachingInterpreter l (Term Prim) v)), Semigroup (Cell l v))
+          => Eval (Term Prim) (CachingResult l (Term Prim) v)
+evalCache = run @(CachingInterpreter l (Term Prim) v) . fixCache @l (fix (evCache @l (evCollect (evRoots (ev @l)))))
 
 evCache :: forall l t v m
         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadCachingInterpreter l t v m)
@@ -90,7 +91,8 @@ evCache :: forall l t v m
 evCache ev0 ev e = do
   env <- askEnv
   store <- getStore
-  let c = Configuration e env store :: Configuration l t v
+  roots <- askRoots
+  let c = Configuration e roots env store :: Configuration l t v
   out <- getCache
   case cacheLookup c out of
     Just pairs -> asum . flip map (toList pairs) $ \ (value, store') -> do
@@ -112,7 +114,8 @@ fixCache :: forall l t v m
 fixCache eval e = do
   env <- askEnv
   store <- getStore
-  let c = Configuration e env store :: Configuration l t v
+  roots <- askRoots
+  let c = Configuration e roots env store :: Configuration l t v
   pairs <- mlfp mempty (\ dollar -> do
     putCache (mempty :: Cache l t v)
     putStore store

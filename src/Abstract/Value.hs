@@ -1,23 +1,26 @@
-{-# LANGUAGE DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, StandaloneDeriving, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, FunctionalDependencies, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, StandaloneDeriving, TypeOperators, UndecidableInstances #-}
 module Abstract.Value where
 
 import Abstract.Primitive
+import Abstract.Set
 import Abstract.Store
 import Abstract.Syntax
 import Abstract.Type
+import Control.Applicative
 import Control.Monad hiding (fail)
 import Control.Monad.Effect
 import Control.Monad.Effect.Reader
 import Control.Monad.Fail
 import Data.Functor.Classes
 import qualified Data.Map as Map
+import Data.Pointed
 import Data.Semigroup
 import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 import Text.Show
 
 newtype Environment l a = Environment { unEnvironment :: Map.Map Name (Address l a) }
-  deriving (Eq, Foldable, Functor, Monoid, Ord, Show, Traversable)
+  deriving (Eq, Foldable, Functor, Monoid, Ord, Semigroup, Show, Traversable)
 
 envLookup :: Name -> Environment l a -> Maybe (Address l a)
 envLookup = (. unEnvironment) . Map.lookup
@@ -25,11 +28,18 @@ envLookup = (. unEnvironment) . Map.lookup
 envInsert :: Name -> Address l a -> Environment l a -> Environment l a
 envInsert name value (Environment m) = Environment (Map.insert name value m)
 
+envRoots :: (Foldable t, Ord l) => Environment l a -> t Name -> Set (Address l a)
+envRoots env = foldr ((<>) . maybe mempty point . flip envLookup env) mempty
+
 
 data Value l
   = I Prim
   | Closure Name (Term Prim) (Environment l (Value l))
 
+
+class AbstractValue l v | v -> l where
+  literal :: Prim -> v
+  valueRoots :: v -> Set (Address l v)
 
 class Monad m => MonadEnv l a m where
   askEnv :: m (Environment l a)
@@ -40,13 +50,18 @@ instance Reader (Environment l a) :< fs => MonadEnv l a (Eff fs) where
   localEnv = local
 
 
-class Monad m => MonadValue l v t a m where
-  lambda :: (t a -> m v) -> Name -> Type -> t a -> m v
-  app :: (t a -> m v) -> v -> v -> m v
+class (AbstractValue l v, Monad m) => MonadValue l v t m where
+  rec :: (t -> m v) -> Name -> Type -> t -> m v
+  lambda :: (t -> m v) -> Name -> Type -> t -> m v
+  app :: (t -> m v) -> v -> v -> m v
 
-  literal :: a -> m v
+instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, MonadFail m, Semigroup (Cell l (Value l))) => MonadValue l (Value l) (Term Prim) m where
+  rec ev name _ e0 =  do
+    a <- alloc name
+    v <- localEnv (envInsert name (a :: Address l (Value l))) (ev e0)
+    assign a v
+    return v
 
-instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, MonadFail m, Semigroup (Cell l (Value l))) => MonadValue l (Value l) Term Prim m where
   lambda _ name _ body = do
     env <- askEnv
     return (Closure name body (env :: Environment l (Value l)))
@@ -57,13 +72,23 @@ instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, Mo
     localEnv (const (envInsert x a p)) (ev e2)
   app _ _ _ = fail "non-closure operator"
 
-  literal = return . I
+instance Ord l => AbstractValue l (Value l) where
+  valueRoots (I _) = mempty
+  valueRoots (Closure name body env) = envRoots env (delete name (freeVariables body))
 
-instance (MonadAddress l m, MonadStore l Type m, MonadEnv l Type m, MonadFail m, Semigroup (Cell l Type)) => MonadValue l Type t Prim m where
+  literal = I
+
+instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail m, Semigroup (Cell Monovariant Type), Alternative m) => MonadValue Monovariant Type t m where
+  rec ev name ty e0 =  do
+    a <- alloc name
+    assign a ty
+    v <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev e0)
+    return v
+
   lambda ev name inTy body = do
     a <- alloc name
     assign a inTy
-    outTy <- localEnv (envInsert name (a :: Address l Type)) (ev body)
+    outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
     return (inTy :-> outTy)
 
   app _ (inTy :-> outTy) argTy = do
@@ -71,8 +96,11 @@ instance (MonadAddress l m, MonadStore l Type m, MonadEnv l Type m, MonadFail m,
     return outTy
   app _ op _ = fail $ "non-function operator: " ++ show op
 
-  literal (PInt _)  = return Int
-  literal (PBool _) = return Bool
+instance AbstractValue Monovariant Type where
+  valueRoots _ = mempty
+
+  literal (PInt _)  = Int
+  literal (PBool _) = Bool
 
 
 instance Eq2 Environment where

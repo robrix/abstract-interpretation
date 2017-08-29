@@ -58,7 +58,7 @@ evRoots ev0 ev e = case out e of
     ev (if b then e1 else e2)
   Op2 o e0 e1 -> do
     env <- askEnv @l @v
-    v0 <- extraRoots (envRoots env (freeVariables e0)) (ev e0)
+    v0 <- extraRoots (envRoots env (freeVariables e1)) (ev e0)
     v1 <- extraRoots (valueRoots @l v0) (ev e1)
     delta2 o v0 v1
   App e0 e1 -> do

@@ -53,8 +53,7 @@ evRoots :: forall l v m
 evRoots ev0 ev e = case out e of
   If e0 e1 e2 -> do
     env <- askEnv @l @v
-    let psi' = envRoots env (freeVariables e1) <> envRoots env (freeVariables e2)
-    v <- extraRoots psi' (ev e0)
+    v <- extraRoots (envRoots env (freeVariables e1) <> envRoots env (freeVariables e2)) (ev e0)
     b <- truthy v
     ev (if b then e1 else e2)
   Op2 o e0 e1 -> do

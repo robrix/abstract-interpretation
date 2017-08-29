@@ -51,10 +51,17 @@ instance Reader (Environment l a) :< fs => MonadEnv l a (Eff fs) where
 
 
 class (AbstractValue l v, Monad m) => MonadValue l v t m where
+  rec :: (t -> m v) -> Name -> Type -> t -> m v
   lambda :: (t -> m v) -> Name -> Type -> t -> m v
   app :: (t -> m v) -> v -> v -> m v
 
 instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, MonadFail m, Semigroup (Cell l (Value l))) => MonadValue l (Value l) (Term Prim) m where
+  rec ev name _ e0 =  do
+    a <- alloc name
+    v <- localEnv (envInsert name (a :: Address l (Value l))) (ev e0)
+    assign a v
+    return v
+
   lambda _ name _ body = do
     env <- askEnv
     return (Closure name body (env :: Environment l (Value l)))
@@ -72,6 +79,12 @@ instance Ord l => AbstractValue l (Value l) where
   literal = I
 
 instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail m, Semigroup (Cell Monovariant Type), Alternative m) => MonadValue Monovariant Type t m where
+  rec ev name ty e0 =  do
+    a <- alloc name
+    assign a ty
+    v <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev e0)
+    return v
+
   lambda ev name inTy body = do
     a <- alloc name
     assign a inTy

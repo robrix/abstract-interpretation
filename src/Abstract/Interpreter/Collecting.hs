@@ -46,7 +46,7 @@ evCollect ev0 ev e = do
   return v
 
 evRoots :: forall l v m
-        .  (Ord l, MonadEnv l v m, MonadGC l v m, MonadPrim v m, AbstractValue l v)
+        .  (Ord l, MonadEnv l v m, MonadGC l v m, MonadValue l v (Term Prim) m, MonadPrim v m, AbstractValue l v)
         => (Eval (Term Prim) (m v) -> Eval (Term Prim) (m v))
         -> Eval (Term Prim) (m v)
         -> Eval (Term Prim) (m v)
@@ -62,4 +62,9 @@ evRoots ev0 ev e = case out e of
     v0 <- extraRoots (envRoots env (freeVariables e0)) (ev e0)
     v1 <- extraRoots (valueRoots @l v0) (ev e1)
     delta2 o v0 v1
+  App e0 e1 -> do
+    env <- askEnv @l @v
+    v0 <- extraRoots (envRoots env (freeVariables e1)) (ev e0)
+    v1 <- extraRoots (valueRoots @l v0) (ev e1)
+    app @l ev v0 v1
   _ -> ev0 ev e

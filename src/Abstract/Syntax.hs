@@ -27,7 +27,7 @@ data Syntax a r
 type Name = String
 
 newtype Term a = In { out :: Syntax a (Term a) }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
 
 
 var :: Name -> Term a
@@ -232,6 +232,9 @@ instance Ord a => Ord1 (Syntax a) where
 
 instance Show1 Term where
   liftShowsPrec spA slA = go where go d t = showsUnaryWith (liftShowsPrec2 spA slA go (liftShowList spA slA)) "In" d (out t)
+
+instance Show a => Show (Term a) where
+  showsPrec = showsPrec1
 
 instance Show2 Syntax where
   liftShowsPrec2 spV _ spA _ d s = case s of

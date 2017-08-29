@@ -8,27 +8,18 @@ import Abstract.Store
 import Abstract.Syntax
 import Abstract.Value
 import Control.Monad.Effect
-import Control.Monad.Effect.State
+import Control.Monad.Effect.Reader
 import Data.Semigroup
 
 class Monad m => MonadGC l a m where
   askRoots :: m (Set (Address l a))
 
-  putRoots :: Set (Address l a) -> m ()
-
   extraRoots :: Set (Address l a) -> m b -> m b
 
-instance (Ord l, State (Set (Address l a)) :< fs) => MonadGC l a (Eff fs) where
-  askRoots = get :: Eff fs (Set (Address l a))
+instance (Ord l, Reader (Set (Address l a)) :< fs) => MonadGC l a (Eff fs) where
+  askRoots = ask :: Eff fs (Set (Address l a))
 
-  putRoots = put
-
-  extraRoots roots' action = do
-    roots <- askRoots @l @a
-    modify (<> roots')
-    v <- action
-    put roots
-    return v
+  extraRoots roots' = local (<> roots')
 
 
 gc :: (Ord l, Foldable (Cell l), AbstractValue l a) => Set (Address l a) -> Store l a -> Store l a

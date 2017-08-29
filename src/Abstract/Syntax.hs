@@ -10,6 +10,7 @@ import Data.Bitraversable
 import Data.Foldable (fold)
 import Data.Functor.Classes
 import Data.Functor.Foldable hiding (fold)
+import Data.List (intersperse)
 import Data.Pointed
 import Data.Text.Prettyprint.Doc
 
@@ -113,7 +114,7 @@ freeVariables = cata (\ syntax -> case syntax of
 
 
 showsConstructor :: String -> Int -> [Int -> ShowS] -> ShowS
-showsConstructor name d fields = showParen (d > 10) $ showString name . showChar ' ' . foldr (.) id ([($ 11)] <*> fields)
+showsConstructor name d fields = showParen (d > 10) $ showString name . showChar ' ' . foldr (.) id (intersperse (showChar ' ') ([($ 11)] <*> fields))
 
 
 -- Instances

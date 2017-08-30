@@ -121,8 +121,9 @@ instance (MonadFail m, Alternative m) => MonadPrim Type m where
   delta2 Modulus   Int  Int  = pure Int <|> divisionByZero
   delta2 _         _    _    = nonNumeric
 
-  truthy Bool = pure True <|> pure False
-  truthy _    = nonBoolean
+  truthy Bool     = pure True <|> pure False
+  truthy (TVar _) = pure True <|> pure False
+  truthy _        = nonBoolean
 
 
 instance Num Prim where

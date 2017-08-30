@@ -97,30 +97,28 @@ instance (MonadFail m, Alternative m) => MonadPrim Type m where
   delta1 _   Int  = pure Int
   delta1 _   _    = nonNumeric
 
-  delta2 And       Bool Bool = pure Bool
-  delta2 And       _    _    = nonBoolean
-  delta2 Or        Bool Bool = pure Bool
-  delta2 Or        _    _    = nonBoolean
-  delta2 Eq        Bool Bool = pure Bool
-  delta2 Eq        Int  Int  = pure Bool
-  delta2 Eq        _    _    = disjointComparison
-  delta2 Lt        Bool Bool = pure Bool
-  delta2 Lt        Int  Int  = pure Bool
-  delta2 Lt        _    _    = disjointComparison
-  delta2 LtE       Bool Bool = pure Bool
-  delta2 LtE       Int  Int  = pure Bool
-  delta2 LtE       _    _    = disjointComparison
-  delta2 Gt        Bool Bool = pure Bool
-  delta2 Gt        Int  Int  = pure Bool
-  delta2 Gt        _    _    = disjointComparison
-  delta2 GtE       Bool Bool = pure Bool
-  delta2 GtE       Int  Int  = pure Bool
-  delta2 GtE       _    _    = disjointComparison
+  delta2 o a b
+    | o `elem` booleanOperators = case (a, b) of
+      (Bool,   Bool)   -> pure Bool
+      (TVar _, Bool)   -> pure Bool
+      (Bool,   TVar _) -> pure Bool
+      (TVar _, TVar _) -> pure Bool
+      _                -> nonBoolean
+    | o `elem` relationOperators = case (a, b) of
+      _ | a == b       -> pure Bool
+      (TVar _, _)      -> pure Bool
+      (_,      TVar _) -> pure Bool
+      _                -> disjointComparison
+    | o `elem` arithmeticOperators = case (a, b) of
+      (Int,    Int)    -> pure Int
+      (TVar _, Int)    -> pure Int
+      (Int,    TVar _) -> pure Int
+      (TVar _, TVar _) -> pure Int
+      _                -> nonNumeric
   delta2 DividedBy Int  Int  = pure Int <|> divisionByZero
   delta2 Quotient  Int  Int  = pure Int <|> divisionByZero
   delta2 Remainder Int  Int  = pure Int <|> divisionByZero
   delta2 Modulus   Int  Int  = pure Int <|> divisionByZero
-  delta2 _         Int  Int  = pure Int
   delta2 _         _    _    = nonNumeric
 
   truthy Bool = pure True <|> pure False

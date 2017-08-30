@@ -14,6 +14,15 @@ data Op1 = Negate | Abs | Signum | Not
 data Op2 = Plus | Minus | Times | DividedBy | Quotient | Remainder | Modulus | And | Or | Eq | Lt | LtE | Gt | GtE
   deriving (Eq, Ord, Show)
 
+arithmeticOperators :: [Op2]
+arithmeticOperators = [Plus, Minus, Times, DividedBy, Quotient, Remainder, Modulus]
+
+booleanOperators :: [Op2]
+booleanOperators = [And, Or]
+
+relationOperators :: [Op2]
+relationOperators = [Eq, Lt, LtE, Gt, GtE]
+
 
 data Prim
   = PInt  {-# UNPACK #-} !Int

@@ -93,10 +93,10 @@ instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail 
     outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
     return (TVar tvar :-> outTy)
 
-  app _ (inTy :-> outTy) argTy = do
-    unless (inTy == argTy) (fail ("expected " ++ show inTy ++ " but got " ++ show argTy))
+  app _ opTy inTy = do
+    tvar <- fresh
+    _ :-> outTy <- opTy `unify` (inTy :-> TVar tvar)
     return outTy
-  app _ op _ = fail $ "non-function operator: " ++ show op
 
 instance AbstractValue Monovariant Type where
   valueRoots _ = mempty

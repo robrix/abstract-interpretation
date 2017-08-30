@@ -25,6 +25,7 @@ library
                      , Abstract.Store
                      , Abstract.Syntax
                      , Abstract.Type
+                     , Abstract.Util
                      , Abstract.Value
                      , Control.Effect
                      , Control.Monad.Effect.Failure

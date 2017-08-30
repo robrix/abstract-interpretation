@@ -7,6 +7,7 @@ import Abstract.Interpreter.Collecting
 import Abstract.Primitive
 import Abstract.Set
 import Abstract.Store
+import Abstract.Type
 import Abstract.Syntax
 import Abstract.Value
 import Control.Applicative
@@ -39,7 +40,7 @@ cacheInsert :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> (v
 cacheInsert = (((Cache .) . (. unCache)) .) . (. point) . Map.insertWith (<>)
 
 
-type CachingInterpreter l t v = '[Reader (Set (Address l v)), Reader (Environment l v), Failure, NonDetEff, State (Store l v), Reader (Cache l t v), State (Cache l t v)]
+type CachingInterpreter l t v = '[Fresh, Reader (Set (Address l v)), Reader (Environment l v), Failure, NonDetEff, State (Store l v), Reader (Cache l t v), State (Cache l t v)]
 
 type CachingResult l t v = Final (CachingInterpreter l t v) v
 
@@ -108,7 +109,7 @@ evCache ev0 ev e = do
       return v
 
 fixCache :: forall l t v m
-         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadCachingInterpreter l t v m, MonadNonDet m)
+         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadCachingInterpreter l t v m, MonadNonDet m, MonadFresh m)
          => Eval t (m v)
          -> Eval t (m v)
 fixCache eval e = do
@@ -119,6 +120,7 @@ fixCache eval e = do
   pairs <- mlfp mempty (\ dollar -> do
     putCache (mempty :: Cache l t v)
     putStore store
+    reset 0
     _ <- localCache (const dollar) (collect point (eval e) :: m (Set v))
     getCache)
   asum . flip map (maybe [] toList (cacheLookup c pairs)) $ \ (value, store') -> do

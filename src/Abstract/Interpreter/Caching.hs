@@ -12,6 +12,7 @@ import Abstract.Value
 import Control.Applicative
 import Control.Effect
 import Control.Monad.Effect.Failure
+import Control.Monad.Effect.Fresh
 import Control.Monad.Effect.Internal hiding (run)
 import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader
@@ -39,7 +40,7 @@ cacheInsert :: (Ord l, Ord t, Ord v, Ord1 (Cell l)) => Configuration l t v -> (v
 cacheInsert = (((Cache .) . (. unCache)) .) . (. point) . Map.insertWith (<>)
 
 
-type CachingInterpreter l t v = '[Reader (Set (Address l v)), Reader (Environment l v), Failure, NonDetEff, State (Store l v), Reader (Cache l t v), State (Cache l t v)]
+type CachingInterpreter l t v = '[Fresh, Reader (Set (Address l v)), Reader (Environment l v), Failure, NonDetEff, State (Store l v), Reader (Cache l t v), State (Cache l t v)]
 
 type CachingResult l t v = Final (CachingInterpreter l t v) v
 

@@ -19,6 +19,8 @@ unify Int  Int  = pure Int
 unify Bool Bool = pure Bool
 unify (a1 :-> b1) (a2 :-> b2) = (:->) <$> unify a1 a2 <*> unify b1 b2
 unify (a1 :* b1)  (a2 :* b2)  = (:*)  <$> unify a1 a2 <*> unify b1 b2
+unify (TVar _) b = pure b
+unify a (TVar _) = pure a
 unify t1 t2 = fail ("cannot unify " ++ prettyString t1 ++ " with " ++ prettyString t2)
 
 

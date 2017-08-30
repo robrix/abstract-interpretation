@@ -3,7 +3,7 @@ module Control.Effect where
 
 import Abstract.Set
 import qualified Control.Monad.Effect as Effect
-import Control.Monad.Effect.Failure
+import Control.Monad.Effect.Fail
 import Control.Monad.Effect.Internal hiding (run)
 import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader
@@ -39,9 +39,9 @@ instance Monoid b => RunEffect (State b) a where
 instance Monoid b => RunEffect (Reader b) a where
   runEffect = flip runReader mempty
 
-instance RunEffect Failure a where
-  type Result Failure a = Either String a
-  runEffect = runFailure
+instance RunEffect Fail a where
+  type Result Fail a = Either String a
+  runEffect = runFail
 
 instance Monoid w => RunEffect (Writer w) a where
   type Result (Writer w) a = (a, w)

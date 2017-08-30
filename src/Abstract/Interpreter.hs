@@ -7,7 +7,7 @@ import Abstract.Syntax
 import Abstract.Value
 import Control.Effect
 import Control.Monad.Effect hiding (run)
-import Control.Monad.Effect.Failure
+import Control.Monad.Effect.Fail
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Data.Function (fix)
@@ -15,7 +15,7 @@ import Data.Semigroup
 import Prelude hiding (fail)
 
 
-type Interpreter l v = '[Failure, State (Store l v), Reader (Environment l v)]
+type Interpreter l v = '[Fail, State (Store l v), Reader (Environment l v)]
 
 type MonadInterpreter l v m = (MonadEnv l v m, MonadStore l v m, MonadFail m)
 

@@ -28,7 +28,6 @@ library
                      , Abstract.Util
                      , Abstract.Value
                      , Control.Effect
-                     , Control.Monad.Effect.Failure
   build-depends:       base >=4.10 && <4.11
                      , containers
                      , effects

@@ -4,7 +4,6 @@ module Abstract.Interpreter where
 import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax
-import Abstract.Type
 import Abstract.Value
 import Control.Effect
 import Control.Monad.Effect hiding (run)
@@ -16,7 +15,7 @@ import Data.Semigroup
 import Prelude hiding (fail)
 
 
-type Interpreter l v = '[Fresh, Failure, State (Store l v), Reader (Environment l v)]
+type Interpreter l v = '[Failure, State (Store l v), Reader (Environment l v)]
 
 type MonadInterpreter l v m = (MonadEnv l v m, MonadStore l v m, MonadFail m)
 

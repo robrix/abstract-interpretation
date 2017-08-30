@@ -27,6 +27,6 @@ instance Pretty Type where
 
 
 instance RunEffect Fresh a where
-  runEffect = relayState (0 :: Int) (const pure) (\ s action k -> case action of
+  runEffect = relayState (0 :: TName) (const pure) (\ s action k -> case action of
     Fresh -> k (succ s) s
     Reset s' -> k s' ())

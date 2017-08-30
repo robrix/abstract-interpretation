@@ -1,14 +1,23 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, GADTs, MultiParamTypeClasses, TypeOperators, UndecidableInstances #-}
 module Abstract.Type where
 
+import Abstract.Util
 import Control.Effect
 import Control.Monad.Effect.Internal
+import Control.Monad.Fail
 import Data.Text.Prettyprint.Doc
+import Prelude hiding (fail)
 
 type TName = Int
 
 data Type = Int | Bool | Type :-> Type | Type :* Type | TVar TName
   deriving (Eq, Ord, Show)
+
+
+unify :: MonadFail m => Type -> Type -> m Type
+unify Int  Int  = pure Int
+unify Bool Bool = pure Bool
+unify t1 t2 = fail ("cannot unify " ++ prettyString t1 ++ " with " ++ prettyString t2)
 
 
 data Fresh a where

@@ -3,7 +3,6 @@ module Abstract.Syntax where
 
 import Abstract.Primitive
 import Abstract.Set
-import Abstract.Type
 import Data.Bifoldable
 import Data.Bifunctor
 import Data.Bitraversable
@@ -20,8 +19,8 @@ data Syntax a r
   | Op1 Op1 r
   | Op2 Op2 r r
   | App r r
-  | Lam Name Type r
-  | Rec Name Type r
+  | Lam Name r
+  | Rec Name r
   | If r r r
   deriving (Eq, Ord, Show)
 
@@ -86,30 +85,30 @@ mod' :: Term a -> Term a -> Term a
 mod' = (In .) . Op2 Modulus
 
 
-lam :: Name -> Type -> (Term a -> Term a) -> Term a
-lam s ty f = makeLam s ty (f (var s))
+lam :: Name -> (Term a -> Term a) -> Term a
+lam s f = makeLam s (f (var s))
 
-makeLam :: Name -> Type -> Term a -> Term a
-makeLam name ty body = In (Lam name ty body)
+makeLam :: Name -> Term a -> Term a
+makeLam name body = In (Lam name body)
 
-mu :: Name -> Type -> (Term a -> Term a) -> Term a
-mu f ty1 b = makeRec f ty1 (b (var f))
+mu :: Name -> (Term a -> Term a) -> Term a
+mu f b = makeRec f (b (var f))
 
-makeRec :: Name -> Type -> Term a -> Term a
-makeRec name ty body = In (Rec name ty body)
+makeRec :: Name -> Term a -> Term a
+makeRec name body = In (Rec name body)
 
 if' :: Term a -> Term a -> Term a -> Term a
 if' c t e = In (If c t e)
 
-let' :: Name -> Term a -> Type -> (Term a -> Term a) -> Term a
-let' var val ty body = lam var ty body # val
+let' :: Name -> Term a -> (Term a -> Term a) -> Term a
+let' var val body = lam var body # val
 
 
 freeVariables :: Term a -> Set Name
 freeVariables = cata (\ syntax -> case syntax of
   Var n -> point n
-  Lam n _ body -> delete n body
-  Rec n _ body -> delete n body
+  Lam n body -> delete n body
+  Rec n body -> delete n body
   _ -> fold syntax)
 
 
@@ -137,8 +136,8 @@ instance Bifoldable Syntax where
     Op1 _ a -> g a
     Op2 _ a b -> g a `mappend` g b
     App a b -> g a `mappend` g b
-    Lam _ _ a -> g a
-    Rec _ _ a -> g a
+    Lam _ a -> g a
+    Rec _ a -> g a
     If c t e -> g c `mappend` g t `mappend` g e
 
 instance Foldable (Syntax a) where
@@ -155,8 +154,8 @@ instance Bifunctor Syntax where
     Op1 o a -> Op1 o (g a)
     Op2 o a b -> Op2 o (g a) (g b)
     App a b -> App (g a) (g b)
-    Lam n t a -> Lam n t (g a)
-    Rec n t a -> Rec n t (g a)
+    Lam n a -> Lam n (g a)
+    Rec n a -> Rec n (g a)
     If c t e -> If (g c) (g t) (g e)
 
 instance Functor (Syntax a) where
@@ -173,8 +172,8 @@ instance Bitraversable Syntax where
     Op1 o a -> Op1 o <$> g a
     Op2 o a b -> Op2 o <$> g a <*> g b
     App a b -> App <$> g a <*> g b
-    Lam n t a -> Lam n t <$> g a
-    Rec n t a -> Rec n t <$> g a
+    Lam n a -> Lam n <$> g a
+    Rec n a -> Rec n <$> g a
     If c t e -> If <$> g c <*> g t <*> g e
 
 instance Traversable (Syntax a) where
@@ -191,8 +190,8 @@ instance Eq2 Syntax where
     (Op1 o1 a1, Op1 o2 a2) -> o1 == o2 && eqA a1 a2
     (Op2 o1 a1 b1, Op2 o2 a2 b2) -> o1 == o2 && eqA a1 a2 && eqA b1 b2
     (App a1 b1, App a2 b2) -> eqA a1 a2 && eqA b1 b2
-    (Lam n1 t1 a1, Lam n2 t2 a2) -> n1 == n2 && t1 == t2 && eqA a1 a2
-    (Rec n1 t1 a1, Rec n2 t2 a2) -> n1 == n2 && t1 == t2 && eqA a1 a2
+    (Lam n1 a1, Lam n2 a2) -> n1 == n2 && eqA a1 a2
+    (Rec n1 a1, Rec n2 a2) -> n1 == n2 && eqA a1 a2
     (If c1 t1 e1, If c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
     _ -> False
 
@@ -219,10 +218,10 @@ instance Ord2 Syntax where
     (App a1 b1, App a2 b2) -> compareA a1 a2 <> compareA b1 b2
     (App{}, _) -> LT
     (_, App{}) -> GT
-    (Lam n1 t1 a1, Lam n2 t2 a2) -> compare n1 n2 <> compare t1 t2 <> compareA a1 a2
+    (Lam n1 a1, Lam n2 a2) -> compare n1 n2 <> compareA a1 a2
     (Lam{}, _) -> LT
     (_, Lam{}) -> GT
-    (Rec n1 t1 a1, Rec n2 t2 a2) -> compare n1 n2 <> compare t1 t2 <> compareA a1 a2
+    (Rec n1 a1, Rec n2 a2) -> compare n1 n2 <> compareA a1 a2
     (Rec{}, _) -> LT
     (_, Rec{}) -> GT
     (If c1 t1 e1, If c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
@@ -244,8 +243,8 @@ instance Show2 Syntax where
     Op1 o a -> showsConstructor "Op1" d [ flip showsPrec o, flip spA a ]
     Op2 o a b -> showsConstructor "Op2" d [ flip showsPrec o, flip spA a, flip spA b ]
     App a b -> showsConstructor "App" d (flip spA <$> [ a, b ])
-    Lam n t a -> showsConstructor "Lam" d [ flip showsPrec n, flip showsPrec t, flip spA a ]
-    Rec n t a -> showsConstructor  "Rec" d [ flip showsPrec n, flip showsPrec t, flip spA a ]
+    Lam n a -> showsConstructor "Lam" d [ flip showsPrec n, flip spA a ]
+    Rec n a -> showsConstructor "Rec" d [ flip showsPrec n, flip spA a ]
     If c t e -> showsConstructor "If" d (flip spA <$> [c, t, e])
 
 instance Show a => Show1 (Syntax a) where
@@ -276,8 +275,8 @@ instance Pretty2 Syntax where
     Op1 o a -> pretty o <+> pr a
     Op2 o a b -> pr a <+> pretty o <+> pr b
     App a b -> pr a <+> parens (pr b)
-    Lam n t a -> parens (pretty '\\' <+> pretty n <+> colon <+> pretty t <+> pretty "." <> nest 2 (line <> pr a))
-    Rec n t a -> pretty "mu" <+> parens (pretty '\\' <+> pretty n <+> colon <+> pretty t <+> pretty "." <> nest 2 (line <> pr a))
+    Lam n a -> parens (pretty '\\' <+> pretty n <+> pretty "." <> nest 2 (line <> pr a))
+    Rec n a -> pretty "mu" <+> parens (pretty '\\' <+> pretty n <+> pretty "." <> nest 2 (line <> pr a))
     If c t e -> pretty "if" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
 
 instance Pretty a => Pretty1 (Syntax a) where

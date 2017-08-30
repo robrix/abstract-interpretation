@@ -49,8 +49,8 @@ ev ev term = case out term of
     closure <- ev e0
     v1 <- ev e1
     app @l ev closure v1
-  Lam x ty e0 -> lambda @l ev x ty e0
-  Rec x ty e0 -> rec @l ev x ty e0
+  Lam x e0 -> lambda @l ev x e0
+  Rec x e0 -> rec @l ev x e0
   If c t e -> do
     v <- ev c
     c' <- truthy v

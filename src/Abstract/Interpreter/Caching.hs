@@ -109,7 +109,7 @@ evCache ev0 ev e = do
       return v
 
 fixCache :: forall l t v m
-         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadCachingInterpreter l t v m, MonadNonDet m)
+         .  (Ord l, Ord t, Ord v, Ord1 (Cell l), MonadCachingInterpreter l t v m, MonadNonDet m, MonadFresh m)
          => Eval t (m v)
          -> Eval t (m v)
 fixCache eval e = do
@@ -120,6 +120,7 @@ fixCache eval e = do
   pairs <- mlfp mempty (\ dollar -> do
     putCache (mempty :: Cache l t v)
     putStore store
+    reset 0
     _ <- localCache (const dollar) (collect point (eval e) :: m (Set v))
     getCache)
   asum . flip map (maybe [] toList (cacheLookup c pairs)) $ \ (value, store') -> do

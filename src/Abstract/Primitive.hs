@@ -26,7 +26,7 @@ relationOperators = [Eq, Lt, LtE, Gt, GtE]
 
 data Prim
   = PInt  {-# UNPACK #-} !Int
-  | PBool {-# UNPACK #-} !Bool
+  | PBool !Bool
   deriving (Eq, Ord, Show)
 
 class Monad m => MonadPrim a m where

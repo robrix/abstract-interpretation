@@ -7,12 +7,12 @@ import Abstract.Interpreter.Collecting
 import Abstract.Primitive
 import Abstract.Set
 import Abstract.Store
+import Abstract.Type
 import Abstract.Syntax
 import Abstract.Value
 import Control.Applicative
 import Control.Effect
 import Control.Monad.Effect.Failure
-import Control.Monad.Effect.Fresh
 import Control.Monad.Effect.Internal hiding (run)
 import Control.Monad.Effect.NonDetEff
 import Control.Monad.Effect.Reader

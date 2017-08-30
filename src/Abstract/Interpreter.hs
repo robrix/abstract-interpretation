@@ -4,11 +4,11 @@ module Abstract.Interpreter where
 import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax
+import Abstract.Type
 import Abstract.Value
 import Control.Effect
 import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.Failure
-import Control.Monad.Effect.Fresh
 import Control.Monad.Effect.Reader
 import Control.Monad.Effect.State
 import Data.Function (fix)

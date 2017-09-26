@@ -35,19 +35,19 @@ instance (Ord l, Ord t, Ord1 (Cell l)) => Ord1 (Configuration l t) where
   liftCompare = liftCompare2 compare
 
 
-instance (Show l, Show1 (Cell l)) => Show2 (Configuration l) where
-  liftShowsPrec2 spT _ spV slV d (Configuration t r e s) = showsConstructor "Configuration" d [ flip spT t, flip (liftShowsPrec (liftShowsPrec spV slV) (liftShowList spV slV)) r, flip (liftShowsPrec spV slV) e, flip (liftShowsPrec spV slV) s ]
-
-instance (Show l, Show t, Show1 (Cell l)) => Show1 (Configuration l t) where
-  liftShowsPrec = liftShowsPrec2 showsPrec showList
-
-
-instance (Pretty l, Pretty1 (Cell l)) => Pretty2 (Configuration l) where
-  liftPretty2 pT _ pV plV (Configuration t r e s) = tupled [ pT t, liftPretty prettyAddress (list . map prettyAddress) r, liftPretty pV plV e, liftPretty pV plV s ]
-    where prettyAddress = liftPretty pV plV
-
-instance (Pretty l, Pretty t, Pretty1 (Cell l)) => Pretty1 (Configuration l t) where
-  liftPretty = liftPretty2 pretty prettyList
-
-instance (Pretty l, Pretty t, Pretty v, Pretty1 (Cell l)) => Pretty (Configuration l t v) where
-  pretty = liftPretty pretty prettyList
+-- instance (Show l, Show1 (Cell l)) => Show2 (Configuration l) where
+--   liftShowsPrec2 spT _ spV slV d (Configuration t r e s) = showsConstructor "Configuration" d [ flip spT t, flip (liftShowsPrec (liftShowsPrec spV slV) (liftShowList spV slV)) r, flip (liftShowsPrec spV slV) e, flip (liftShowsPrec spV slV) s ]
+--
+-- instance (Show l, Show t, Show1 (Cell l)) => Show1 (Configuration l t) where
+--   liftShowsPrec = liftShowsPrec2 showsPrec showList
+--
+--
+-- instance (Pretty l, Pretty1 (Cell l)) => Pretty2 (Configuration l) where
+--   liftPretty2 pT _ pV plV (Configuration t r e s) = tupled [ pT t, liftPretty prettyAddress (list . map prettyAddress) r, liftPretty pV plV e, liftPretty pV plV s ]
+--     where prettyAddress = liftPretty pV plV
+--
+-- instance (Pretty l, Pretty t, Pretty1 (Cell l)) => Pretty1 (Configuration l t) where
+--   liftPretty = liftPretty2 pretty prettyList
+--
+-- instance (Pretty l, Pretty t, Pretty v, Pretty1 (Cell l)) => Pretty (Configuration l t v) where
+--   pretty = liftPretty pretty prettyList

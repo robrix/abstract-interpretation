@@ -1,4 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, FunctionalDependencies, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, StandaloneDeriving, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE TypeApplications, ConstraintKinds, AllowAmbiguousTypes, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, FunctionalDependencies, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, StandaloneDeriving, TypeOperators, UndecidableInstances #-}
 module Abstract.Value where
 
 import Abstract.Primitive
@@ -19,6 +19,9 @@ import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 import Text.Show
 
+import Data.Proxy
+import Data.Union
+
 newtype Environment l a = Environment { unEnvironment :: Map.Map Name (Address l a) }
   deriving (Eq, Foldable, Functor, Monoid, Ord, Semigroup, Show, Traversable)
 
@@ -35,11 +38,32 @@ envRoots env = foldr ((<>) . maybe mempty point . flip envLookup env) mempty
 data Value l
   = I Prim
   | Closure Name (Term Prim) (Environment l (Value l))
+  deriving (Show)
 
 
-class AbstractValue l v | v -> l where
-  literal :: Prim -> v
-  valueRoots :: v -> Set (Address l v)
+class Monad m => Eval syntax v m where
+  eval :: (Monad m) => ((Term Prim) -> m v) -> syntax (Term Prim) -> m v
+
+
+instance Monad m => Eval (Syntax Prim) (Value l) m where
+  eval ev (Other fs) = apply (Proxy :: Eval) (eval ev) fs
+  eval _ _ = undefined
+
+instance (Monad m, MonadEnv l (Value l) m) => Eval Lambda (Value l) m where
+  eval _ (Lambda name body) = do
+    env <- askEnv
+    return (Closure name body (env :: Environment l (Value l)))
+-- instance Eval Lambda Type where
+--   eval ev (Lambda name body) = lambda @Monovariant ev name body
+
+instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m) => Eval Variable (Value l) m where
+  eval _ (Variable x) = do
+    env <- askEnv
+    maybe (fail ("free variable: " ++ x)) deref (envLookup x (env :: Environment l (Value l)))
+
+-- class AbstractValue l v | v -> l where
+--   literal :: Prim -> v
+--   valueRoots :: v -> Set (Address l v)
 
 class Monad m => MonadEnv l a m where
   askEnv :: m (Environment l a)
@@ -49,61 +73,60 @@ instance Reader (Environment l a) :< fs => MonadEnv l a (Eff fs) where
   askEnv = ask
   localEnv = local
 
+-- class (AbstractValue l v, Monad m) => MonadValue l v t m where
+--   rec :: (t -> m v) -> Name -> t -> m v
+--   lambda :: (t -> m v) -> Name -> t -> m v
+--   app :: (t -> m v) -> v -> v -> m v
 
-class (AbstractValue l v, Monad m) => MonadValue l v t m where
-  rec :: (t -> m v) -> Name -> t -> m v
-  lambda :: (t -> m v) -> Name -> t -> m v
-  app :: (t -> m v) -> v -> v -> m v
-
-instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, MonadFail m, Semigroup (Cell l (Value l))) => MonadValue l (Value l) (Term Prim) m where
-  rec ev name e0 =  do
-    a <- alloc name
-    v <- localEnv (envInsert name (a :: Address l (Value l))) (ev e0)
-    assign a v
-    return v
-
-  lambda _ name body = do
-    env <- askEnv
-    return (Closure name body (env :: Environment l (Value l)))
-
-  app ev (Closure x e2 p) v1 = do
-    a <- alloc x
-    assign a v1
-    localEnv (const (envInsert x a p)) (ev e2)
-  app _ _ _ = fail "non-closure operator"
-
-instance Ord l => AbstractValue l (Value l) where
-  valueRoots (I _) = mempty
-  valueRoots (Closure name body env) = envRoots env (delete name (freeVariables body))
-
-  literal = I
-
-instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail m, Semigroup (Cell Monovariant Type), MonadFresh m, Alternative m) => MonadValue Monovariant Type t m where
-  rec ev name e0 =  do
-    a <- alloc name
-    tvar <- fresh
-    assign a (TVar tvar)
-    v <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev e0)
-    return v
-
-  lambda ev name body = do
-    a <- alloc name
-    tvar <- fresh
-    assign a (TVar tvar)
-    outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
-    return (TVar tvar :-> outTy)
-
-  app _ opTy inTy = do
-    tvar <- fresh
-    _ :-> outTy <- opTy `unify` (inTy :-> TVar tvar)
-    return outTy
-
-instance AbstractValue Monovariant Type where
-  valueRoots _ = mempty
-
-  literal (PInt _)  = Int
-  literal (PBool _) = Bool
-
+-- instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, MonadFail m, Semigroup (Cell l (Value l))) => MonadValue l (Value l) (Term Prim) m where
+--   rec ev name e0 =  do
+--     a <- alloc name
+--     v <- localEnv (envInsert name (a :: Address l (Value l))) (ev e0)
+--     assign a v
+--     return v
+--
+--   lambda _ name body = do
+--     env <- askEnv
+--     return (Closure name body (env :: Environment l (Value l)))
+--
+--   app ev (Closure x e2 p) v1 = do
+--     a <- alloc x
+--     assign a v1
+--     localEnv (const (envInsert x a p)) (ev e2)
+--   app _ _ _ = fail "non-closure operator"
+--
+-- instance Ord l => AbstractValue l (Value l) where
+--   valueRoots (I _) = mempty
+--   valueRoots (Closure name body env) = envRoots env (delete name (freeVariables body))
+--
+--   literal = I
+--
+-- instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail m, Semigroup (Cell Monovariant Type), MonadFresh m, Alternative m) => MonadValue Monovariant Type t m where
+--   rec ev name e0 =  do
+--     a <- alloc name
+--     tvar <- fresh
+--     assign a (TVar tvar)
+--     v <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev e0)
+--     return v
+--
+--   lambda ev name body = do
+--     a <- alloc name
+--     tvar <- fresh
+--     assign a (TVar tvar)
+--     outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
+--     return (TVar tvar :-> outTy)
+--
+--   app _ opTy inTy = do
+--     tvar <- fresh
+--     _ :-> outTy <- opTy `unify` (inTy :-> TVar tvar)
+--     return outTy
+--
+-- instance AbstractValue Monovariant Type where
+--   valueRoots _ = mempty
+--
+--   literal (PInt _)  = Int
+--   literal (PBool _) = Bool
+--
 
 instance Eq2 Environment where
   liftEq2 eqL eqA (Environment m1) (Environment m2) = liftEq (liftEq2 eqL eqA) m1 m2
@@ -139,42 +162,41 @@ instance Ord l => Ord (Value l) where
   compare = compare1
 
 
-instance Show2 Environment where
-  liftShowsPrec2 spL slL spA slA d (Environment m) = showsConstructor "Environment" d [ flip (liftShowsPrec showsAddress (showListWith (showsAddress 0))) m ]
-    where showsAddress = liftShowsPrec2 spL slL spA slA
-
-instance Show l => Show1 (Environment l) where
-  liftShowsPrec = liftShowsPrec2 showsPrec showList
-
-instance Show1 Value where
-  liftShowsPrec spL slL = go
-    where go d v = case v of
-            I a -> showsUnaryWith showsPrec "I" d a
-            Closure s t e -> showsConstructor "Closure" d [flip showsPrec s, flip showsPrec t, flip (liftShowsPrec2 spL slL go (showListWith (go 0))) e]
-
-instance Show l => Show (Value l) where
-  showsPrec = showsPrec1
-
-
-instance Pretty2 Environment where
-  liftPretty2 pL plL pA plA = list . map (liftPretty prettyAddress (list . map prettyAddress)) . Map.toList . unEnvironment
-    where prettyAddress = liftPretty2 pL plL pA plA
-
-instance Pretty l => Pretty1 (Environment l) where
-  liftPretty = liftPretty2 pretty prettyList
-
-instance (Pretty l, Pretty a) => Pretty (Environment l a) where
-  pretty = liftPretty pretty prettyList
-
-instance Pretty1 Value where
-  liftPretty pL plL = go
-    where go (I a) = pretty a
-          go (Closure n t e) = pretty "Closure" <+> pretty n <+> dot <+> pretty t <> line
-                                 <> liftPretty2 pL plL go (list . map go) e
-
-instance Pretty l => Pretty (Value l) where
-  pretty = liftPretty pretty prettyList
-
+-- instance Show2 Environment where
+--   liftShowsPrec2 spL slL spA slA d (Environment m) = showsConstructor "Environment" d [ flip (liftShowsPrec showsAddress (showListWith (showsAddress 0))) m ]
+--     where showsAddress = liftShowsPrec2 spL slL spA slA
+--
+-- instance Show l => Show1 (Environment l) where
+--   liftShowsPrec = liftShowsPrec2 showsPrec showList
+--
+-- instance Show1 Value where
+--   liftShowsPrec spL slL = go
+--     where go d v = case v of
+--             I a -> showsUnaryWith showsPrec "I" d a
+--             Closure s t e -> showsConstructor "Closure" d [flip showsPrec s, flip showsPrec t, flip (liftShowsPrec2 spL slL go (showListWith (go 0))) e]
+--
+-- instance Show l => Show (Value l) where
+--   showsPrec = showsPrec1
+--
+--
+-- instance Pretty2 Environment where
+--   liftPretty2 pL plL pA plA = list . map (liftPretty prettyAddress (list . map prettyAddress)) . Map.toList . unEnvironment
+--     where prettyAddress = liftPretty2 pL plL pA plA
+--
+-- instance Pretty l => Pretty1 (Environment l) where
+--   liftPretty = liftPretty2 pretty prettyList
+--
+-- instance (Pretty l, Pretty a) => Pretty (Environment l a) where
+--   pretty = liftPretty pretty prettyList
+--
+-- instance Pretty1 Value where
+--   liftPretty pL plL = go
+--     where go (I a) = pretty a
+--           go (Closure n t e) = pretty "Closure" <+> pretty n <+> dot <+> pretty t <> line
+--                                  <> liftPretty2 pL plL go (list . map go) e
+--
+-- instance Pretty l => Pretty (Value l) where
+--   pretty = liftPretty pretty prettyList
 
 instance MonadFail m => MonadPrim (Value l) m where
   delta1 o   (I a) = fmap I (delta1 o a)

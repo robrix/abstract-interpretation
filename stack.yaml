@@ -1,0 +1,14 @@
+resolver: nightly-2017-09-20
+packages:
+- .
+- location: vendor/effects
+  extra-dep: true
+- vendor/prettyprinter/prettyprinter
+- vendor/prettyprinter/prettyprinter-ansi-terminal
+- vendor/prettyprinter/prettyprinter-compat-annotated-wl-pprint
+- vendor/prettyprinter/prettyprinter-compat-ansi-wl-pprint
+- vendor/prettyprinter/prettyprinter-compat-wl-pprint
+- vendor/prettyprinter/prettyprinter-convert-ansi-wl-pprint
+extra-deps: []
+flags: {}
+extra-package-dbs: []

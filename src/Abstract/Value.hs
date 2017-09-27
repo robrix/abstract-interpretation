@@ -49,6 +49,8 @@ class Monad m => Eval v m syntax where
 instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, Semigroup (Cell l (Value l))) => Eval (Value l) m Syntax where
   eval ev fs = apply (Proxy :: Proxy (Eval (Value l) m)) (eval ev) fs
 
+instance (Alternative m, MonadFresh m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m, Semigroup (Cell Monovariant Type)) => Eval Type m Syntax where
+  eval ev fs = apply (Proxy :: Proxy (Eval Type m)) (eval ev) fs
 
 -- Lambda Eval instances
 instance (Monad m, MonadEnv l (Value l) m) => Eval (Value l) m Lambda where
@@ -64,24 +66,8 @@ instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail 
     outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
     return (TVar tvar :-> outTy)
 
---   lambda ev name body = do
---     a <- alloc name
---     tvar <- fresh
---     assign a (TVar tvar)
---     outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
---     return (TVar tvar :-> outTy)
 
--- instance Eval Lambda Type where
---   eval ev (Lambda name body) = lambda @Monovariant ev name body
-
-instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m) => Eval (Value l) m Variable where
-  eval _ (Variable x) = do
-    env <- askEnv
-    maybe (fail ("free variable: " ++ x)) deref (envLookup x (env :: Environment l (Value l)))
-
-instance Monad m => Eval (Value l) m Primitive where
-  eval _ (Primitive x) = return (I x)
-
+-- Application Eval instances
 instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, Semigroup (Cell l (Value l))) => Eval (Value l) m Application where
   eval ev (Application e1 e2) = do
     Closure name body env <- ev e1
@@ -90,10 +76,36 @@ instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, Mona
     assign a value
     localEnv (const (envInsert name a env)) (ev body)
 
+instance (Monad m, MonadFail m, MonadFresh m) => Eval Type m Application where
+  eval ev (Application e1 e2) = do
+    opTy <- ev e1
+    inTy <- ev e2
+    tvar <- fresh
+    _ :-> outTy <- opTy `unify` (inTy :-> TVar tvar)
+    return outTy
 
--- class AbstractValue l v | v -> l where
---   literal :: Prim -> v
---   valueRoots :: v -> Set (Address l v)
+
+-- Variable Eval instances
+instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m) => Eval (Value l) m Variable where
+  eval _ (Variable x) = do
+    env <- askEnv
+    maybe (fail ("free variable: " ++ x)) deref (envLookup x (env :: Environment l (Value l)))
+
+instance (Alternative m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m) => Eval Type m Variable where
+  eval _ (Variable x) = do
+    env <- askEnv
+    maybe (fail ("free type: " ++ x)) deref (envLookup x (env :: Environment Monovariant Type))
+
+
+-- Primitive Eval instances
+instance Monad m => Eval (Value l) m Primitive where
+  eval _ (Primitive x) = return (I x)
+
+instance Monad m => Eval Type m Primitive where
+  eval _ (Primitive (PInt _)) = return Int
+  eval _ (Primitive (PBool _)) = return Bool
+
+
 
 class Monad m => MonadEnv l a m where
   askEnv :: m (Environment l a)
@@ -102,6 +114,11 @@ class Monad m => MonadEnv l a m where
 instance Reader (Environment l a) :< fs => MonadEnv l a (Eff fs) where
   askEnv = ask
   localEnv = local
+
+-- class AbstractValue l v | v -> l where
+--   literal :: Prim -> v
+--   valueRoots :: v -> Set (Address l v)
+
 
 -- class (AbstractValue l v, Monad m) => MonadValue l v t m where
 --   rec :: (t -> m v) -> Name -> t -> m v

@@ -41,25 +41,55 @@ data Value l
   deriving (Show)
 
 
-class Monad m => Eval syntax v m where
-  eval :: (Monad m) => ((Term Prim) -> m v) -> syntax (Term Prim) -> m v
+class Monad m => Eval v m syntax where
+  eval :: (Monad m) => (Term Prim -> m v) -> syntax (Term Prim) -> m v
 
 
-instance Monad m => Eval (Syntax Prim) (Value l) m where
-  eval ev (Other fs) = apply (Proxy :: Eval) (eval ev) fs
-  eval _ _ = undefined
+-- Syntax Eval instance
+instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, Semigroup (Cell l (Value l))) => Eval (Value l) m Syntax where
+  eval ev fs = apply (Proxy :: Proxy (Eval (Value l) m)) (eval ev) fs
 
-instance (Monad m, MonadEnv l (Value l) m) => Eval Lambda (Value l) m where
+
+-- Lambda Eval instances
+instance (Monad m, MonadEnv l (Value l) m) => Eval (Value l) m Lambda where
   eval _ (Lambda name body) = do
     env <- askEnv
     return (Closure name body (env :: Environment l (Value l)))
+
+instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail m, Semigroup (Cell Monovariant Type), MonadFresh m, Alternative m) => Eval Type m Lambda where
+  eval ev (Lambda name body) = do
+    a <- alloc name
+    tvar <- fresh
+    assign a (TVar tvar)
+    outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
+    return (TVar tvar :-> outTy)
+
+--   lambda ev name body = do
+--     a <- alloc name
+--     tvar <- fresh
+--     assign a (TVar tvar)
+--     outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
+--     return (TVar tvar :-> outTy)
+
 -- instance Eval Lambda Type where
 --   eval ev (Lambda name body) = lambda @Monovariant ev name body
 
-instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m) => Eval Variable (Value l) m where
+instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m) => Eval (Value l) m Variable where
   eval _ (Variable x) = do
     env <- askEnv
     maybe (fail ("free variable: " ++ x)) deref (envLookup x (env :: Environment l (Value l)))
+
+instance Monad m => Eval (Value l) m Primitive where
+  eval _ (Primitive x) = return (I x)
+
+instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, Semigroup (Cell l (Value l))) => Eval (Value l) m Application where
+  eval ev (Application e1 e2) = do
+    Closure name body env <- ev e1
+    value <- ev e2
+    a <- alloc name
+    assign a value
+    localEnv (const (envInsert name a env)) (ev body)
+
 
 -- class AbstractValue l v | v -> l where
 --   literal :: Prim -> v

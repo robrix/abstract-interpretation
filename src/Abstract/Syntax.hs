@@ -19,84 +19,76 @@ import Data.Union
 import Data.Proxy
 import GHC.Generics
 import Data.Functor.Classes.Show.Generic
---
--- newtype Expr f = In' (f (Expr f))
--- deriving instance Show (f (Expr f)) => Show (Expr f)
---
--- inject :: (g :< f) => g (Expr (Union f)) -> Expr (Union f)
--- inject = In' . inj
---
---
--- -- New Syntax
---
--- newtype Boolean a = Boolean Bool deriving (Functor, Show, Generic1)
--- instance Show1 Boolean where liftShowsPrec = genericLiftShowsPrec
---
--- -- instance Render Boolean where render _ (Boolean x) = text (show x)
--- -- instance Eval Boolean where
--- --   eval _ (Boolean x) = Literal (PBool x)
---
--- bool :: (Boolean :< f) => Bool -> Expr (Union f)
--- bool = inject . Boolean
---
--- true :: (Boolean :< f) => Expr (Union f)
--- true = bool True
---
--- false :: (Boolean :< f) => Expr (Union f)
--- false = bool False
 
+-- newtype Syntax a r
+--   = Other (Union '[Lambda, Application, Variable, Primitive] r)
+  -- | Var Name
+  -- | Prim a
+  -- | Op1 Op1 r
+  -- | Op2 Op2 r r
+  -- | App r r
+  -- | Lam Name r
+  -- | Rec Name r
+  -- | If r r r
+  -- deriving (Eq, Ord, Show)
 
-data Lambda a = Lambda Name a deriving (Eq, Ord, Show, Functor, Generic1)
-instance Show1 Lambda where liftShowsPrec = genericLiftShowsPrec
-instance Eq1 Lambda where liftEq comp (Lambda name1 body1) (Lambda name2 body2) = name1 == name2 && comp body1 body2
-instance Ord1 Lambda where liftCompare comp (Lambda name1 body1) (Lambda name2 body2) = compare (compare name1 name2) (comp body1 body2)
+type Syntax = Union '[Lambda, Application, Variable, Primitive]
+
+newtype Term a = In { out :: Syntax (Term a) }
+  deriving (Eq, Ord, Show)
+
+type Name = String
 
 newtype Variable a = Variable String deriving (Eq, Ord, Show, Functor, Generic1)
 instance Show1 Variable where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Variable where liftEq _ (Variable name1) (Variable name2) = name1 == name2
 instance Ord1 Variable where liftCompare _ (Variable name1) (Variable name2) = compare name1 name2
 
-newtype Primative a = Primative a deriving (Eq, Ord, Show, Functor, Generic1)
-instance Show1 Primative where liftShowsPrec = genericLiftShowsPrec
-instance Eq1 Primative where liftEq comp (Primative a1) (Primative a2) = comp a1 a2
-instance Ord1 Primative where liftCompare comp (Primative a1) (Primative a2) = comp a1 a2
+newtype Primitive a = Primitive Prim deriving (Eq, Ord, Show, Functor, Generic1)
+instance Show1 Primitive where liftShowsPrec = genericLiftShowsPrec
+instance Eq1 Primitive where liftEq _ (Primitive a1) (Primitive a2) = a1 == a2
+instance Ord1 Primitive where liftCompare _ (Primitive a1) (Primitive a2) = compare a1 a2
+
+data Lambda a = Lambda Name a deriving (Eq, Ord, Show, Functor, Generic1)
+instance Show1 Lambda where liftShowsPrec = genericLiftShowsPrec
+instance Eq1 Lambda where liftEq comp (Lambda name1 body1) (Lambda name2 body2) = name1 == name2 && comp body1 body2
+instance Ord1 Lambda where liftCompare comp (Lambda name1 body1) (Lambda name2 body2) = compare name1 name2 `mappend` comp body1 body2
+
+data Application a = Application a a deriving (Eq, Ord, Show, Functor, Generic1)
+instance Show1 Application where liftShowsPrec = genericLiftShowsPrec
+instance Eq1 Application where liftEq comp (Application a1 b1) (Application a2 b2) = comp a1 a2 && comp b1 b2
+instance Ord1 Application where liftCompare comp (Application a1 b1) (Application a2 b2) = comp a1 a2 `mappend` comp b1 b2
 
 
-data Syntax a r
-  = Var Name
-  | Prim a
-  -- | Op1 Op1 r
-  -- | Op2 Op2 r r
-  | App r r
-  | Lam Name r
-  | Other (Union '[Lambda, Variable] r)
-  -- | Rec Name r
-  -- | If r r r
-  deriving (Eq, Ord, Show)
-
-type Name = String
-
-newtype Term a = In { out :: Syntax a (Term a) }
-  deriving (Eq, Ord, Show)
-
-
+-- Smart constructors for various Terms.
 var :: Name -> Term a
--- var = In . Var
-var = In . Other . inj . Variable
+var = In . inj . Variable
 
--- prim :: a -> Term a
--- prim = In . Prim
---
--- true :: Term Prim
--- true = prim (PBool True)
---
--- false :: Term Prim
--- false = prim (PBool False)
---
---
--- infixl 9 #
--- (#) :: Term a -> Term a -> Term a
--- (#) = (In .) . App
+prim :: Prim -> Term a
+prim = In . inj . Primitive
+
+int :: Int -> Term Prim
+int x = prim (PInt x)
+
+true :: Term Prim
+true = prim (PBool True)
+
+false :: Term Prim
+false = prim (PBool False)
+
+infixl 9 #
+(#) :: Term a -> Term a -> Term a
+(#) a b = In (inj (Application a b))
+
+lam :: Name -> (Term a -> Term a) -> Term a
+lam s f = makeLam s (f (var s))
+
+makeLam :: Name -> Term a -> Term a
+makeLam name body = In (inj (Lambda name body))
+
+-- Instances
+
+type instance Base (Term a) = Syntax
 
 
 -- eq :: Term a -> Term a -> Term a
@@ -135,14 +127,6 @@ var = In . Other . inj . Variable
 -- mod' :: Term a -> Term a -> Term a
 -- mod' = (In .) . Op2 Modulus
 
-
-lam :: Name -> (Term a -> Term a) -> Term a
-lam s f = makeLam s (f (var s))
-
-makeLam :: Name -> Term a -> Term a
--- makeLam name body = In (Lam name body)
-makeLam name body = In (Other (inj (Lambda name body)))
-
 -- mu :: Name -> (Term a -> Term a) -> Term a
 -- mu f b = makeRec f (b (var f))
 
@@ -168,118 +152,115 @@ makeLam name body = In (Other (inj (Lambda name body)))
 -- showsConstructor name d fields = showParen (d > 10) $ showString name . showChar ' ' . foldr (.) id (intersperse (showChar ' ') ([($ 11)] <*> fields))
 
 
--- Instances
 
-type instance Base (Term a) = Syntax a
+-- instance Recursive (Term a) where
+--   project = out
+--
+-- instance Corecursive (Term a) where
+--   embed = In
 
-instance Recursive (Term a) where
-  project = out
+-- instance Foldable Term where
+--   foldMap f = go where go = bifoldMap f go . out
 
-instance Corecursive (Term a) where
-  embed = In
+-- instance Bifoldable Syntax where
+--   bifoldMap f g s = case s of
+--     Var _ -> mempty
+--     Prim i -> f i
+--     -- Op1 _ a -> g a
+--     -- Op2 _ a b -> g a `mappend` g b
+--     App a b -> g a `mappend` g b
+--     Lam _ a -> g a
+--     -- Rec _ a -> g a
+--     -- If c t e -> g c `mappend` g t `mappend` g e
 
-instance Foldable Term where
-  foldMap f = go where go = bifoldMap f go . out
-
-instance Bifoldable Syntax where
-  bifoldMap f g s = case s of
-    Var _ -> mempty
-    Prim i -> f i
-    -- Op1 _ a -> g a
-    -- Op2 _ a b -> g a `mappend` g b
-    App a b -> g a `mappend` g b
-    Lam _ a -> g a
-    -- Rec _ a -> g a
-    -- If c t e -> g c `mappend` g t `mappend` g e
-
-instance Foldable (Syntax a) where
-  foldMap = bifoldMap (const mempty)
+-- instance Foldable (Syntax a) where
+--   foldMap = bifoldMap (const mempty)
 
 
-instance Functor Term where
-  fmap f = go where go = In . bimap f go . out
+-- instance Functor Term where
+--   fmap f = go where go = In . bimap f go . out
 
-instance Bifunctor Syntax where
-  bimap f g s = case s of
-    Var n -> Var n
-    Prim v -> Prim (f v)
-    -- Op1 o a -> Op1 o (g a)
-    -- Op2 o a b -> Op2 o (g a) (g b)
-    App a b -> App (g a) (g b)
-    Lam n a -> Lam n (g a)
-    -- Rec n a -> Rec n (g a)
-    -- If c t e -> If (g c) (g t) (g e)
+-- instance Bifunctor Syntax where
+--   bimap f g s = case s of
+--     Var n -> Var n
+--     Prim v -> Prim (f v)
+--     -- Op1 o a -> Op1 o (g a)
+--     -- Op2 o a b -> Op2 o (g a) (g b)
+--     App a b -> App (g a) (g b)
+--     Lam n a -> Lam n (g a)
+--     -- Rec n a -> Rec n (g a)
+--     -- If c t e -> If (g c) (g t) (g e)
 
-instance Functor (Syntax a) where
-  fmap = second
+-- instance Functor (Syntax a) where
+--   fmap = second
+--
+--
+-- instance Traversable Term where
+--   traverse f = go where go = fmap In . bitraverse f go . out
 
+-- instance Bitraversable Syntax where
+--   bitraverse f g s = case s of
+--     Var n -> pure (Var n)
+--     Prim v -> Prim <$> f v
+--     -- Op1 o a -> Op1 o <$> g a
+--     -- Op2 o a b -> Op2 o <$> g a <*> g b
+--     App a b -> App <$> g a <*> g b
+--     Lam n a -> Lam n <$> g a
+--     -- Rec n a -> Rec n <$> g a
+--     -- If c t e -> If <$> g c <*> g t <*> g e
 
-instance Traversable Term where
-  traverse f = go where go = fmap In . bitraverse f go . out
+-- instance Traversable (Syntax a) where
+--   traverse = bitraverse pure
+--
+--
+-- instance Eq1 Term where
+--   liftEq eqA = go where go t1 t2 = liftEq2 eqA go (out t1) (out t2)
 
-instance Bitraversable Syntax where
-  bitraverse f g s = case s of
-    Var n -> pure (Var n)
-    Prim v -> Prim <$> f v
-    -- Op1 o a -> Op1 o <$> g a
-    -- Op2 o a b -> Op2 o <$> g a <*> g b
-    App a b -> App <$> g a <*> g b
-    Lam n a -> Lam n <$> g a
-    -- Rec n a -> Rec n <$> g a
-    -- If c t e -> If <$> g c <*> g t <*> g e
+-- instance Eq2 Syntax where
+--   liftEq2 eqV eqA s1 s2 = case (s1, s2) of
+--     (Var n1, Var n2) -> n1 == n2
+--     (Prim v1, Prim v2) -> eqV v1 v2
+--     -- (Op1 o1 a1, Op1 o2 a2) -> o1 == o2 && eqA a1 a2
+--     -- (Op2 o1 a1 b1, Op2 o2 a2 b2) -> o1 == o2 && eqA a1 a2 && eqA b1 b2
+--     (App a1 b1, App a2 b2) -> eqA a1 a2 && eqA b1 b2
+--     (Lam n1 a1, Lam n2 a2) -> n1 == n2 && eqA a1 a2
+--     -- (Rec n1 a1, Rec n2 a2) -> n1 == n2 && eqA a1 a2
+--     -- (If c1 t1 e1, If c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
+--     _ -> False
 
-instance Traversable (Syntax a) where
-  traverse = bitraverse pure
+-- instance Eq a => Eq1 (Syntax a) where
+--   liftEq = liftEq2 (==)
+--
+-- instance Ord1 Term where
+--   liftCompare compareA = go where go t1 t2 = liftCompare2 compareA go (out t1) (out t2)
 
+-- instance Ord2 Syntax where
+--   liftCompare2 compareV compareA s1 s2 = case (s1, s2) of
+--     (Var n1, Var n2) -> compare n1 n2
+--     (Var{}, _) -> LT
+--     (_, Var{}) -> GT
+--     (Prim v1, Prim v2) -> compareV v1 v2
+--     (Prim{}, _) -> LT
+--     (_, Prim{}) -> GT
+--     -- (Op1 o1 a1, Op1 o2 a2) -> compare o1 o2 <> compareA a1 a2
+--     -- (Op1{}, _) -> LT
+--     -- (_, Op1{}) -> GT
+--     -- (Op2 o1 a1 b1, Op2 o2 a2 b2) -> compare o1 o2 <> compareA a1 a2 <> compareA b1 b2
+--     -- (Op2{}, _) -> LT
+--     -- (_, Op2{}) -> GT
+--     (App a1 b1, App a2 b2) -> compareA a1 a2 <> compareA b1 b2
+--     (App{}, _) -> LT
+--     (_, App{}) -> GT
+--     (Lam n1 a1, Lam n2 a2) -> compare n1 n2 <> compareA a1 a2
+--     (Lam{}, _) -> LT
+--     (_, Lam{}) -> GT
+--     -- (Rec n1 a1, Rec n2 a2) -> compare n1 n2 <> compareA a1 a2
+--     -- (Rec{}, _) -> LT
+--     -- (_, Rec{}) -> GT
+--     -- (If c1 t1 e1, If c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
 
-instance Eq1 Term where
-  liftEq eqA = go where go t1 t2 = liftEq2 eqA go (out t1) (out t2)
-
-instance Eq2 Syntax where
-  liftEq2 eqV eqA s1 s2 = case (s1, s2) of
-    (Var n1, Var n2) -> n1 == n2
-    (Prim v1, Prim v2) -> eqV v1 v2
-    -- (Op1 o1 a1, Op1 o2 a2) -> o1 == o2 && eqA a1 a2
-    -- (Op2 o1 a1 b1, Op2 o2 a2 b2) -> o1 == o2 && eqA a1 a2 && eqA b1 b2
-    (App a1 b1, App a2 b2) -> eqA a1 a2 && eqA b1 b2
-    (Lam n1 a1, Lam n2 a2) -> n1 == n2 && eqA a1 a2
-    -- (Rec n1 a1, Rec n2 a2) -> n1 == n2 && eqA a1 a2
-    -- (If c1 t1 e1, If c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
-    _ -> False
-
-instance Eq a => Eq1 (Syntax a) where
-  liftEq = liftEq2 (==)
-
-instance Ord1 Term where
-  liftCompare compareA = go where go t1 t2 = liftCompare2 compareA go (out t1) (out t2)
-
-instance Ord2 Syntax where
-  liftCompare2 compareV compareA s1 s2 = case (s1, s2) of
-    (Var n1, Var n2) -> compare n1 n2
-    (Var{}, _) -> LT
-    (_, Var{}) -> GT
-    (Prim v1, Prim v2) -> compareV v1 v2
-    (Prim{}, _) -> LT
-    (_, Prim{}) -> GT
-    -- (Op1 o1 a1, Op1 o2 a2) -> compare o1 o2 <> compareA a1 a2
-    -- (Op1{}, _) -> LT
-    -- (_, Op1{}) -> GT
-    -- (Op2 o1 a1 b1, Op2 o2 a2 b2) -> compare o1 o2 <> compareA a1 a2 <> compareA b1 b2
-    -- (Op2{}, _) -> LT
-    -- (_, Op2{}) -> GT
-    (App a1 b1, App a2 b2) -> compareA a1 a2 <> compareA b1 b2
-    (App{}, _) -> LT
-    (_, App{}) -> GT
-    (Lam n1 a1, Lam n2 a2) -> compare n1 n2 <> compareA a1 a2
-    (Lam{}, _) -> LT
-    (_, Lam{}) -> GT
-    -- (Rec n1 a1, Rec n2 a2) -> compare n1 n2 <> compareA a1 a2
-    -- (Rec{}, _) -> LT
-    -- (_, Rec{}) -> GT
-    -- (If c1 t1 e1, If c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
-
-instance Ord a => Ord1 (Syntax a) where
-  liftCompare = liftCompare2 compare
+-- instance Ord a => Ord1 (Syntax a) where
+--   liftCompare = liftCompare2 compare
 
 
 -- instance Show1 Term where
@@ -328,8 +309,6 @@ instance Ord a => Ord1 (Syntax a) where
 --     -- Op2 o a b -> pr a <+> pretty o <+> pr b
 --     App a b -> pr a <+> parens (pr b)
 --     Lam n a -> parens (pretty '\\' <+> pretty n <+> pretty "." <> nest 2 (line <> pr a))
---     -- Other ()
---   -- | Other (Union '[Lambda, Variable] r)
 --     -- Rec n a -> pretty "mu" <+> parens (pretty '\\' <+> pretty n <+> pretty "." <> nest 2 (line <> pr a))
 --     -- If c t e -> pretty "if" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
 --

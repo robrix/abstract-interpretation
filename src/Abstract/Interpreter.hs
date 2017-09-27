@@ -21,19 +21,21 @@ type MonadInterpreter l v m = (MonadEnv l v m, MonadStore l v m, MonadFail m)
 
 type EvalResult l v = Final (Interpreter l v) v
 
-type Eval' t m = t -> m
+-- type Eval' t m = t -> m
 
-eval' :: forall l v . (Eval (Syntax Prim) v (Eff (Interpreter l v)), MonadAddress l (Eff (Interpreter l v)), MonadPrim v (Eff (Interpreter l v)), Semigroup (Cell l v))
+eval' :: forall l v . (Eval v (Eff (Interpreter l v)) Syntax, MonadAddress l (Eff (Interpreter l v)), MonadPrim v (Eff (Interpreter l v)), Semigroup (Cell l v))
      => Term Prim
      -> EvalResult l v
-eval' = run @(Interpreter l v) . fix eval . out
+eval' = run @(Interpreter l v) . fix (\ ev -> eval ev . out)
+
 -- eval' = run @(Interpreter l v) . fix (ev @l)
---
+
 -- ev :: forall l v m
---    .  (Eval (Syntax Prim) v m, MonadAddress l m, MonadInterpreter l v m, MonadPrim v m, Semigroup (Cell l v))
+--    .  (Eval v m (Syntax Prim), MonadAddress l m, MonadInterpreter l v m, MonadPrim v m, Semigroup (Cell l v))
 --    => Eval' (Term Prim) (m v)
 --    -> Eval' (Term Prim) (m v)
 -- ev ev term = eval ev (out term)
+
 
   -- where
   --   go :: forall l v m

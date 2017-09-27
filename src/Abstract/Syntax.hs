@@ -12,27 +12,11 @@ import Data.Functor.Foldable hiding (fold)
 import Data.List (intersperse)
 import Data.Pointed
 import Data.Text.Prettyprint.Doc
-
--- import Abstract.Expr
--- import Abstract.Eval
 import Data.Union
-import Data.Proxy
 import GHC.Generics
 import Data.Functor.Classes.Show.Generic
 
--- newtype Syntax a r
---   = Other (Union '[Lambda, Application, Variable, Primitive] r)
-  -- | Var Name
-  -- | Prim a
-  -- | Op1 Op1 r
-  -- | Op2 Op2 r r
-  -- | App r r
-  -- | Lam Name r
-  -- | Rec Name r
-  -- | If r r r
-  -- deriving (Eq, Ord, Show)
-
-type Syntax = Union '[Lambda, Application, Variable, Primitive]
+type Syntax = Union '[Variable, Primitive, Lambda, Application]
 
 newtype Term a = In { out :: Syntax (Term a) }
   deriving (Eq, Ord, Show)
@@ -90,6 +74,18 @@ makeLam name body = In (inj (Lambda name body))
 
 type instance Base (Term a) = Syntax
 
+
+-- data Syntax a r
+--   = Other (Union '[Lambda, Application, Variable, Primitive] r)
+  -- | Var Name
+  -- | Prim a
+  -- | Op1 Op1 r
+  -- | Op2 Op2 r r
+  -- | App r r
+  -- | Lam Name r
+  -- | Rec Name r
+  -- | If r r r
+  -- deriving (Eq, Ord, Show)
 
 -- eq :: Term a -> Term a -> Term a
 -- eq = (In .) . Op2 Eq

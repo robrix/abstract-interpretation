@@ -21,16 +21,14 @@ library
                     --  , Abstract.Interpreter.Symbolic
                     --  , Abstract.Interpreter.Tracing
                      , Abstract.Primitive
-                    --  , Abstract.Eval
-                    --  , Abstract.Expr
                      , Abstract.Set
                      , Abstract.Store
                      , Abstract.Syntax
                      , Abstract.Type
                      , Abstract.Util
                      , Abstract.Value
-                     , Data.Functor.Classes.Show.Generic
                      , Control.Effect
+                     , Data.Functor.Classes.Show.Generic
   build-depends:       base >=4.10 && <4.11
                      , containers
                      , effects

@@ -18,7 +18,6 @@ import Data.Semigroup
 import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 import Text.Show
-
 import Data.Proxy
 import Data.Union
 
@@ -41,6 +40,7 @@ data Value l
   deriving (Show)
 
 
+
 class Monad m => Eval v m syntax where
   eval :: (Monad m) => (Term Prim -> m v) -> syntax (Term Prim) -> m v
 
@@ -51,6 +51,7 @@ instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, Mona
 
 instance (Alternative m, MonadFresh m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m, Semigroup (Cell Monovariant Type)) => Eval Type m Syntax where
   eval ev fs = apply (Proxy :: Proxy (Eval Type m)) (eval ev) fs
+
 
 -- Lambda Eval instances
 instance (Monad m, MonadEnv l (Value l) m) => Eval (Value l) m Lambda where

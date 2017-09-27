@@ -19,9 +19,14 @@ import Data.Functor.Classes.Show.Generic
 
 type Syntax = Union '[Variable, Primitive, Lambda, Application]
 
-newtype Term a = In { out :: Syntax (Term a) }
-  deriving (Eq, Ord, Show)
+type instance Base (Term a f) = Syntax
 
+-- type Syntax = Union '[Variable, Primitive, Lambda, Application]
+--
+-- newtype Term a = In { out :: Syntax (Term a) }
+--   deriving (Eq, Ord, Show)
+--
+-- type instance Base (Term a) = Syntax
 
 newtype Variable a = Variable String deriving (Eq, Ord, Show, Functor, Generic1)
 instance Show1 Variable where liftShowsPrec = genericLiftShowsPrec
@@ -45,34 +50,55 @@ instance Ord1 Application where liftCompare comp (Application a1 b1) (Applicatio
 
 
 -- Smart constructors for various Terms.
-var :: Name -> Term a
-var = In . inj . Variable
 
-prim :: Prim -> Term a
-prim = In . inj . Primitive
+prim :: (Primitive :< fs) => Prim -> Term a (Union fs)
+prim = inject . Primitive
 
-int :: Int -> Term Prim
-int x = prim (PInt x)
+int :: (Primitive :< fs) => Int -> Term a (Union fs)
+int = prim . PInt
 
-true :: Term Prim
+true :: (Primitive :< fs) => Term a (Union fs)
 true = prim (PBool True)
 
-false :: Term Prim
+false :: (Primitive :< fs) => Term a (Union fs)
 false = prim (PBool False)
 
+var :: (Variable :< fs) => Name -> Term a (Union fs)
+var = inject . Variable
+
 infixl 9 #
-(#) :: Term a -> Term a -> Term a
-(#) a b = In (inj (Application a b))
+(#) :: (Application :< fs) => Term a (Union fs) -> Term a (Union fs) -> Term a (Union fs)
+(#) a b = inject (Application a b)
 
-lam :: Name -> (Term a -> Term a) -> Term a
-lam s f = makeLam s (f (var s))
+makeLam :: (Lambda :< fs) => Name -> Term a (Union fs) -> Term a (Union fs)
+makeLam name body = inject (Lambda name body)
 
-makeLam :: Name -> Term a -> Term a
-makeLam name body = In (inj (Lambda name body))
+-- var :: Name -> Term a
+-- var = In . inj . Variable
+--
+-- prim :: Prim -> Term a
+-- prim = In . inj . Primitive
+--
+-- int :: Int -> Term Prim
+-- int x = prim (PInt x)
+--
+-- true :: Term Prim
+-- true = prim (PBool True)
+--
+-- false :: Term Prim
+-- false = prim (PBool False)
+--
+-- infixl 9 #
+-- (#) :: Term a -> Term a -> Term a
+-- (#) a b = In (inj (Application a b))
+--
+-- lam :: Name -> (Term a -> Term a) -> Term a
+-- lam s f = makeLam s (f (var s))
+--
+-- makeLam :: Name -> Term a -> Term a
+-- makeLam name body = In (inj (Lambda name body))
 
--- Instances
 
-type instance Base (Term a) = Syntax
 
 
 -- data Syntax a r

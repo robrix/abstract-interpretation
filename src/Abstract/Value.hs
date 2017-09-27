@@ -26,13 +26,13 @@ import Data.Union
 
 data Value l
   = I Prim
-  | Closure Name (Term Prim) (Environment l (Value l))
+  | Closure Name (Term Prim Syntax) (Environment l (Value l))
   deriving (Show)
 
 
 
 class Monad m => Eval v m syntax where
-  eval :: (Monad m) => (Term Prim -> m v) -> syntax (Term Prim) -> m v
+  eval :: (Monad m) => (Term Prim Syntax -> m v) -> syntax (Term Prim Syntax) -> m v
 
 
 -- Syntax Eval instance

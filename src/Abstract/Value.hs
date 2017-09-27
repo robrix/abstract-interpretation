@@ -3,7 +3,9 @@ module Abstract.Value where
 
 import Abstract.Primitive
 import Abstract.Set
+import Abstract.Environment
 import Abstract.Store
+import Abstract.Term
 import Abstract.Syntax
 import Abstract.Type
 import Control.Applicative
@@ -20,18 +22,6 @@ import Prelude hiding (fail)
 import Text.Show
 import Data.Proxy
 import Data.Union
-
-newtype Environment l a = Environment { unEnvironment :: Map.Map Name (Address l a) }
-  deriving (Eq, Foldable, Functor, Monoid, Ord, Semigroup, Show, Traversable)
-
-envLookup :: Name -> Environment l a -> Maybe (Address l a)
-envLookup = (. unEnvironment) . Map.lookup
-
-envInsert :: Name -> Address l a -> Environment l a -> Environment l a
-envInsert name value (Environment m) = Environment (Map.insert name value m)
-
-envRoots :: (Foldable t, Ord l) => Environment l a -> t Name -> Set (Address l a)
-envRoots env = foldr ((<>) . maybe mempty point . flip envLookup env) mempty
 
 
 data Value l
@@ -176,12 +166,6 @@ instance Reader (Environment l a) :< fs => MonadEnv l a (Eff fs) where
 --   literal (PBool _) = Bool
 --
 
-instance Eq2 Environment where
-  liftEq2 eqL eqA (Environment m1) (Environment m2) = liftEq (liftEq2 eqL eqA) m1 m2
-
-instance Eq l => Eq1 (Environment l) where
-  liftEq = liftEq2 (==)
-
 instance Eq1 Value where
   liftEq eqL = go
     where go v1 v2 = case (v1, v2) of
@@ -191,12 +175,6 @@ instance Eq1 Value where
 
 instance Eq l => Eq (Value l) where
   (==) = eq1
-
-instance Ord2 Environment where
-  liftCompare2 compareL compareA (Environment m1) (Environment m2) = liftCompare (liftCompare2 compareL compareA) m1 m2
-
-instance Ord l => Ord1 (Environment l) where
-  liftCompare = liftCompare2 compare
 
 instance Ord1 Value where
   liftCompare compareL = go

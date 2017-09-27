@@ -15,6 +15,9 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Abstract.Configuration
                      , Abstract.Interpreter
+
+                     , Abstract.Environment
+                     , Abstract.Term
                     --  , Abstract.Interpreter.Caching
                     --  , Abstract.Interpreter.Dead
                     --  , Abstract.Interpreter.Collecting

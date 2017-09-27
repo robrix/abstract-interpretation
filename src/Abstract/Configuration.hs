@@ -3,8 +3,8 @@ module Abstract.Configuration where
 
 import Abstract.Set
 import Abstract.Store
-import Abstract.Syntax
-import Abstract.Value
+import Abstract.Environment
+
 import Data.Functor.Classes
 import Data.Text.Prettyprint.Doc
 

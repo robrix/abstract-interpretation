@@ -4,7 +4,9 @@ module Abstract.Interpreter where
 import Abstract.Primitive
 import Abstract.Store
 import Abstract.Syntax
+import Abstract.Type
 import Abstract.Value
+import Abstract.Environment
 import Control.Effect
 import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.Fail

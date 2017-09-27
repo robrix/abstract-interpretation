@@ -16,7 +16,7 @@ module Abstract.Store
 ) where
 
 import Abstract.Set
-import Abstract.Syntax
+import Abstract.Term
 import Control.Applicative
 import Control.Monad ((<=<))
 import Control.Monad.Effect

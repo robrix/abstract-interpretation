@@ -3,6 +3,7 @@ module Abstract.Syntax where
 
 import Abstract.Primitive
 import Abstract.Set
+import Abstract.Term
 import Data.Bifoldable
 import Data.Bifunctor
 import Data.Bitraversable
@@ -21,7 +22,6 @@ type Syntax = Union '[Variable, Primitive, Lambda, Application]
 newtype Term a = In { out :: Syntax (Term a) }
   deriving (Eq, Ord, Show)
 
-type Name = String
 
 newtype Variable a = Variable String deriving (Eq, Ord, Show, Functor, Generic1)
 instance Show1 Variable where liftShowsPrec = genericLiftShowsPrec

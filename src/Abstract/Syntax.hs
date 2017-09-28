@@ -14,16 +14,23 @@ import Control.Monad.Effect
 import Control.Monad.Fail
 import Data.Functor.Classes
 import Data.Functor.Classes.Show.Generic
-import Data.Functor.Foldable hiding (fold)
 import Data.Proxy
 import Data.Semigroup
 import Data.Union
 import GHC.Generics
 import Prelude hiding (fail)
 
-type Syntax = Union '[Variable, Primitive, Lambda, Application]
-
-type instance Base (Term syntax) = Syntax
+-- The Syntax of our language, defined as an open Union of type constructors.
+type Syntax = Union
+  '[ Variable
+   , Primitive
+   , Lambda
+   , Application
+   , Rec
+   , Unary
+   , Binary
+   , If
+   ]
 
 -- Syntax Eval instances
 instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m, Semigroup (Cell l (Value s l))) => Eval (Value s l) m s Syntax where

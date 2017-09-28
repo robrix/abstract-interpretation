@@ -4,7 +4,6 @@ module Abstract.Interpreter where
 import Abstract.Environment
 import Abstract.Primitive
 import Abstract.Store
-import Abstract.Syntax
 import Abstract.Term
 import Abstract.Type
 
@@ -26,8 +25,10 @@ type MonadInterpreter l v m = (MonadEnv l v m, MonadStore l v m, MonadFail m)
 type EvalResult l v = Final (Interpreter l v) v
 
 
-eval' :: forall l v . (Ord v, Eval v (Eff (Interpreter l v)) Syntax Syntax, MonadAddress l (Eff (Interpreter l v)), MonadPrim v (Eff (Interpreter l v)), Semigroup (Cell l v))
-     => Term Syntax
+-- Example: `eval' @Precise @(Value Syntax Precise) @Syntax (makeLam "x" (var "x") # true)`
+
+eval' :: forall l v s . (Ord v, Eval v (Eff (Interpreter l v)) s s, MonadAddress l (Eff (Interpreter l v)), MonadPrim v (Eff (Interpreter l v)), Semigroup (Cell l v))
+     => Term s
      -> EvalResult l v
 eval' = run @(Interpreter l v) . fix (\ ev -> eval ev . out)
 -- eval' = run @(Interpreter l v) . fix (ev @l)

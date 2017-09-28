@@ -24,32 +24,30 @@ import Data.Proxy
 import Data.Union
 
 
-data Value l
+data Value syntax l
   = I Prim
-  | Closure Name (Term Prim Syntax) (Environment l (Value l))
-  deriving (Show)
+  | Closure Name (Term Prim syntax) (Environment l (Value syntax l))
+  deriving (Eq, Ord, Show)
 
 
-
-class Monad m => Eval v m syntax where
-  eval :: (Monad m) => (Term Prim Syntax -> m v) -> syntax (Term Prim Syntax) -> m v
-
+class Monad m => Eval v m g syntax where
+  eval :: (Term Prim g -> m v) -> syntax (Term Prim g) -> m v
 
 -- Syntax Eval instance
-instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, Semigroup (Cell l (Value l))) => Eval (Value l) m Syntax where
-  eval ev fs = apply (Proxy :: Proxy (Eval (Value l) m)) (eval ev) fs
+instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m, Semigroup (Cell l (Value s l))) => Eval (Value s l) m s Syntax where
+  eval ev fs = apply (Proxy :: Proxy (Eval (Value s l) m s)) (eval ev) fs
 
-instance (Alternative m, MonadFresh m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m, Semigroup (Cell Monovariant Type)) => Eval Type m Syntax where
-  eval ev fs = apply (Proxy :: Proxy (Eval Type m)) (eval ev) fs
+instance (Alternative m, MonadFresh m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m, Semigroup (Cell Monovariant Type)) => Eval Type m s Syntax where
+  eval ev fs = apply (Proxy :: Proxy (Eval Type m s)) (eval ev) fs
 
 
 -- Lambda Eval instances
-instance (Monad m, MonadEnv l (Value l) m) => Eval (Value l) m Lambda where
+instance (Monad m, MonadEnv l (Value s l) m) => Eval (Value s l) m s Lambda where
   eval _ (Lambda name body) = do
     env <- askEnv
-    return (Closure name body (env :: Environment l (Value l)))
+    return (Closure name body (env :: Environment l (Value s l)))
 
-instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail m, Semigroup (Cell Monovariant Type), MonadFresh m, Alternative m) => Eval Type m Lambda where
+instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail m, Semigroup (Cell Monovariant Type), MonadFresh m, Alternative m) => Eval Type m s Lambda where
   eval ev (Lambda name body) = do
     a <- alloc name
     tvar <- fresh
@@ -59,7 +57,7 @@ instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail 
 
 
 -- Application Eval instances
-instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, Semigroup (Cell l (Value l))) => Eval (Value l) m Application where
+instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m, Semigroup (Cell l (Value s l))) => Eval (Value s l) m s Application where
   eval ev (Application e1 e2) = do
     Closure name body env <- ev e1
     value <- ev e2
@@ -67,7 +65,7 @@ instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, Mona
     assign a value
     localEnv (const (envInsert name a env)) (ev body)
 
-instance (Monad m, MonadFail m, MonadFresh m) => Eval Type m Application where
+instance (Monad m, MonadFail m, MonadFresh m) => Eval Type m s Application where
   eval ev (Application e1 e2) = do
     opTy <- ev e1
     inTy <- ev e2
@@ -77,22 +75,22 @@ instance (Monad m, MonadFail m, MonadFresh m) => Eval Type m Application where
 
 
 -- Variable Eval instances
-instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m) => Eval (Value l) m Variable where
+instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m) => Eval (Value s l) m s Variable where
   eval _ (Variable x) = do
     env <- askEnv
-    maybe (fail ("free variable: " ++ x)) deref (envLookup x (env :: Environment l (Value l)))
+    maybe (fail ("free variable: " ++ x)) deref (envLookup x (env :: Environment l (Value s l)))
 
-instance (Alternative m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m) => Eval Type m Variable where
+instance (Alternative m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m) => Eval Type m s Variable where
   eval _ (Variable x) = do
     env <- askEnv
     maybe (fail ("free type: " ++ x)) deref (envLookup x (env :: Environment Monovariant Type))
 
 
 -- Primitive Eval instances
-instance Monad m => Eval (Value l) m Primitive where
+instance Monad m => Eval (Value s l) m s Primitive where
   eval _ (Primitive x) = return (I x)
 
-instance Monad m => Eval Type m Primitive where
+instance Monad m => Eval Type m s Primitive where
   eval _ (Primitive (PInt _)) = return Int
   eval _ (Primitive (PBool _)) = return Bool
 
@@ -166,17 +164,23 @@ instance Reader (Environment l a) :< fs => MonadEnv l a (Eff fs) where
 --   literal (PBool _) = Bool
 --
 
-instance Eq1 Value where
+-- instance Eq2 Value where
+  -- liftEq2 eql1 eql2 = go
+  --   where go v1 v2 = case (v1, v2) of
+  --           _ -> False
+
+instance Eq1 syntax => Eq1 (Value syntax) where
   liftEq eqL = go
     where go v1 v2 = case (v1, v2) of
             (I a, I b) -> a == b
             (Closure s1 t1 e1, Closure s2 t2 e2) -> s1 == s2 && t1 == t2 && liftEq2 eqL go e1 e2
             _ -> False
 
-instance Eq l => Eq (Value l) where
-  (==) = eq1
+-- instance (Eq l, Eq1 s) => Eq (Value s l) where
+--   (==) = eq1
 
-instance Ord1 Value where
+
+instance Ord1 syntax => Ord1 (Value syntax) where
   liftCompare compareL = go
     where go v1 v2 = case (v1, v2) of
             (I a, I b) -> compare a b
@@ -184,8 +188,8 @@ instance Ord1 Value where
             (I _, _) -> LT
             _ -> GT
 
-instance Ord l => Ord (Value l) where
-  compare = compare1
+-- instance (Ord l, Ord1 s) => Ord (Value s l) where
+--   compare = compare1
 
 
 -- instance Show2 Environment where
@@ -224,7 +228,7 @@ instance Ord l => Ord (Value l) where
 -- instance Pretty l => Pretty (Value l) where
 --   pretty = liftPretty pretty prettyList
 
-instance MonadFail m => MonadPrim (Value l) m where
+instance MonadFail m => MonadPrim (Value s l) m where
   delta1 o   (I a) = fmap I (delta1 o a)
   delta1 Not _     = nonBoolean
   delta1 _   _     = nonNumeric

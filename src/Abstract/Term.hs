@@ -1,7 +1,10 @@
-{-# LANGUAGE StandaloneDeriving, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE TypeOperators #-}
+
 module Abstract.Term where
 
 import Data.Union
+import Data.Functor.Classes
+import Data.Function
 
 type Name = String
 
@@ -16,6 +19,11 @@ inject = In . inj
 
 -- Instances
 
-deriving instance Eq (f (Term a f)) => Eq (Term a f)
-deriving instance Ord (f (Term a f)) => Ord (Term a f)
-deriving instance Show (f (Term a f)) => Show (Term a f)
+instance Eq1 syntax => Eq (Term a syntax) where
+  (==) = liftEq (==) `on` out
+
+instance Ord1 syntax => Ord (Term a syntax) where
+  compare (In a) (In b) = liftCompare compare a b
+
+instance Show1 syntax => Show (Term a syntax) where
+  showsPrec p = liftShowsPrec showsPrec showList p . out

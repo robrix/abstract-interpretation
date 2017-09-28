@@ -73,6 +73,7 @@ infixl 9 #
 makeLam :: (Lambda :< fs) => Name -> Term a (Union fs) -> Term a (Union fs)
 makeLam name body = inject (Lambda name body)
 
+
 -- var :: Name -> Term a
 -- var = In . inj . Variable
 --

@@ -11,7 +11,7 @@ type Name = String
 newtype Term syntax = In { out :: syntax (Term syntax)}
 
 class Monad m => Eval v m syntax constr where
-  eval :: (Term syntax -> m v) -> constr (Term syntax) -> m v
+  evaluate :: (Term syntax -> m v) -> constr (Term syntax) -> m v
 
 -- Smart constructor helper for Term
 inject :: (g :< fs) => g (Term (Union fs)) -> Term (Union fs)

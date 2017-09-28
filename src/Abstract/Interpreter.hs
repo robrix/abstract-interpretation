@@ -25,12 +25,11 @@ type MonadInterpreter l v m = (MonadEnv l v m, MonadStore l v m, MonadFail m)
 type EvalResult l v = Final (Interpreter l v) v
 
 
--- Example: `eval' @Precise @(Value Syntax Precise) @Syntax (makeLam "x" (var "x") # true)`
-
-eval' :: forall l v s . (Ord v, Eval v (Eff (Interpreter l v)) s s, MonadAddress l (Eff (Interpreter l v)), MonadPrim v (Eff (Interpreter l v)), Semigroup (Cell l v))
+-- Example: `eval @Precise @(Value Syntax Precise) @Syntax (makeLam "x" (var "x") # true)`
+eval :: forall l v s . (Ord v, Eval v (Eff (Interpreter l v)) s s, MonadAddress l (Eff (Interpreter l v)), MonadPrim v (Eff (Interpreter l v)), Semigroup (Cell l v))
      => Term s
      -> EvalResult l v
-eval' = run @(Interpreter l v) . fix (\ ev -> eval ev . out)
+eval = run @(Interpreter l v) . fix (\ ev -> evaluate ev . out)
 -- eval' = run @(Interpreter l v) . fix (ev @l)
 
 -- ev :: forall l v m

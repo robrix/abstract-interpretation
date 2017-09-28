@@ -31,7 +31,7 @@ import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 
 newtype Store l a = Store { unStore :: Map.Map (Address l a) (Cell l a) }
-  deriving (Monoid)
+  deriving (Semigroup, Monoid)
 
 newtype Address l a = Address { unAddress :: l }
   deriving (Eq, Ord, Show)
@@ -127,7 +127,7 @@ instance Eq1 I where
   liftEq eq (I a) (I b) = eq a b
 
 instance Ord1 I where
-  liftCompare compare (I a) (I b) = compare a b
+  liftCompare comp (I a) (I b) = comp a b
 
 instance Show1 I where
   liftShowsPrec sp _ d (I a) = sp d a

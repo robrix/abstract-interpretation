@@ -27,10 +27,10 @@ type instance Base (Term syntax) = Syntax
 
 -- Syntax Eval instances
 instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m, Semigroup (Cell l (Value s l))) => Eval (Value s l) m s Syntax where
-  eval ev = apply (Proxy :: Proxy (Eval (Value s l) m s)) (eval ev)
+  evaluate ev = apply (Proxy :: Proxy (Eval (Value s l) m s)) (evaluate ev)
 
 instance (Alternative m, MonadFresh m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m, Semigroup (Cell Monovariant Type)) => Eval Type m s Syntax where
-  eval ev = apply (Proxy :: Proxy (Eval Type m s)) (eval ev)
+  evaluate ev = apply (Proxy :: Proxy (Eval Type m s)) (evaluate ev)
 
 
 -- Variables
@@ -40,12 +40,12 @@ instance Eq1 Variable where liftEq _ (Variable name1) (Variable name2) = name1 =
 instance Ord1 Variable where liftCompare _ (Variable name1) (Variable name2) = compare name1 name2
 
 instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m) => Eval (Value s l) m s Variable where
-  eval _ (Variable x) = do
+  evaluate _ (Variable x) = do
     env <- askEnv
     maybe (fail ("free variable: " ++ x)) deref (envLookup x (env :: Environment l (Value s l)))
 
 instance (Alternative m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m) => Eval Type m s Variable where
-  eval _ (Variable x) = do
+  evaluate _ (Variable x) = do
     env <- askEnv
     maybe (fail ("free type: " ++ x)) deref (envLookup x (env :: Environment Monovariant Type))
 
@@ -57,11 +57,11 @@ instance Eq1 Primitive where liftEq _ (Primitive a1) (Primitive a2) = a1 == a2
 instance Ord1 Primitive where liftCompare _ (Primitive a1) (Primitive a2) = compare a1 a2
 
 instance Monad m => Eval (Value s l) m s Primitive where
-  eval _ (Primitive x) = return (I x)
+  evaluate _ (Primitive x) = return (I x)
 
 instance Monad m => Eval Type m s Primitive where
-  eval _ (Primitive (PInt _)) = return Int
-  eval _ (Primitive (PBool _)) = return Bool
+  evaluate _ (Primitive (PInt _)) = return Int
+  evaluate _ (Primitive (PBool _)) = return Bool
 
 
 -- Lambdas
@@ -71,12 +71,12 @@ instance Eq1 Lambda where liftEq comp (Lambda name1 body1) (Lambda name2 body2) 
 instance Ord1 Lambda where liftCompare comp (Lambda name1 body1) (Lambda name2 body2) = compare name1 name2 `mappend` comp body1 body2
 
 instance (Monad m, MonadEnv l (Value s l) m) => Eval (Value s l) m s Lambda where
-  eval _ (Lambda name body) = do
+  evaluate _ (Lambda name body) = do
     env <- askEnv
     return (Closure name body (env :: Environment l (Value s l)))
 
 instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail m, Semigroup (Cell Monovariant Type), MonadFresh m, Alternative m) => Eval Type m s Lambda where
-  eval ev (Lambda name body) = do
+  evaluate ev (Lambda name body) = do
     a <- alloc name
     tvar <- fresh
     assign a (TVar tvar)
@@ -91,7 +91,7 @@ instance Eq1 Application where liftEq comp (Application a1 b1) (Application a2 b
 instance Ord1 Application where liftCompare comp (Application a1 b1) (Application a2 b2) = comp a1 a2 `mappend` comp b1 b2
 
 instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m, Semigroup (Cell l (Value s l))) => Eval (Value s l) m s Application where
-  eval ev (Application e1 e2) = do
+  evaluate ev (Application e1 e2) = do
     Closure name body env <- ev e1
     value <- ev e2
     a <- alloc name
@@ -99,7 +99,7 @@ instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, Mo
     localEnv (const (envInsert name a env)) (ev body)
 
 instance (Monad m, MonadFail m, MonadFresh m) => Eval Type m s Application where
-  eval ev (Application e1 e2) = do
+  evaluate ev (Application e1 e2) = do
     opTy <- ev e1
     inTy <- ev e2
     tvar <- fresh

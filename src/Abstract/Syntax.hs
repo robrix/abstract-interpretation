@@ -1,105 +1,135 @@
-{-# LANGUAGE StandaloneDeriving, DataKinds, TypeOperators, DeriveFunctor, DeriveGeneric, FlexibleContexts, UndecidableInstances, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeFamilies #-}
+{-# LANGUAGE DataKinds, TypeFamilies, ConstraintKinds, AllowAmbiguousTypes, DeriveFunctor, DeriveGeneric, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeOperators, UndecidableInstances #-}
 module Abstract.Syntax where
 
+import Abstract.Environment
 import Abstract.Primitive
-import Abstract.Set
+import Abstract.Store
 import Abstract.Term
-import Data.Bifoldable
-import Data.Bifunctor
-import Data.Bitraversable
-import Data.Foldable (fold)
+import Abstract.Type
+import Abstract.Value
+
+import Control.Applicative
+import Control.Monad hiding (fail)
+import Control.Monad.Effect
+import Control.Monad.Fail
 import Data.Functor.Classes
+import Data.Functor.Classes.Show.Generic
 import Data.Functor.Foldable hiding (fold)
-import Data.List (intersperse)
-import Data.Pointed
-import Data.Text.Prettyprint.Doc
+import Data.Proxy
+import Data.Semigroup
 import Data.Union
 import GHC.Generics
-import Data.Functor.Classes.Show.Generic
+import Prelude hiding (fail)
 
 type Syntax = Union '[Variable, Primitive, Lambda, Application]
 
-type instance Base (Term a f) = Syntax
+type instance Base (Term syntax) = Syntax
 
--- type Syntax = Union '[Variable, Primitive, Lambda, Application]
---
--- newtype Term a = In { out :: Syntax (Term a) }
---   deriving (Eq, Ord, Show)
---
--- type instance Base (Term a) = Syntax
+-- Syntax Eval instances
+instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m, Semigroup (Cell l (Value s l))) => Eval (Value s l) m s Syntax where
+  eval ev = apply (Proxy :: Proxy (Eval (Value s l) m s)) (eval ev)
 
+instance (Alternative m, MonadFresh m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m, Semigroup (Cell Monovariant Type)) => Eval Type m s Syntax where
+  eval ev = apply (Proxy :: Proxy (Eval Type m s)) (eval ev)
+
+
+-- Variables
 newtype Variable a = Variable String deriving (Eq, Ord, Show, Functor, Generic1)
 instance Show1 Variable where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Variable where liftEq _ (Variable name1) (Variable name2) = name1 == name2
 instance Ord1 Variable where liftCompare _ (Variable name1) (Variable name2) = compare name1 name2
 
+instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m) => Eval (Value s l) m s Variable where
+  eval _ (Variable x) = do
+    env <- askEnv
+    maybe (fail ("free variable: " ++ x)) deref (envLookup x (env :: Environment l (Value s l)))
+
+instance (Alternative m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m) => Eval Type m s Variable where
+  eval _ (Variable x) = do
+    env <- askEnv
+    maybe (fail ("free type: " ++ x)) deref (envLookup x (env :: Environment Monovariant Type))
+
+
+-- Primitives
 newtype Primitive a = Primitive Prim deriving (Eq, Ord, Show, Functor, Generic1)
 instance Show1 Primitive where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Primitive where liftEq _ (Primitive a1) (Primitive a2) = a1 == a2
 instance Ord1 Primitive where liftCompare _ (Primitive a1) (Primitive a2) = compare a1 a2
 
+instance Monad m => Eval (Value s l) m s Primitive where
+  eval _ (Primitive x) = return (I x)
+
+instance Monad m => Eval Type m s Primitive where
+  eval _ (Primitive (PInt _)) = return Int
+  eval _ (Primitive (PBool _)) = return Bool
+
+
+-- Lambdas
 data Lambda a = Lambda Name a deriving (Eq, Ord, Show, Functor, Generic1)
 instance Show1 Lambda where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Lambda where liftEq comp (Lambda name1 body1) (Lambda name2 body2) = name1 == name2 && comp body1 body2
 instance Ord1 Lambda where liftCompare comp (Lambda name1 body1) (Lambda name2 body2) = compare name1 name2 `mappend` comp body1 body2
 
+instance (Monad m, MonadEnv l (Value s l) m) => Eval (Value s l) m s Lambda where
+  eval _ (Lambda name body) = do
+    env <- askEnv
+    return (Closure name body (env :: Environment l (Value s l)))
+
+instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail m, Semigroup (Cell Monovariant Type), MonadFresh m, Alternative m) => Eval Type m s Lambda where
+  eval ev (Lambda name body) = do
+    a <- alloc name
+    tvar <- fresh
+    assign a (TVar tvar)
+    outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
+    return (TVar tvar :-> outTy)
+
+
+-- Applications
 data Application a = Application a a deriving (Eq, Ord, Show, Functor, Generic1)
 instance Show1 Application where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Application where liftEq comp (Application a1 b1) (Application a2 b2) = comp a1 a2 && comp b1 b2
 instance Ord1 Application where liftCompare comp (Application a1 b1) (Application a2 b2) = comp a1 a2 `mappend` comp b1 b2
 
+instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m, Semigroup (Cell l (Value s l))) => Eval (Value s l) m s Application where
+  eval ev (Application e1 e2) = do
+    Closure name body env <- ev e1
+    value <- ev e2
+    a <- alloc name
+    assign a value
+    localEnv (const (envInsert name a env)) (ev body)
+
+instance (Monad m, MonadFail m, MonadFresh m) => Eval Type m s Application where
+  eval ev (Application e1 e2) = do
+    opTy <- ev e1
+    inTy <- ev e2
+    tvar <- fresh
+    _ :-> outTy <- opTy `unify` (inTy :-> TVar tvar)
+    return outTy
+
 
 -- Smart constructors for various Terms.
 
-prim :: (Primitive :< fs) => Prim -> Term a (Union fs)
+prim :: (Primitive :< fs) => Prim -> Term (Union fs)
 prim = inject . Primitive
 
-int :: (Primitive :< fs) => Int -> Term a (Union fs)
+int :: (Primitive :< fs) => Int -> Term (Union fs)
 int = prim . PInt
 
-true :: (Primitive :< fs) => Term a (Union fs)
+true :: (Primitive :< fs) => Term (Union fs)
 true = prim (PBool True)
 
-false :: (Primitive :< fs) => Term a (Union fs)
+false :: (Primitive :< fs) => Term (Union fs)
 false = prim (PBool False)
 
-var :: (Variable :< fs) => Name -> Term a (Union fs)
+var :: (Variable :< fs) => Name -> Term (Union fs)
 var = inject . Variable
 
 infixl 9 #
-(#) :: (Application :< fs) => Term a (Union fs) -> Term a (Union fs) -> Term a (Union fs)
+(#) :: (Application :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs)
 (#) a b = inject (Application a b)
 
-makeLam :: (Lambda :< fs) => Name -> Term a (Union fs) -> Term a (Union fs)
+makeLam :: (Lambda :< fs) => Name -> Term (Union fs) -> Term (Union fs)
 makeLam name body = inject (Lambda name body)
-
-
--- var :: Name -> Term a
--- var = In . inj . Variable
---
--- prim :: Prim -> Term a
--- prim = In . inj . Primitive
---
--- int :: Int -> Term Prim
--- int x = prim (PInt x)
---
--- true :: Term Prim
--- true = prim (PBool True)
---
--- false :: Term Prim
--- false = prim (PBool False)
---
--- infixl 9 #
--- (#) :: Term a -> Term a -> Term a
--- (#) a b = In (inj (Application a b))
---
--- lam :: Name -> (Term a -> Term a) -> Term a
--- lam s f = makeLam s (f (var s))
---
--- makeLam :: Name -> Term a -> Term a
--- makeLam name body = In (inj (Lambda name body))
-
-
 
 
 -- data Syntax a r
@@ -170,9 +200,6 @@ makeLam name body = inject (Lambda name body)
 --   -- Rec n body -> delete n body
 --   _ -> fold syntax)
 --
---
--- showsConstructor :: String -> Int -> [Int -> ShowS] -> ShowS
--- showsConstructor name d fields = showParen (d > 10) $ showString name . showChar ' ' . foldr (.) id (intersperse (showChar ' ') ([($ 11)] <*> fields))
 
 
 
@@ -235,78 +262,6 @@ makeLam name body = inject (Lambda name body)
 -- instance Traversable (Syntax a) where
 --   traverse = bitraverse pure
 --
---
--- instance Eq1 Term where
---   liftEq eqA = go where go t1 t2 = liftEq2 eqA go (out t1) (out t2)
-
--- instance Eq2 Syntax where
---   liftEq2 eqV eqA s1 s2 = case (s1, s2) of
---     (Var n1, Var n2) -> n1 == n2
---     (Prim v1, Prim v2) -> eqV v1 v2
---     -- (Op1 o1 a1, Op1 o2 a2) -> o1 == o2 && eqA a1 a2
---     -- (Op2 o1 a1 b1, Op2 o2 a2 b2) -> o1 == o2 && eqA a1 a2 && eqA b1 b2
---     (App a1 b1, App a2 b2) -> eqA a1 a2 && eqA b1 b2
---     (Lam n1 a1, Lam n2 a2) -> n1 == n2 && eqA a1 a2
---     -- (Rec n1 a1, Rec n2 a2) -> n1 == n2 && eqA a1 a2
---     -- (If c1 t1 e1, If c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
---     _ -> False
-
--- instance Eq a => Eq1 (Syntax a) where
---   liftEq = liftEq2 (==)
---
--- instance Ord1 Term where
---   liftCompare compareA = go where go t1 t2 = liftCompare2 compareA go (out t1) (out t2)
-
--- instance Ord2 Syntax where
---   liftCompare2 compareV compareA s1 s2 = case (s1, s2) of
---     (Var n1, Var n2) -> compare n1 n2
---     (Var{}, _) -> LT
---     (_, Var{}) -> GT
---     (Prim v1, Prim v2) -> compareV v1 v2
---     (Prim{}, _) -> LT
---     (_, Prim{}) -> GT
---     -- (Op1 o1 a1, Op1 o2 a2) -> compare o1 o2 <> compareA a1 a2
---     -- (Op1{}, _) -> LT
---     -- (_, Op1{}) -> GT
---     -- (Op2 o1 a1 b1, Op2 o2 a2 b2) -> compare o1 o2 <> compareA a1 a2 <> compareA b1 b2
---     -- (Op2{}, _) -> LT
---     -- (_, Op2{}) -> GT
---     (App a1 b1, App a2 b2) -> compareA a1 a2 <> compareA b1 b2
---     (App{}, _) -> LT
---     (_, App{}) -> GT
---     (Lam n1 a1, Lam n2 a2) -> compare n1 n2 <> compareA a1 a2
---     (Lam{}, _) -> LT
---     (_, Lam{}) -> GT
---     -- (Rec n1 a1, Rec n2 a2) -> compare n1 n2 <> compareA a1 a2
---     -- (Rec{}, _) -> LT
---     -- (_, Rec{}) -> GT
---     -- (If c1 t1 e1, If c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
-
--- instance Ord a => Ord1 (Syntax a) where
---   liftCompare = liftCompare2 compare
-
-
--- instance Show1 Term where
---   liftShowsPrec spA slA = go where go d t = showsUnaryWith (liftShowsPrec2 spA slA go (liftShowList spA slA)) "In" d (out t)
---
--- instance Show a => Show (Term a) where
---   showsPrec = showsPrec1
---
--- instance Show2 Syntax where
---   liftShowsPrec2 spV _ spA _ d s = case s of
---     Var n -> showsConstructor "Var" d [ flip showsPrec n ]
---     Prim v -> showsConstructor "Prim" d [ flip spV v ]
---     -- Op1 o a -> showsConstructor "Op1" d [ flip showsPrec o, flip spA a ]
---     -- Op2 o a b -> showsConstructor "Op2" d [ flip showsPrec o, flip spA a, flip spA b ]
---     App a b -> showsConstructor "App" d (flip spA <$> [ a, b ])
---     Lam n a -> showsConstructor "Lam" d [ flip showsPrec n, flip spA a ]
---     -- Rec n a -> showsConstructor "Rec" d [ flip showsPrec n, flip spA a ]
---     -- If c t e -> showsConstructor "If" d (flip spA <$> [c, t, e])
---
--- instance Show a => Show1 (Syntax a) where
---   liftShowsPrec = liftShowsPrec2 showsPrec showList
---
---
 -- instance Num a => Num (Term a) where
 --   fromInteger = prim . fromInteger
 --
@@ -316,24 +271,3 @@ makeLam name body = inject (Lambda name body)
 --   -- (+) = (In .) . Op2 Plus
 --   -- (-) = (In .) . Op2 Minus
 --   -- (*) = (In .) . Op2 Times
---
---
--- instance Pretty1 Term where
---   liftPretty p pl = go where go = liftPretty2 p pl go (list . map (liftPretty p pl)) . out
---
--- instance Pretty a => Pretty (Term a) where
---   pretty = liftPretty pretty prettyList
---
--- instance Pretty2 Syntax where
---   liftPretty2 pv _ pr _ s = case s of
---     Var n -> pretty n
---     Prim v -> pv v
---     -- Op1 o a -> pretty o <+> pr a
---     -- Op2 o a b -> pr a <+> pretty o <+> pr b
---     App a b -> pr a <+> parens (pr b)
---     Lam n a -> parens (pretty '\\' <+> pretty n <+> pretty "." <> nest 2 (line <> pr a))
---     -- Rec n a -> pretty "mu" <+> parens (pretty '\\' <+> pretty n <+> pretty "." <> nest 2 (line <> pr a))
---     -- If c t e -> pretty "if" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
---
--- instance Pretty a => Pretty1 (Syntax a) where
---   liftPretty = liftPretty2 pretty prettyList

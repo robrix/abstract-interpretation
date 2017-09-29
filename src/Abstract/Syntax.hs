@@ -117,7 +117,7 @@ instance FreeVariables a => FreeVariables (Rec a) where
   freeVariables (Rec name body) = delete name (freeVariables body)
 
 
--- Applications
+-- Application
 data Application a = Application a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 Application where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Application where liftEq comp (Application a1 b1) (Application a2 b2) = comp a1 a2 && comp b1 b2
@@ -208,10 +208,27 @@ instance Eq1 Binary where liftEq comp (Binary op1 expr1A expr1B) (Binary op2 exp
 instance Ord1 Binary where liftCompare comp (Binary op1 expr1A expr1B) (Binary op2 expr2A expr2B) = compare op1 op2 `mappend` comp expr1A expr2A `mappend` comp expr1B expr2B
 
 instance (Monad m, MonadPrim v m) => Eval v m s Binary where
-  evaluate ev (Binary op e1 e2) = do
-    v1 <- ev e1
-    v2 <- ev e2
+  evaluate ev (Binary op e0 e1) = do
+    v1 <- ev e0
+    v2 <- ev e1
     delta2 op v1 v2
+
+instance ( Ord l
+         , Monad m
+         , MonadGC l v m
+         , MonadEnv l v m
+         , MonadPrim v m
+         , Functor s
+         , FreeVariables1 s
+         , AbstractValue l v
+         )
+         => EvalCollect v m s Binary where
+  evalCollect _ ev (Binary op e0 e1) = do
+    env <- askEnv @l @v
+    v0 <- extraRoots (envRoots env (freeVariables e1)) (ev e0)
+    v1 <- extraRoots (valueRoots @l v0) (ev e1)
+    delta2 op v0 v1
+
 
 -- If statements
 data If a = If a a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
@@ -224,6 +241,21 @@ instance (Monad m, MonadPrim v m) => Eval v m s If where
     v <- ev c
     c' <- truthy v
     ev (if c' then t else e)
+
+instance ( Ord l
+         , Monad m
+         , MonadGC l v m
+         , MonadEnv l v m
+         , MonadPrim v m
+         , Functor s
+         , FreeVariables1 s
+         )
+         => EvalCollect v m s If where
+  evalCollect _ ev (If c t e) = do
+    env <- askEnv @l @v
+    v <- extraRoots (envRoots env (freeVariables t <> freeVariables e)) (ev c)
+    b <- truthy v
+    ev (if b then t else e)
 
 
 -- Smart constructors for various Terms.

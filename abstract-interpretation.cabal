@@ -22,7 +22,7 @@ library
                      , Abstract.Interpreter.Collecting
                      , Abstract.Interpreter.Dead
                      , Abstract.Interpreter.Symbolic
-                    --  , Abstract.Interpreter.Tracing
+                     , Abstract.Interpreter.Tracing
                      , Abstract.Primitive
                      , Abstract.Eval
                      , Abstract.Set

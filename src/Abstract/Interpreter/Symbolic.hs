@@ -3,13 +3,17 @@ module Abstract.Interpreter.Symbolic where
 
 import Abstract.Interpreter
 import Abstract.Primitive
+import Abstract.Term
 import Abstract.Syntax
+
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Effect
 import Control.Monad.Effect.State
 import Control.Monad.Fail
+import Data.Functor.Classes
 import qualified Data.Set as Set
+import Data.Union
 
 data Sym t a = Sym t | V a
   deriving (Eq, Ord, Show)
@@ -24,7 +28,10 @@ sym2 _ _ g (Sym a) (Sym b) = pure (Sym (g a b))
 sym2 f num g a (V b) = sym2 f num g a (Sym (num b))
 sym2 f num g (V a) b = sym2 f num g (Sym (num a)) b
 
-evSymbolic :: (Eval t (Eff fs (v (Sym t a))) -> Eval t (Eff fs (v (Sym t a)))) -> Eval t (Eff fs (v (Sym t a))) -> Eval t (Eff fs (v (Sym t a)))
+
+evSymbolic :: (Eval' t (Eff fs (v (Sym t a))) -> Eval' t (Eff fs (v (Sym t a))))
+           -> Eval' t (Eff fs (v (Sym t a)))
+           -> Eval' t (Eff fs (v (Sym t a)))
 evSymbolic ev0 ev e = ev0 ev e
 
 
@@ -49,14 +56,23 @@ class Monad m => MonadPathCondition t m where
   getPathCondition :: m (PathCondition t)
   putPathCondition :: PathCondition t -> m ()
 
-instance State (PathCondition t) :< fs => MonadPathCondition t (Eff fs) where
+instance (State (PathCondition t) :< fs) => MonadPathCondition t (Eff fs) where
   getPathCondition = get
   putPathCondition = put
 
 modifyPathCondition :: MonadPathCondition t m => (PathCondition t -> PathCondition t) -> m ()
 modifyPathCondition f = getPathCondition >>= putPathCondition . f
 
-instance (Num a, Ord a, MonadFail m, MonadPrim a m, MonadPathCondition (Term a) m, Alternative m) => MonadPrim (Sym (Term a) a) m where
+instance ( Alternative m
+         , MonadFail m
+         , MonadPrim Prim m
+         , MonadPathCondition (Term (Union fs)) m
+         , Apply Eq1 fs
+         , Apply Ord1 fs
+         , Binary :< fs
+         , Unary :< fs
+         , Primitive :< fs
+         ) => MonadPrim (Sym (Term (Union fs)) Prim) m where
   delta1 o a = case o of
     Negate -> pure (negate a)
     Abs    -> pure (abs a)
@@ -89,10 +105,10 @@ instance (Num a, Ord a, MonadFail m, MonadPrim a m, MonadPathCondition (Term a) 
     else if NotE e `pathConditionMember` phi then
       return False
     else
-        ((refine (E e)    >> return True)
-     <|> (refine (NotE e) >> return False))
+         (refine (E e)    >> return True)
+     <|> (refine (NotE e) >> return False)
 
-instance Num a => Num (Sym (Term a) a) where
+instance (Binary :< fs, Unary :< fs, Primitive :< fs) => Num (Sym (Term (Union fs)) Prim) where
   fromInteger = V . fromInteger
 
   signum (V a)   = V   (signum a)

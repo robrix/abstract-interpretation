@@ -40,9 +40,6 @@ instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, Mo
 instance (Alternative m, MonadFresh m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m, Semigroup (Cell Monovariant Type)) => Eval Type m s Syntax where
   evaluate ev = apply (Proxy :: Proxy (Eval Type m s)) (evaluate ev)
 
--- instance (Apply Functor fs) => Recursive (Term (Union fs)) where
---   project = undefined
-
 
 -- Variables
 newtype Variable a = Variable String deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
@@ -247,6 +244,15 @@ not' :: (Unary :< fs) => Term (Union fs) -> Term (Union fs)
 not' = inject . Unary Not
 
 
+instance (Binary :< fs, Unary :< fs, Primitive :< fs) => Num (Term (Union fs)) where
+  fromInteger = int . fromInteger
+
+  signum = inject     . Unary Signum
+  abs    = inject     . Unary Abs
+  negate = inject     . Unary Negate
+  (+)    = (inject .) . Binary Plus
+  (-)    = (inject .) . Binary Minus
+  (*)    = (inject .) . Binary Times
 
 -- data Syntax a r
 --   = Other (Union '[Lambda, Application, Variable, Primitive] r)

@@ -23,14 +23,14 @@ type DeadCodeResult l t v = Final (DeadCodeInterpreter l t v) v
 
 
 newtype Dead a = Dead { unDead :: Set a }
-  deriving (Eq, Foldable, Monoid, Ord, Show)
+  deriving (Eq, Foldable, Semigroup, Monoid, Ord, Show)
 
 
 class Monad m => MonadDead t m where
   killAll :: Dead t -> m ()
   revive :: Ord t => t -> m ()
 
-instance State (Dead t) :< fs => MonadDead t (Eff fs) where
+instance (State (Dead t) :< fs) => MonadDead t (Eff fs) where
   killAll = put
   revive = modify . (Dead .) . (. unDead) . delete
 
@@ -40,7 +40,8 @@ subterms term = para (foldMap (uncurry ((<>) . point))) term <> point term
 
 
 -- Dead code analysis
-
+-- Example:
+--    evalDead @Precise @(Value Syntax Precise) @Syntax (if' true (Abstract.Syntax.int 1) (Abstract.Syntax.int 2))
 evalDead :: forall l v s
          . ( Ord v
            , Ord1 s
@@ -55,8 +56,6 @@ evalDead :: forall l v s
 evalDead e0 = run @(DeadCodeInterpreter l (Term s) v) $ do
   killAll (Dead (subterms e0))
   fix (evDead ev) e0
-
-type Eval' t m = t -> m
 
 evDead :: (Ord t, MonadDead t m)
        => (Eval' t (m v) -> Eval' t (m v))

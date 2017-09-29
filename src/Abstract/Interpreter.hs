@@ -24,6 +24,7 @@ type MonadInterpreter l v m = (MonadEnv l v m, MonadStore l v m, MonadFail m)
 
 type EvalResult l v = Final (Interpreter l v) v
 
+type Eval' t m = t -> m
 
 -- Evaluate an expression.
 -- Example:

@@ -19,24 +19,24 @@ class Monad m => Eval v m syntax constr where
   evaluate :: (Term syntax -> m v) -> constr (Term syntax) -> m v
 
 
-instance ( Apply (Eval (Value s l) m s) fs
-         , Monad m
+instance ( Monad m
          , MonadFail m
          , MonadAddress l m
          , MonadStore l (Value s l) m
          , MonadEnv l (Value s l) m
          , Semigroup (Cell l (Value s l))
+         , Apply (Eval (Value s l) m s) fs
          )
          => Eval (Value s l) m s (Union fs) where
   evaluate ev = apply (Proxy :: Proxy (Eval (Value s l) m s)) (evaluate ev)
 
-instance ( Apply (Eval Type m s) fs
-         , Alternative m
+instance ( Alternative m
          , MonadFresh m
          , MonadFail m
          , MonadStore Monovariant Type m
          , MonadEnv Monovariant Type m
          , Semigroup (Cell Monovariant Type)
+         , Apply (Eval Type m s) fs
          )
          => Eval Type m s (Union fs) where
   evaluate ev = apply (Proxy :: Proxy (Eval Type m s)) (evaluate ev)
@@ -59,3 +59,9 @@ class Monad m => EvalCollect v m syntax constr where
                       -> constr (Term syntax)
                       -> m v
   evalCollect ev0 = ev0
+
+instance ( Monad m
+         , Apply (EvalCollect v m s) fs
+         )
+         => EvalCollect v m s (Union fs) where
+  evalCollect ev0 ev = apply (Proxy :: Proxy (EvalCollect v m s )) (evalCollect ev0 ev)

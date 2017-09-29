@@ -18,7 +18,7 @@ library
 
                      , Abstract.Environment
                      , Abstract.Term
-                    --  , Abstract.Interpreter.Caching
+                     , Abstract.Interpreter.Caching
                      , Abstract.Interpreter.Collecting
                      , Abstract.Interpreter.Dead
                      , Abstract.Interpreter.Symbolic

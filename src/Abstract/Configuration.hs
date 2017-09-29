@@ -5,6 +5,7 @@ import Abstract.Set
 import Abstract.Store
 import Abstract.Environment
 
+import Data.List (intersperse)
 import Data.Functor.Classes
 import Data.Text.Prettyprint.Doc
 
@@ -34,12 +35,15 @@ instance (Ord l, Ord1 (Cell l)) => Ord2 (Configuration l) where
 instance (Ord l, Ord t, Ord1 (Cell l)) => Ord1 (Configuration l t) where
   liftCompare = liftCompare2 compare
 
+showsConstructor :: String -> Int -> [Int -> ShowS] -> ShowS
+showsConstructor name d fields = showParen (d > 10) $ showString name . showChar ' ' . foldr (.) id (intersperse (showChar ' ') ([($ 11)] <*> fields))
 
--- instance (Show l, Show1 (Cell l)) => Show2 (Configuration l) where
---   liftShowsPrec2 spT _ spV slV d (Configuration t r e s) = showsConstructor "Configuration" d [ flip spT t, flip (liftShowsPrec (liftShowsPrec spV slV) (liftShowList spV slV)) r, flip (liftShowsPrec spV slV) e, flip (liftShowsPrec spV slV) s ]
---
--- instance (Show l, Show t, Show1 (Cell l)) => Show1 (Configuration l t) where
---   liftShowsPrec = liftShowsPrec2 showsPrec showList
+
+instance (Show l, Show1 (Cell l)) => Show2 (Configuration l) where
+  liftShowsPrec2 spT _ spV slV d (Configuration t r e s) = showsConstructor "Configuration" d [ flip spT t, flip (liftShowsPrec (liftShowsPrec spV slV) (liftShowList spV slV)) r, flip (liftShowsPrec spV slV) e, flip (liftShowsPrec spV slV) s ]
+
+instance (Show l, Show t, Show1 (Cell l)) => Show1 (Configuration l t) where
+  liftShowsPrec = liftShowsPrec2 showsPrec showList
 --
 --
 -- instance (Pretty l, Pretty1 (Cell l)) => Pretty2 (Configuration l) where

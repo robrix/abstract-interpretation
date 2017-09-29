@@ -51,7 +51,8 @@ evalDead :: forall l v s
            , Eval v (Eff (DeadCodeInterpreter l (Term s) v)) s s
            , MonadAddress l (Eff (DeadCodeInterpreter l (Term s) v))
            , MonadPrim v (Eff (DeadCodeInterpreter l (Term s) v))
-           , Semigroup (Cell l v))
+           , Semigroup (Cell l v)
+           )
          => Term s
          -> DeadCodeResult l (Term s) v
 evalDead e0 = run @(DeadCodeInterpreter l (Term s) v) $ do

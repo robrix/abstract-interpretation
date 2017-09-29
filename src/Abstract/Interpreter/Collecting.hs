@@ -48,15 +48,18 @@ evCollect ev0 ev e = do
   modifyStore (gc (roots <> valueRoots v))
   return v
 
--- evRoots :: forall l v m s
---         .  ( Ord l
---            , MonadEnv l v m
---            , MonadGC l v m
---            , MonadPrim v m
---            , AbstractValue l v
---            , EvalCollect v m s s
---            )
---         => ((Term s -> m v) -> (Term s -> m v))
---         -> Term s -> m v
---         -> Term s -> m v
--- evRoots ev0 ev e = undefined
+evRoots :: forall l v m s
+        .  ( Ord l
+           , MonadEnv l v m
+           , MonadGC l v m
+           , MonadPrim v m
+           , AbstractValue l v
+           , EvalCollect v m s s
+           )
+        => (Eval' (Term s) (m v) -> Eval' (Term s) (m v))
+        -> Eval' (Term s) (m v)
+        -> Eval' (Term s) (m v)
+        -- => ((Term s -> m v) -> (Term s -> m v))
+        -- -> Term s -> m v
+        -- -> Term s -> m v
+evRoots ev0 ev e = undefined

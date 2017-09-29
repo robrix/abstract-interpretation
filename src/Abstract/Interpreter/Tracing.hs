@@ -8,7 +8,9 @@ import Abstract.Primitive
 import Abstract.Set
 import Abstract.Store
 import Abstract.Syntax
+import Abstract.Term
 import Abstract.Value
+
 import Control.Effect
 import Control.Monad.Effect hiding (run)
 import Control.Monad.Effect.Reader
@@ -16,8 +18,8 @@ import Control.Monad.Effect.Writer
 import Data.Function (fix)
 import Data.Functor.Classes (Ord1)
 import Data.Semigroup
-import qualified Data.Set as Set
 import GHC.Exts (IsList(..))
+import qualified Data.Set as Set
 
 type TracingInterpreter l t v g = Reader (Set (Address l v)) ': Writer (g (Configuration l t v)) ': Interpreter l v
 
@@ -30,7 +32,7 @@ type TraceResult l t v f = Final (TracingInterpreter l t v f) v
 class Monad m => MonadTrace l t v g m where
   trace :: g (Configuration l t v) -> m ()
 
-instance Writer (g (Configuration l t v)) :< fs => MonadTrace l t v g (Eff fs) where
+instance (Writer (g (Configuration l t v)) :< fs) => MonadTrace l t v g (Eff fs) where
   trace = tell
 
 

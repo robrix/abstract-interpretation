@@ -32,7 +32,7 @@ class Monad m => MonadFresh m where
   fresh :: m TName
   reset :: TName -> m ()
 
-instance Fresh :< fs => MonadFresh (Eff fs) where
+instance (Fresh :< fs) => MonadFresh (Eff fs) where
   fresh = send Fresh
   reset = send . Reset
 

@@ -1,6 +1,8 @@
-{-# LANGUAGE TypeOperators, MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE DefaultSignatures, TypeOperators, MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
 
 module Abstract.Term where
+
+import Abstract.Set
 
 import Data.Function
 import Data.Functor.Classes
@@ -17,8 +19,17 @@ instance (Functor syntax) => Recursive (Term syntax) where
   project = out
 
 
-class Monad m => Eval v m syntax constr where
-  evaluate :: (Term syntax -> m v) -> constr (Term syntax) -> m v
+class FreeVariables1 syntax where
+  liftFreeVariables :: (a -> Set Name) -> syntax a -> Set Name
+  default liftFreeVariables :: (Foldable syntax) => (a -> Set Name) -> syntax a -> Set Name
+  liftFreeVariables = foldMap
+
+class FreeVariables term where
+  freeVariables :: term -> Set Name
+
+instance (FreeVariables1 syntax, Functor syntax) => FreeVariables (Term syntax) where
+  freeVariables = cata (liftFreeVariables id)
+  
 
 -- Smart constructor helper for Term
 inject :: (g :< fs) => g (Term (Union fs)) -> Term (Union fs)

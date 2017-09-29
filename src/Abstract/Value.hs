@@ -1,9 +1,12 @@
-{-# LANGUAGE ConstraintKinds, AllowAmbiguousTypes, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE ConstraintKinds, FunctionalDependencies, AllowAmbiguousTypes, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeOperators, UndecidableInstances #-}
 module Abstract.Value where
 
 import Abstract.Environment
 import Abstract.Primitive
 import Abstract.Term
+import Abstract.Set
+import Abstract.Store
+import Abstract.Type
 
 import Control.Monad hiding (fail)
 import Control.Monad.Fail
@@ -73,61 +76,19 @@ instance MonadFail m => MonadPrim (Value s l) m where
   truthy _     = nonBoolean
 
 
--- class AbstractValue l v | v -> l where
---   literal :: Prim -> v
---   valueRoots :: v -> Set (Address l v)
 
--- class (AbstractValue l v, Monad m) => MonadValue l v t m where
---   rec :: (t -> m v) -> Name -> t -> m v
---   lambda :: (t -> m v) -> Name -> t -> m v
---   app :: (t -> m v) -> v -> v -> m v
+class AbstractValue l v | v -> l where
+  literal :: Prim -> v
+  valueRoots :: v -> Set (Address l v)
 
--- instance (MonadAddress l m, MonadStore l (Value l) m, MonadEnv l (Value l) m, MonadFail m, Semigroup (Cell l (Value l))) => MonadValue l (Value l) (Term Prim) m where
---   rec ev name e0 =  do
---     a <- alloc name
---     v <- localEnv (envInsert name (a :: Address l (Value l))) (ev e0)
---     assign a v
---     return v
---
---   lambda _ name body = do
---     env <- askEnv
---     return (Closure name body (env :: Environment l (Value l)))
---
---   app ev (Closure x e2 p) v1 = do
---     a <- alloc x
---     assign a v1
---     localEnv (const (envInsert x a p)) (ev e2)
---   app _ _ _ = fail "non-closure operator"
---
--- instance Ord l => AbstractValue l (Value l) where
---   valueRoots (I _) = mempty
---   valueRoots (Closure name body env) = envRoots env (delete name (freeVariables body))
---
---   literal = I
---
--- instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail m, Semigroup (Cell Monovariant Type), MonadFresh m, Alternative m) => MonadValue Monovariant Type t m where
---   rec ev name e0 =  do
---     a <- alloc name
---     tvar <- fresh
---     assign a (TVar tvar)
---     v <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev e0)
---     return v
---
---   lambda ev name body = do
---     a <- alloc name
---     tvar <- fresh
---     assign a (TVar tvar)
---     outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
---     return (TVar tvar :-> outTy)
---
---   app _ opTy inTy = do
---     tvar <- fresh
---     _ :-> outTy <- opTy `unify` (inTy :-> TVar tvar)
---     return outTy
---
--- instance AbstractValue Monovariant Type where
---   valueRoots _ = mempty
---
---   literal (PInt _)  = Int
---   literal (PBool _) = Bool
---
+instance (FreeVariables1 syntax, Functor syntax, Ord l) => AbstractValue l (Value syntax l) where
+  valueRoots (I _) = mempty
+  valueRoots (Closure name body env) = envRoots env (delete name (freeVariables body))
+
+  literal = I
+
+instance AbstractValue Monovariant Type where
+  valueRoots _ = mempty
+
+  literal (PInt _)  = Int
+  literal (PBool _) = Bool

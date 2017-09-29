@@ -19,11 +19,12 @@ library
                      , Abstract.Environment
                      , Abstract.Term
                     --  , Abstract.Interpreter.Caching
-                    --  , Abstract.Interpreter.Collecting
+                     , Abstract.Interpreter.Collecting
                      , Abstract.Interpreter.Dead
                      , Abstract.Interpreter.Symbolic
                     --  , Abstract.Interpreter.Tracing
                      , Abstract.Primitive
+                     , Abstract.Eval
                      , Abstract.Set
                      , Abstract.Store
                      , Abstract.Syntax

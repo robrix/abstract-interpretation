@@ -2,7 +2,9 @@
 module Abstract.Syntax where
 
 import Abstract.Environment
+import Abstract.Eval
 import Abstract.Primitive
+import Abstract.Set
 import Abstract.Store
 import Abstract.Term
 import Abstract.Type
@@ -14,7 +16,7 @@ import Control.Monad.Effect
 import Control.Monad.Fail
 import Data.Functor.Classes
 import Data.Functor.Classes.Show.Generic
-import Data.Proxy
+import Data.Pointed
 import Data.Semigroup
 import Data.Union
 import GHC.Generics
@@ -33,13 +35,6 @@ type Syntax = Union
    ]
 
 
--- Syntax Eval instances
-instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m, Semigroup (Cell l (Value s l))) => Eval (Value s l) m s Syntax where
-  evaluate ev = apply (Proxy :: Proxy (Eval (Value s l) m s)) (evaluate ev)
-
-instance (Alternative m, MonadFresh m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m, Semigroup (Cell Monovariant Type)) => Eval Type m s Syntax where
-  evaluate ev = apply (Proxy :: Proxy (Eval Type m s)) (evaluate ev)
-
 
 -- Variables
 newtype Variable a = Variable String deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
@@ -56,6 +51,9 @@ instance (Alternative m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Mo
   evaluate _ (Variable x) = do
     env <- askEnv
     maybe (fail ("free type: " ++ x)) deref (envLookup x (env :: Environment Monovariant Type))
+
+instance FreeVariables (Variable a) where
+  freeVariables (Variable name) = point name
 
 
 -- Primitives
@@ -91,6 +89,10 @@ instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail 
     outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
     return (TVar tvar :-> outTy)
 
+instance FreeVariables a => FreeVariables (Lambda a) where
+  freeVariables (Lambda name body) = delete name (freeVariables body)
+
+
 -- Recursive lambdas
 data Rec a = Rec Name a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 Rec where liftShowsPrec = genericLiftShowsPrec
@@ -110,6 +112,10 @@ instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail 
     tvar <- fresh
     assign a (TVar tvar)
     localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
+
+instance FreeVariables a => FreeVariables (Rec a) where
+  freeVariables (Rec name body) = delete name (freeVariables body)
+
 
 -- Applications
 data Application a = Application a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
@@ -132,6 +138,14 @@ instance (Monad m, MonadFail m, MonadFresh m) => Eval Type m s Application where
     tvar <- fresh
     _ :-> outTy <- opTy `unify` (inTy :-> TVar tvar)
     return outTy
+
+-- instance EvalCollect v m Application where
+--   evalCollect ev0 ev e = do
+--     env <- askEnv
+--     v0 <- extraRoots (envRoots env (freeVariables e1)) (ev e0)
+--     v1 <- extraRoots (valueRoots v0) (ev e1)
+--     -- app @l ev v0 v1
+--     _
 
 
 -- Unary operations
@@ -266,14 +280,8 @@ instance (Binary :< fs, Unary :< fs, Primitive :< fs) => Num (Term (Union fs)) w
   -- | If r r r
   -- deriving (Eq, Ord, Show)
 
---
--- freeVariables :: Term a -> Set Name
--- freeVariables = cata (\ syntax -> case syntax of
---   Var n -> point n
---   Lam n body -> delete n body
---   -- Rec n body -> delete n body
---   _ -> fold syntax)
---
+
+
 
 
 

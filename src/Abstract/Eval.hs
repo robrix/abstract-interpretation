@@ -42,14 +42,20 @@ instance ( Apply (Eval Type m s) fs
   evaluate ev = apply (Proxy :: Proxy (Eval Type m s)) (evaluate ev)
 
 
+class Monad m => MonadGC l a m where
+  askRoots :: m (Set (Address l a))
+
+  extraRoots :: Set (Address l a) -> m b -> m b
+
+
 -- Collecting evaluator
-class Monad m => EvalCollect v m syntax where
-  evalCollect :: ((Term syntax -> m v) -> (Term syntax -> m v))
+class Monad m => EvalCollect v m syntax constr where
+  evalCollect :: ((Term syntax -> m v) -> (constr (Term syntax) -> m v))
               -> (Term syntax -> m v)
-              -> Term syntax
+              -> constr (Term syntax)
               -> m v
-  default evalCollect :: ((Term syntax -> m v) -> (Term syntax -> m v))
+  default evalCollect :: ((Term syntax -> m v) -> (constr (Term syntax) -> m v))
                       -> (Term syntax -> m v)
-                      -> Term syntax
+                      -> constr (Term syntax)
                       -> m v
   evalCollect ev0 = ev0

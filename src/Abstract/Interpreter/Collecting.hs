@@ -14,16 +14,11 @@ import Control.Monad.Effect
 import Control.Monad.Effect.Reader
 import Data.Semigroup
 
-class Monad m => MonadGC l a m where
-  askRoots :: m (Set (Address l a))
-
-  extraRoots :: Set (Address l a) -> m b -> m b
 
 instance (Ord l, Reader (Set (Address l a)) :< fs) => MonadGC l a (Eff fs) where
   askRoots = ask :: Eff fs (Set (Address l a))
 
   extraRoots roots' = local (<> roots')
-
 
 gc :: (Ord l, Foldable (Cell l), AbstractValue l a) => Set (Address l a) -> Store l a -> Store l a
 gc roots store = storeRestrict store (reachable roots store)
@@ -53,18 +48,18 @@ evCollect ev0 ev e = do
   modifyStore (gc (roots <> valueRoots v))
   return v
 
-evRoots :: forall l v m s
-        .  ( Ord l
-           , MonadEnv l v m
-           , MonadGC l v m
-           , MonadPrim v m
-           , AbstractValue l v
-           , EvalCollect v m s
-           )
-        => (Eval' (Term s) (m v) -> Eval' (Term s) (m v))
-        -> Eval' (Term s) (m v)
-        -> Eval' (Term s) (m v)
-evRoots = evalCollect
+-- evRoots :: forall l v m s
+--         .  ( Ord l
+--            , MonadEnv l v m
+--            , MonadGC l v m
+--            , MonadPrim v m
+--            , AbstractValue l v
+--            , EvalCollect v m s s
+--            )
+--         => ((Term s -> m v) -> (Term s -> m v))
+--         -> Term s -> m v
+--         -> Term s -> m v
+-- evRoots ev0 ev e = undefined
 -- evRoots ev0 ev e = case out e of
 --   If e0 e1 e2 -> do
 --     env <- askEnv @l @v
@@ -82,7 +77,3 @@ evRoots = evalCollect
 --     v1 <- extraRoots (valueRoots @l v0) (ev e1)
 --     app @l ev v0 v1
 --   _ -> ev0 ev e
-
-
--- TODO: Will need some sort of new type class for ^.
--- class EvalCollect

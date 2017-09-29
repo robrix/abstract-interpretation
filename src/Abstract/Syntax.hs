@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, TypeFamilies, ConstraintKinds, AllowAmbiguousTypes, DeriveFunctor, DeriveFoldable, DeriveGeneric, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE TypeApplications, DataKinds, TypeFamilies, ConstraintKinds, AllowAmbiguousTypes, DeriveFunctor, DeriveFoldable, DeriveGeneric, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeOperators, UndecidableInstances #-}
 module Abstract.Syntax where
 
 import Abstract.Environment
@@ -123,7 +123,14 @@ instance Show1 Application where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Application where liftEq comp (Application a1 b1) (Application a2 b2) = comp a1 a2 && comp b1 b2
 instance Ord1 Application where liftCompare comp (Application a1 b1) (Application a2 b2) = comp a1 a2 `mappend` comp b1 b2
 
-instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m, Semigroup (Cell l (Value s l))) => Eval (Value s l) m s Application where
+instance ( Monad m
+         , MonadFail m
+         , MonadAddress l m
+         , MonadStore l (Value s l) m
+         , MonadEnv l (Value s l) m
+         , Semigroup (Cell l (Value s l))
+         )
+         => Eval (Value s l) m s Application where
   evaluate ev (Application e1 e2) = do
     Closure name body env <- ev e1
     value <- ev e2
@@ -131,7 +138,11 @@ instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, Mo
     assign a value
     localEnv (const (envInsert name a env)) (ev body)
 
-instance (Monad m, MonadFail m, MonadFresh m) => Eval Type m s Application where
+instance ( Monad m
+         , MonadFail m
+         , MonadFresh m
+         )
+         => Eval Type m s Application where
   evaluate ev (Application e1 e2) = do
     opTy <- ev e1
     inTy <- ev e2
@@ -139,13 +150,44 @@ instance (Monad m, MonadFail m, MonadFresh m) => Eval Type m s Application where
     _ :-> outTy <- opTy `unify` (inTy :-> TVar tvar)
     return outTy
 
--- instance EvalCollect v m Application where
---   evalCollect ev0 ev e = do
---     env <- askEnv
---     v0 <- extraRoots (envRoots env (freeVariables e1)) (ev e0)
---     v1 <- extraRoots (valueRoots v0) (ev e1)
---     -- app @l ev v0 v1
---     _
+instance ( Ord l
+         , Monad m
+         , MonadGC l (Value s l) m
+         , MonadAddress l m
+         , MonadStore l (Value s l) m
+         , MonadEnv l (Value s l) m
+         , Semigroup (Cell l (Value s l))
+         , FreeVariables1 Application
+         , Functor s
+         , FreeVariables1 s
+         )
+         => EvalCollect (Value s l) m s Application where
+  evalCollect _ ev (Application e1 e2) = do
+    env <- askEnv @l @(Value s l)
+    v1@(Closure name body env') <- extraRoots (envRoots env (freeVariables e2)) (ev e1)
+    v2 <- extraRoots (valueRoots @l v1) (ev e2)
+    a <- alloc name
+    assign a v2
+    localEnv (const (envInsert name a env')) (ev body)
+
+instance ( Ord l
+         , Monad m
+         , MonadFail m
+         , MonadFresh m
+         , MonadGC l Type m
+         , MonadEnv l Type m
+         , AbstractValue l Type
+         , Functor s
+         , FreeVariables1 s
+         )
+         => EvalCollect Type m s Application where
+  evalCollect _ ev (Application e1 e2) = do
+    env <- askEnv @l @Type
+    opTy <- extraRoots (envRoots env (freeVariables e2)) (ev e1)
+    inTy <- extraRoots (valueRoots @l opTy) (ev e2)
+    tvar <- fresh
+    _ :-> outTy <- opTy `unify` (inTy :-> TVar tvar)
+    return outTy
 
 
 -- Unary operations

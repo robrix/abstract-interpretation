@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, TypeFamilies, ConstraintKinds, AllowAmbiguousTypes, DeriveFunctor, DeriveGeneric, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE DataKinds, TypeFamilies, ConstraintKinds, AllowAmbiguousTypes, DeriveFunctor, DeriveFoldable, DeriveGeneric, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeOperators, UndecidableInstances #-}
 module Abstract.Syntax where
 
 import Abstract.Environment
@@ -32,6 +32,7 @@ type Syntax = Union
    , If
    ]
 
+
 -- Syntax Eval instances
 instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m, Semigroup (Cell l (Value s l))) => Eval (Value s l) m s Syntax where
   evaluate ev = apply (Proxy :: Proxy (Eval (Value s l) m s)) (evaluate ev)
@@ -39,9 +40,12 @@ instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, Mo
 instance (Alternative m, MonadFresh m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m, Semigroup (Cell Monovariant Type)) => Eval Type m s Syntax where
   evaluate ev = apply (Proxy :: Proxy (Eval Type m s)) (evaluate ev)
 
+-- instance (Apply Functor fs) => Recursive (Term (Union fs)) where
+--   project = undefined
+
 
 -- Variables
-newtype Variable a = Variable String deriving (Eq, Ord, Show, Functor, Generic1)
+newtype Variable a = Variable String deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 Variable where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Variable where liftEq _ (Variable name1) (Variable name2) = name1 == name2
 instance Ord1 Variable where liftCompare _ (Variable name1) (Variable name2) = compare name1 name2
@@ -58,7 +62,7 @@ instance (Alternative m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Mo
 
 
 -- Primitives
-newtype Primitive a = Primitive Prim deriving (Eq, Ord, Show, Functor, Generic1)
+newtype Primitive a = Primitive Prim deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 Primitive where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Primitive where liftEq _ (Primitive a1) (Primitive a2) = a1 == a2
 instance Ord1 Primitive where liftCompare _ (Primitive a1) (Primitive a2) = compare a1 a2
@@ -72,7 +76,7 @@ instance Monad m => Eval Type m s Primitive where
 
 
 -- Lambdas
-data Lambda a = Lambda Name a deriving (Eq, Ord, Show, Functor, Generic1)
+data Lambda a = Lambda Name a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 Lambda where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Lambda where liftEq comp (Lambda name1 body1) (Lambda name2 body2) = name1 == name2 && comp body1 body2
 instance Ord1 Lambda where liftCompare comp (Lambda name1 body1) (Lambda name2 body2) = compare name1 name2 `mappend` comp body1 body2
@@ -91,7 +95,7 @@ instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail 
     return (TVar tvar :-> outTy)
 
 -- Recursive lambdas
-data Rec a = Rec Name a deriving (Eq, Ord, Show, Functor, Generic1)
+data Rec a = Rec Name a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 Rec where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Rec where liftEq comp (Rec name1 body1) (Rec name2 body2) = name1 == name2 && comp body1 body2
 instance Ord1 Rec where liftCompare comp (Rec name1 body1) (Rec name2 body2) = compare name1 name2 `mappend` comp body1 body2
@@ -111,7 +115,7 @@ instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail 
     localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
 
 -- Applications
-data Application a = Application a a deriving (Eq, Ord, Show, Functor, Generic1)
+data Application a = Application a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 Application where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Application where liftEq comp (Application a1 b1) (Application a2 b2) = comp a1 a2 && comp b1 b2
 instance Ord1 Application where liftCompare comp (Application a1 b1) (Application a2 b2) = comp a1 a2 `mappend` comp b1 b2
@@ -134,7 +138,7 @@ instance (Monad m, MonadFail m, MonadFresh m) => Eval Type m s Application where
 
 
 -- Unary operations
-data Unary a = Unary Op1 a deriving (Eq, Ord, Show, Functor, Generic1)
+data Unary a = Unary Op1 a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 Unary where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Unary where liftEq comp (Unary op1 expr1) (Unary op2 expr2) = op1 == op2 && comp expr1 expr2
 instance Ord1 Unary where liftCompare comp (Unary op1 expr1) (Unary op2 expr2) = compare op1 op2 `mappend` comp expr1 expr2
@@ -145,7 +149,7 @@ instance (Monad m, MonadPrim v m) => Eval v m s Unary where
     delta1 op v
 
 -- Binary operations
-data Binary a = Binary Op2 a a deriving (Eq, Ord, Show, Functor, Generic1)
+data Binary a = Binary Op2 a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 Binary where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Binary where liftEq comp (Binary op1 expr1A expr1B) (Binary op2 expr2A expr2B) = op1 == op2 && comp expr1A expr2A && comp expr1B expr2B
 instance Ord1 Binary where liftCompare comp (Binary op1 expr1A expr1B) (Binary op2 expr2A expr2B) = compare op1 op2 `mappend` comp expr1A expr2A `mappend` comp expr1B expr2B
@@ -157,7 +161,7 @@ instance (Monad m, MonadPrim v m) => Eval v m s Binary where
     delta2 op v1 v2
 
 -- If statements
-data If a = If a a a deriving (Eq, Ord, Show, Functor, Generic1)
+data If a = If a a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 If where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 If where liftEq comp (If c1 then1 else1) (If c2 then2 else2) = comp c1 c2 && comp then1 then2 && comp else1 else2
 instance Ord1 If where liftCompare comp (If c1 then1 else1) (If c2 then2 else2) = comp c1 c2 `mappend` comp then1 then2 `mappend` comp else1 else2

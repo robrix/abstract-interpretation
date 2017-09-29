@@ -1,14 +1,21 @@
-{-# LANGUAGE TypeOperators, MultiParamTypeClasses #-}
+{-# LANGUAGE TypeOperators, MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
 
 module Abstract.Term where
 
 import Data.Function
 import Data.Functor.Classes
+import Data.Functor.Foldable
 import Data.Union
 
 type Name = String
 
-newtype Term syntax = In { out :: syntax (Term syntax)}
+newtype Term syntax = In { out :: syntax (Term syntax) }
+
+type instance Base (Term syntax) = syntax
+
+instance (Functor syntax) => Recursive (Term syntax) where
+  project = out
+
 
 class Monad m => Eval v m syntax constr where
   evaluate :: (Term syntax -> m v) -> constr (Term syntax) -> m v

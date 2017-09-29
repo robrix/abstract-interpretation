@@ -4,12 +4,13 @@ module Abstract.Interpreter.Caching where
 import Abstract.Configuration
 import Abstract.Interpreter
 import Abstract.Interpreter.Collecting
+import Abstract.Environment
 import Abstract.Primitive
 import Abstract.Set
 import Abstract.Store
 import Abstract.Type
-import Abstract.Syntax
-import Abstract.Value
+import Abstract.Type
+
 import Control.Applicative
 import Control.Effect
 import Control.Monad.Effect.Fail
@@ -20,11 +21,11 @@ import Control.Monad.Effect.State
 import Data.Foldable
 import Data.Function (fix)
 import Data.Functor.Classes
-import qualified Data.Map as Map
 import Data.Maybe
 import Data.Pointed
 import Data.Semigroup
 import Data.Text.Prettyprint.Doc
+import qualified Data.Map as Map
 
 newtype Cache l t v = Cache { unCache :: Map.Map (Configuration l t v) (Set (v, Store l v)) }
 

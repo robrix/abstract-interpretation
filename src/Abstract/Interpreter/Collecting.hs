@@ -1,12 +1,13 @@
 {-# LANGUAGE AllowAmbiguousTypes, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeOperators, UndecidableInstances #-}
 module Abstract.Interpreter.Collecting where
 
+import Abstract.Environment
 import Abstract.Interpreter
 import Abstract.Primitive
 import Abstract.Set
 import Abstract.Store
-import Abstract.Syntax
-import Abstract.Value
+import Abstract.Term
+
 import Control.Monad.Effect
 import Control.Monad.Effect.Reader
 import Data.Semigroup

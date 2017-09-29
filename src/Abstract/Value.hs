@@ -73,9 +73,6 @@ instance MonadFail m => MonadPrim (Value s l) m where
   truthy _     = nonBoolean
 
 
-
-
-
 -- class AbstractValue l v | v -> l where
 --   literal :: Prim -> v
 --   valueRoots :: v -> Set (Address l v)

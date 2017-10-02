@@ -26,7 +26,6 @@ import Data.Functor.Classes
 import Data.Maybe
 import Data.Pointed
 import Data.Semigroup
-import Data.Text.Prettyprint.Doc
 import qualified Data.Map as Map
 
 newtype Cache l t v = Cache { unCache :: Map.Map (Configuration l t v) (Set (v, Store l v)) }
@@ -82,6 +81,10 @@ instance (NonDetEff :< fs) => MonadNonDet (Eff fs) where
 
 
 -- Coinductively-cached evaluation
+--
+-- Examples:
+--    evalCache @Monovariant @Type @Syntax (makeLam "x" (var "x") # true)
+--    evalCache @Precise @(Value Syntax Precise) @Syntax (makeLam "x" (var "x") # true)
 
 evalCache :: forall l v s
           . ( Ord v, Ord l
@@ -96,6 +99,7 @@ evalCache :: forall l v s
           => Term s
           -> CachingResult l (Term s) v
 evalCache e = run @(CachingInterpreter l (Term s) v) (fixCache @l (fix (evCache @l (evCollect @l (evRoots @l)))) e)
+
 
 evCache :: forall l t v m
         . ( Ord l, Ord t, Ord v

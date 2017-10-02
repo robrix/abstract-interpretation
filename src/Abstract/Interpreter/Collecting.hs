@@ -54,12 +54,8 @@ evRoots :: forall l v m s
            , MonadGC l v m
            , MonadPrim v m
            , AbstractValue l v
-           , EvalCollect v m s s
+           , EvalCollect l v m s s
            )
-        => (Eval' (Term s) (m v) -> Eval' (Term s) (m v))
+        => Eval' (Term s) (m v)
         -> Eval' (Term s) (m v)
-        -> Eval' (Term s) (m v)
-        -- => ((Term s -> m v) -> (Term s -> m v))
-        -- -> Term s -> m v
-        -- -> Term s -> m v
-evRoots ev0 ev e = undefined
+evRoots ev = evalCollect @l ev . out

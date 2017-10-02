@@ -1,16 +1,10 @@
-{-# LANGUAGE DefaultSignatures, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, UndecidableInstances, ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications, AllowAmbiguousTypes, DefaultSignatures, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, UndecidableInstances, ScopedTypeVariables #-}
 module Abstract.Eval where
 
 import Abstract.Term
-import Abstract.Type
-import Abstract.Value
 import Abstract.Store
-import Abstract.Environment
 
-import Control.Applicative
-import Control.Monad.Fail
 import Data.Proxy
-import Data.Semigroup
 import Data.Union
 
 
@@ -20,26 +14,11 @@ class Monad m => Eval v m syntax constr where
 
 
 instance ( Monad m
-         , MonadFail m
-         , MonadAddress l m
-         , MonadStore l (Value s l) m
-         , MonadEnv l (Value s l) m
-         , Semigroup (Cell l (Value s l))
-         , Apply (Eval (Value s l) m s) fs
+         , Apply (Eval v m s) fs
          )
-         => Eval (Value s l) m s (Union fs) where
-  evaluate ev = apply (Proxy :: Proxy (Eval (Value s l) m s)) (evaluate ev)
+         => Eval v m s (Union fs) where
+  evaluate ev = apply (Proxy :: Proxy (Eval v m s)) (evaluate ev)
 
-instance ( Alternative m
-         , MonadFresh m
-         , MonadFail m
-         , MonadStore Monovariant Type m
-         , MonadEnv Monovariant Type m
-         , Semigroup (Cell Monovariant Type)
-         , Apply (Eval Type m s) fs
-         )
-         => Eval Type m s (Union fs) where
-  evaluate ev = apply (Proxy :: Proxy (Eval Type m s)) (evaluate ev)
 
 
 class Monad m => MonadGC l a m where
@@ -49,19 +28,17 @@ class Monad m => MonadGC l a m where
 
 
 -- Collecting evaluator
-class Monad m => EvalCollect v m syntax constr where
-  evalCollect :: ((Term syntax -> m v) -> (constr (Term syntax) -> m v))
-              -> (Term syntax -> m v)
+class Monad m => EvalCollect l v m syntax constr where
+  evalCollect :: (Term syntax -> m v)
               -> constr (Term syntax)
               -> m v
-  default evalCollect :: ((Term syntax -> m v) -> (constr (Term syntax) -> m v))
-                      -> (Term syntax -> m v)
+  default evalCollect :: (Eval v m syntax constr) => (Term syntax -> m v)
                       -> constr (Term syntax)
                       -> m v
-  evalCollect ev0 = ev0
+  evalCollect = evaluate
 
 instance ( Monad m
-         , Apply (EvalCollect v m s) fs
+         , Apply (EvalCollect l v m s) fs
          )
-         => EvalCollect v m s (Union fs) where
-  evalCollect ev0 ev = apply (Proxy :: Proxy (EvalCollect v m s )) (evalCollect ev0 ev)
+         => EvalCollect l v m s (Union fs) where
+  evalCollect ev = apply (Proxy :: Proxy (EvalCollect l v m s)) (evalCollect @l ev)

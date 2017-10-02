@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications, DataKinds, TypeFamilies, ConstraintKinds, AllowAmbiguousTypes, DeriveFunctor, DeriveFoldable, DeriveGeneric, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE TypeApplications, DataKinds, TypeFamilies, ConstraintKinds, AllowAmbiguousTypes, DeriveAnyClass, DeriveFunctor, DeriveFoldable, DeriveGeneric, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeOperators, UndecidableInstances #-}
 module Abstract.Syntax where
 
 import Abstract.Environment
@@ -52,12 +52,14 @@ instance (Alternative m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Mo
     env <- askEnv
     maybe (fail ("free type: " ++ x)) deref (envLookup x (env :: Environment Monovariant Type))
 
-instance FreeVariables (Variable a) where
-  freeVariables (Variable name) = point name
+instance FreeVariables1 Variable where
+  liftFreeVariables _ (Variable name) = point name
+
+instance (Monad m, Eval v m s Variable) => EvalCollect l v m s Variable
 
 
 -- Primitives
-newtype Primitive a = Primitive Prim deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
+newtype Primitive a = Primitive Prim deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
 instance Show1 Primitive where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Primitive where liftEq _ (Primitive a1) (Primitive a2) = a1 == a2
 instance Ord1 Primitive where liftCompare _ (Primitive a1) (Primitive a2) = compare a1 a2
@@ -69,6 +71,7 @@ instance Monad m => Eval Type m s Primitive where
   evaluate _ (Primitive (PInt _)) = return Int
   evaluate _ (Primitive (PBool _)) = return Bool
 
+instance (Monad m, Eval v m s Primitive) => EvalCollect l v m s Primitive
 
 -- Lambdas
 data Lambda a = Lambda Name a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
@@ -89,9 +92,10 @@ instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail 
     outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
     return (TVar tvar :-> outTy)
 
-instance FreeVariables a => FreeVariables (Lambda a) where
-  freeVariables (Lambda name body) = delete name (freeVariables body)
+instance FreeVariables1 Lambda where
+  liftFreeVariables f (Lambda name body) = delete name (f body)
 
+instance (Monad m, Eval v m s Lambda) => EvalCollect l v m s Lambda
 
 -- Recursive lambdas
 data Rec a = Rec Name a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
@@ -113,12 +117,14 @@ instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail 
     assign a (TVar tvar)
     localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
 
-instance FreeVariables a => FreeVariables (Rec a) where
-  freeVariables (Rec name body) = delete name (freeVariables body)
+instance FreeVariables1 Rec where
+  liftFreeVariables f (Rec name body) = delete name (f body)
+
+instance (Monad m, Eval v m s Rec) => EvalCollect l v m s Rec
 
 
 -- Application
-data Application a = Application a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
+data Application a = Application a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
 instance Show1 Application where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Application where liftEq comp (Application a1 b1) (Application a2 b2) = comp a1 a2 && comp b1 b2
 instance Ord1 Application where liftCompare comp (Application a1 b1) (Application a2 b2) = comp a1 a2 `mappend` comp b1 b2
@@ -161,8 +167,8 @@ instance ( Ord l
          , Functor s
          , FreeVariables1 s
          )
-         => EvalCollect (Value s l) m s Application where
-  evalCollect _ ev (Application e1 e2) = do
+         => EvalCollect l (Value s l) m s Application where
+  evalCollect ev (Application e1 e2) = do
     env <- askEnv @l @(Value s l)
     v1@(Closure name body env') <- extraRoots (envRoots env (freeVariables e2)) (ev e1)
     v2 <- extraRoots (valueRoots @l v1) (ev e2)
@@ -180,8 +186,8 @@ instance ( Ord l
          , Functor s
          , FreeVariables1 s
          )
-         => EvalCollect Type m s Application where
-  evalCollect _ ev (Application e1 e2) = do
+         => EvalCollect l Type m s Application where
+  evalCollect ev (Application e1 e2) = do
     env <- askEnv @l @Type
     opTy <- extraRoots (envRoots env (freeVariables e2)) (ev e1)
     inTy <- extraRoots (valueRoots @l opTy) (ev e2)
@@ -191,7 +197,7 @@ instance ( Ord l
 
 
 -- Unary operations
-data Unary a = Unary Op1 a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
+data Unary a = Unary Op1 a deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
 instance Show1 Unary where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Unary where liftEq comp (Unary op1 expr1) (Unary op2 expr2) = op1 == op2 && comp expr1 expr2
 instance Ord1 Unary where liftCompare comp (Unary op1 expr1) (Unary op2 expr2) = compare op1 op2 `mappend` comp expr1 expr2
@@ -201,8 +207,10 @@ instance (Monad m, MonadPrim v m) => Eval v m s Unary where
     v <- ev e
     delta1 op v
 
+instance (Monad m, MonadPrim v m) => EvalCollect l v m s Unary
+
 -- Binary operations
-data Binary a = Binary Op2 a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
+data Binary a = Binary Op2 a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
 instance Show1 Binary where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Binary where liftEq comp (Binary op1 expr1A expr1B) (Binary op2 expr2A expr2B) = op1 == op2 && comp expr1A expr2A && comp expr1B expr2B
 instance Ord1 Binary where liftCompare comp (Binary op1 expr1A expr1B) (Binary op2 expr2A expr2B) = compare op1 op2 `mappend` comp expr1A expr2A `mappend` comp expr1B expr2B
@@ -222,8 +230,8 @@ instance ( Ord l
          , FreeVariables1 s
          , AbstractValue l v
          )
-         => EvalCollect v m s Binary where
-  evalCollect _ ev (Binary op e0 e1) = do
+         => EvalCollect l v m s Binary where
+  evalCollect ev (Binary op e0 e1) = do
     env <- askEnv @l @v
     v0 <- extraRoots (envRoots env (freeVariables e1)) (ev e0)
     v1 <- extraRoots (valueRoots @l v0) (ev e1)
@@ -231,7 +239,7 @@ instance ( Ord l
 
 
 -- If statements
-data If a = If a a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
+data If a = If a a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
 instance Show1 If where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 If where liftEq comp (If c1 then1 else1) (If c2 then2 else2) = comp c1 c2 && comp then1 then2 && comp else1 else2
 instance Ord1 If where liftCompare comp (If c1 then1 else1) (If c2 then2 else2) = comp c1 c2 `mappend` comp then1 then2 `mappend` comp else1 else2
@@ -250,8 +258,8 @@ instance ( Ord l
          , Functor s
          , FreeVariables1 s
          )
-         => EvalCollect v m s If where
-  evalCollect _ ev (If c t e) = do
+         => EvalCollect l v m s If where
+  evalCollect ev (If c t e) = do
     env <- askEnv @l @v
     v <- extraRoots (envRoots env (freeVariables t <> freeVariables e)) (ev c)
     b <- truthy v

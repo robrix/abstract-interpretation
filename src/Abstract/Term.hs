@@ -1,4 +1,4 @@
-{-# LANGUAGE DefaultSignatures, TypeOperators, MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE DefaultSignatures, TypeOperators, FlexibleContexts, UndecidableInstances, MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
 
 module Abstract.Term where
 
@@ -7,6 +7,7 @@ import Abstract.Set
 import Data.Function
 import Data.Functor.Classes
 import Data.Functor.Foldable
+import Data.Proxy
 import Data.Union
 
 type Name = String
@@ -29,7 +30,10 @@ class FreeVariables term where
 
 instance (FreeVariables1 syntax, Functor syntax) => FreeVariables (Term syntax) where
   freeVariables = cata (liftFreeVariables id)
-  
+
+instance (Apply FreeVariables1 fs) => FreeVariables1 (Union fs) where
+  liftFreeVariables f = apply (Proxy :: Proxy FreeVariables1) (liftFreeVariables f)
+
 
 -- Smart constructor helper for Term
 inject :: (g :< fs) => g (Term (Union fs)) -> Term (Union fs)

@@ -91,12 +91,11 @@ evalCache :: forall l v s
             , MonadPrim v (Eff (CachingInterpreter l (Term s) v))
             , Semigroup (Cell l v)
             , AbstractValue l v
-            , Eval v (Eff (CachingInterpreter l (Term s) v)) s s
-            , EvalCollect v (Eff (CachingInterpreter l (Term s) v)) s s
+            , EvalCollect l v (Eff (CachingInterpreter l (Term s) v)) s s
             )
           => Term s
           -> CachingResult l (Term s) v
-evalCache e = run @(CachingInterpreter l (Term s) v) (fixCache @l (fix (evCache @l (evCollect @l (evRoots ev)))) e)
+evalCache e = run @(CachingInterpreter l (Term s) v) (fixCache @l (fix (evCache @l (evCollect @l (evRoots @l)))) e)
 
 evCache :: forall l t v m
         . ( Ord l, Ord t, Ord v
@@ -128,7 +127,8 @@ evCache ev0 ev e = do
 fixCache :: forall l t v m
          . ( Ord l, Ord t, Ord v
            , Ord1 (Cell l)
-           , MonadCachingInterpreter l t v m, MonadNonDet m
+           , MonadCachingInterpreter l t v m
+           , MonadNonDet m
            , MonadFresh m
            )
          => Eval' t (m v)

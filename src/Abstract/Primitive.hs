@@ -1,11 +1,10 @@
-{-# LANGUAGE FlexibleContexts, FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeOperators, UndecidableInstances #-}
 module Abstract.Primitive where
 
 import Abstract.Type
 import Control.Applicative
 import Control.Monad hiding (fail)
 import Control.Monad.Fail
-import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 
 data Op1 = Negate | Abs | Signum | Not
@@ -140,30 +139,3 @@ instance Num Prim where
   _      + _      = error "(+) of non-integer"
   PInt a * PInt b = PInt (a * b)
   _      * _      = error "(*) of non-integer"
-
-
-instance Pretty Prim where
-  pretty (PBool a) = pretty a
-  pretty (PInt a) = pretty a
-
-instance Pretty Op1 where
-  pretty Negate = pretty "negate"
-  pretty Abs = pretty "abs"
-  pretty Signum = pretty "signum"
-  pretty Not = pretty "not"
-
-instance Pretty Op2 where
-  pretty Plus = pretty '+'
-  pretty Minus = pretty '-'
-  pretty Times = pretty '*'
-  pretty DividedBy = pretty '/'
-  pretty Quotient = pretty "`quot`"
-  pretty Remainder = pretty "`rem`"
-  pretty Modulus = pretty "`mod`"
-  pretty And = pretty "&&"
-  pretty Or  = pretty "||"
-  pretty Eq = pretty "=="
-  pretty Lt = pretty "<"
-  pretty LtE = pretty "<="
-  pretty Gt = pretty ">"
-  pretty GtE = pretty ">="

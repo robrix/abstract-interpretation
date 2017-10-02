@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, StandaloneDeriving, UndecidableInstances #-}
+{-# LANGUAGE DeriveFoldable, FlexibleContexts, StandaloneDeriving, UndecidableInstances #-}
 module Abstract.Configuration where
 
 import Abstract.Set
@@ -7,7 +7,7 @@ import Abstract.Environment
 
 import Data.List (intersperse)
 import Data.Functor.Classes
-import Data.Text.Prettyprint.Doc
+import Data.Monoid
 
 data Configuration l t v
   = Configuration

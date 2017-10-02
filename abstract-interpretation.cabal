@@ -28,7 +28,6 @@ library
                      , Abstract.Syntax
                      , Abstract.Term
                      , Abstract.Type
-                     , Abstract.Util
                      , Abstract.Value
                      , Control.Effect
                      , Data.Functor.Classes.Show.Generic
@@ -36,7 +35,6 @@ library
                      , containers
                      , effects
                      , pointed
-                     , prettyprinter
                      , recursion-schemes
                      , pretty-show
                      , hscolour

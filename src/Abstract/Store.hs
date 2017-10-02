@@ -1,4 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes, DataKinds, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeApplications, TypeFamilies, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes, DataKinds, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeFamilies, TypeOperators, UndecidableInstances #-}
 module Abstract.Store
 ( Precise(..)
 , Monovariant(..)
@@ -27,7 +27,6 @@ import Data.Functor.Classes
 import qualified Data.Map as Map
 import Data.Pointed
 import Data.Semigroup
-import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 
 newtype Store l a = Store { unStore :: Map.Map (Address l a) (Cell l a) }
@@ -60,7 +59,7 @@ class Monad m => MonadStore l a m where
   getStore :: m (Store l a)
   putStore :: Store l a -> m ()
 
-instance State (Store l a) :< fs => MonadStore l a (Eff fs) where
+instance (State (Store l a) :< fs) => MonadStore l a (Eff fs) where
   getStore = get
   putStore = put
 
@@ -132,9 +131,6 @@ instance Ord1 I where
 instance Show1 I where
   liftShowsPrec sp _ d (I a) = sp d a
 
-instance Pretty1 I where
-  liftPretty p _ (I a) = p a
-
 instance Foldable (Address l) where
   foldMap _ = mempty
 
@@ -190,24 +186,3 @@ instance Show2 Address where
 
 instance Show l => Show1 (Address l) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
-
-instance Pretty Precise where
-  pretty (Precise n) = pretty "Precise" <+> pretty n
-
-instance Pretty Monovariant where
-  pretty (Monovariant n) = pretty "Monovariant" <+> pretty n
-
-instance (Pretty l, Pretty1 (Cell l)) => Pretty1 (Store l) where
-  liftPretty p pl = list . map (liftPretty (liftPretty p pl) (list . map (liftPretty p pl))) . Map.toList . unStore
-
-instance (Pretty l, Pretty1 (Cell l), Pretty a) => Pretty (Store l a) where
-  pretty = liftPretty pretty prettyList
-
-instance Pretty2 Address where
-  liftPretty2 pL _ _ _ (Address l) = pL l
-
-instance Pretty l => Pretty1 (Address l) where
-  liftPretty = liftPretty2 pretty prettyList
-
-instance Pretty l => Pretty (Address l a) where
-  pretty = liftPretty (const emptyDoc) (const emptyDoc)

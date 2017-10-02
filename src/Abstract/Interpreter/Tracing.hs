@@ -5,12 +5,10 @@ import Abstract.Configuration
 import Abstract.Environment
 import Abstract.Eval
 import Abstract.Interpreter
-import Abstract.Interpreter.Collecting
 import Abstract.Primitive
 import Abstract.Set
 import Abstract.Store
 import Abstract.Term
-import Abstract.Value
 
 import Control.Effect
 import Control.Monad.Effect hiding (run)
@@ -38,26 +36,33 @@ instance (Writer (g (Configuration l t v)) :< fs) => MonadTrace l t v g (Eff fs)
 
 
 -- Tracing and reachable state analyses
+--
+-- Examples
+--    evalTrace @Precise @(Value Syntax Precise) @Syntax (makeLam "x" (var "x") # true)
+--    evalReach @Precise @(Value Syntax Precise) @Syntax (makeLam "x" (var "x") # true)
 
 evalTrace :: forall l v s
           . ( Ord v, Ord1 s, Ord1 (Cell l)
             , MonadAddress l (Eff (TraceInterpreter l (Term s) v))
             , MonadPrim v (Eff (TraceInterpreter l (Term s) v))
+            , MonadGC l v (Eff (TraceInterpreter l (Term s) v))
             , Semigroup (Cell l v)
             , Eval v (Eff (TraceInterpreter l (Term s) v)) s s
             )
-          => Term s -> TraceResult l (Term s) v []
+          => Eval' (Term s) (TraceResult l (Term s) v [])
 evalTrace = run @(TraceInterpreter l (Term s) v) . fix (evTell @l @(Term s) @v @[] ev)
 
-evalReach :: forall l v a s
-          . ( Ord a, Ord v, Ord l, Ord1 (Cell l), Ord1 s
+evalReach :: forall l v s
+          . ( Ord v, Ord l, Ord1 (Cell l), Ord1 s
             , MonadAddress l (Eff (ReachableStateInterpreter l (Term s) v))
             , MonadPrim v (Eff (ReachableStateInterpreter l (Term s) v))
+            , MonadGC l v (Eff (ReachableStateInterpreter l (Term s) v))
             , Semigroup (Cell l v)
             , Eval v (Eff (ReachableStateInterpreter l (Term s) v)) s s
             )
-          => Term s -> TraceResult l (Term s) v Set.Set
+          => Eval' (Term s) (TraceResult l (Term s) v Set.Set)
 evalReach = run @(ReachableStateInterpreter l (Term s) v) . fix (evTell @l @(Term s) @v @Set.Set ev)
+
 
 evTell :: forall l t v g m
        . ( Ord l

@@ -197,21 +197,3 @@ instance (Show l, Show t, Show1 (Cell l)) => Show1 (Cache l t) where
 
 instance (Show l, Show t, Show v, Show1 (Cell l)) => Show (Cache l t v) where
   showsPrec = showsPrec1
-
-
--- instance (Pretty l, Pretty1 (Cell l)) => Pretty2 (Cache l) where
---   liftPretty2 pT plT pV plV = list . map (liftPretty2 prettyConfiguration prettyListConfiguration prettySet prettyListSet) . Map.toList . unCache
---     where prettyConfiguration = liftPretty2 pT plT pV plV
---           prettyListConfiguration = list . map (liftPretty2 pT plT pV plV)
---           prettyPair = liftPretty2 pV plV prettyStore prettyListStore
---           prettyListPair = list . map prettyPair
---           prettySet = liftPretty prettyPair prettyListPair
---           prettyListSet = list . map prettySet
---           prettyStore = liftPretty pV plV
---           prettyListStore = list . map (liftPretty pV plV)
---
--- instance (Pretty l, Pretty t, Pretty1 (Cell l)) => Pretty1 (Cache l t) where
---   liftPretty = liftPretty2 pretty prettyList
---
--- instance (Pretty l, Pretty t, Pretty v, Pretty1 (Cell l)) => Pretty (Cache l t v) where
---   pretty = liftPretty pretty prettyList

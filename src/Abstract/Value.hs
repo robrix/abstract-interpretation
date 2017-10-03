@@ -23,11 +23,6 @@ data Value syntax l
 
 -- Instances
 
--- instance Eq2 Value where
-  -- liftEq2 eql1 eql2 = go
-  --   where go v1 v2 = case (v1, v2) of
-  --           _ -> False
-
 instance Eq1 syntax => Eq1 (Value syntax) where
   liftEq eqL = go
     where go v1 v2 = case (v1, v2) of
@@ -42,15 +37,6 @@ instance Ord1 syntax => Ord1 (Value syntax) where
             (Closure s1 t1 e1, Closure s2 t2 e2) -> compare s1 s2 <> compare t1 t2 <> liftCompare2 compareL go e1 e2
             (I _, _) -> LT
             _ -> GT
-
--- instance Show1 Value where
---   liftShowsPrec spL slL = go
---     where go d v = case v of
---             I a -> showsUnaryWith showsPrec "I" d a
---             Closure s t e -> showsConstructor "Closure" d [flip showsPrec s, flip showsPrec t, flip (liftShowsPrec2 spL slL go (showListWith (go 0))) e]
---
--- instance Show l => Show (Value l) where
---   showsPrec = showsPrec1
 
 instance MonadFail m => MonadPrim (Value s l) m where
   delta1 o   (I a) = fmap I (delta1 o a)

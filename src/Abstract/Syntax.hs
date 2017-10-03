@@ -97,7 +97,7 @@ instance FreeVariables1 Lambda where
 
 instance (Monad m, Eval v m s Lambda) => EvalCollect l v m s Lambda
 
--- Recursive lambdas
+-- Recursive binder (e.g. letrec)
 data Rec a = Rec Name a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 Rec where liftShowsPrec = genericLiftShowsPrec
 instance Eq1 Rec where liftEq comp (Rec name1 body1) (Rec name2 body2) = name1 == name2 && comp body1 body2

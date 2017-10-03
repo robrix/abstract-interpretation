@@ -30,7 +30,7 @@ library
                      , Abstract.Type
                      , Abstract.Value
                      , Control.Effect
-                     , Data.Functor.Classes.Show.Generic
+  other-modules:       Data.Functor.Classes.Show.Generic
   build-depends:       base >=4.10 && <4.11
                      , containers
                      , effects

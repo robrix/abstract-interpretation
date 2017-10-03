@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications, DataKinds, TypeFamilies, ConstraintKinds, AllowAmbiguousTypes, DeriveAnyClass, DeriveFunctor, DeriveFoldable, DeriveGeneric, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ScopedTypeVariables, TypeOperators, UndecidableInstances #-}
+{-# LANGUAGE TypeApplications, DataKinds, TypeFamilies, ConstraintKinds, AllowAmbiguousTypes, DeriveAnyClass, DeriveFunctor, DeriveFoldable, DeriveGeneric, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeOperators, UndecidableInstances #-}
 module Abstract.Syntax where
 
 import Abstract.Environment
@@ -15,7 +15,9 @@ import Control.Monad hiding (fail)
 import Control.Monad.Effect
 import Control.Monad.Fail
 import Data.Functor.Classes
+import Data.Functor.Classes.Eq.Generic
 import Data.Functor.Classes.Show.Generic
+import Data.Functor.Classes.Ord.Generic
 import Data.Pointed
 import Data.Semigroup
 import Data.Union
@@ -39,8 +41,8 @@ type Syntax = Union
 -- Variables
 newtype Variable a = Variable String deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 Variable where liftShowsPrec = genericLiftShowsPrec
-instance Eq1 Variable where liftEq _ (Variable name1) (Variable name2) = name1 == name2
-instance Ord1 Variable where liftCompare _ (Variable name1) (Variable name2) = compare name1 name2
+instance Eq1 Variable where liftEq = genericLiftEq
+instance Ord1 Variable where liftCompare = genericLiftCompare
 
 instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m) => Eval (Value s l) m s Variable where
   evaluate _ (Variable x) = do
@@ -61,8 +63,8 @@ instance (Monad m, Eval v m s Variable) => EvalCollect l v m s Variable
 -- Primitives
 newtype Primitive a = Primitive Prim deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
 instance Show1 Primitive where liftShowsPrec = genericLiftShowsPrec
-instance Eq1 Primitive where liftEq _ (Primitive a1) (Primitive a2) = a1 == a2
-instance Ord1 Primitive where liftCompare _ (Primitive a1) (Primitive a2) = compare a1 a2
+instance Eq1 Primitive where liftEq = genericLiftEq
+instance Ord1 Primitive where liftCompare = genericLiftCompare
 
 instance Monad m => Eval (Value s l) m s Primitive where
   evaluate _ (Primitive x) = return (I x)
@@ -76,8 +78,8 @@ instance (Monad m, Eval v m s Primitive) => EvalCollect l v m s Primitive
 -- Lambdas
 data Lambda a = Lambda Name a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 Lambda where liftShowsPrec = genericLiftShowsPrec
-instance Eq1 Lambda where liftEq comp (Lambda name1 body1) (Lambda name2 body2) = name1 == name2 && comp body1 body2
-instance Ord1 Lambda where liftCompare comp (Lambda name1 body1) (Lambda name2 body2) = compare name1 name2 `mappend` comp body1 body2
+instance Eq1 Lambda where liftEq = genericLiftEq
+instance Ord1 Lambda where liftCompare = genericLiftCompare
 
 instance (Monad m, MonadEnv l (Value s l) m) => Eval (Value s l) m s Lambda where
   evaluate _ (Lambda name body) = do
@@ -100,8 +102,8 @@ instance (Monad m, Eval v m s Lambda) => EvalCollect l v m s Lambda
 -- Recursive binder (e.g. letrec)
 data Rec a = Rec Name a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
 instance Show1 Rec where liftShowsPrec = genericLiftShowsPrec
-instance Eq1 Rec where liftEq comp (Rec name1 body1) (Rec name2 body2) = name1 == name2 && comp body1 body2
-instance Ord1 Rec where liftCompare comp (Rec name1 body1) (Rec name2 body2) = compare name1 name2 `mappend` comp body1 body2
+instance Eq1 Rec where liftEq = genericLiftEq
+instance Ord1 Rec where liftCompare = genericLiftCompare
 
 instance (Monad m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m, Semigroup (Cell l (Value s l))) => Eval (Value s l) m s Rec where
   evaluate ev (Rec name body) = do
@@ -126,8 +128,8 @@ instance (Monad m, Eval v m s Rec) => EvalCollect l v m s Rec
 -- Application
 data Application a = Application a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
 instance Show1 Application where liftShowsPrec = genericLiftShowsPrec
-instance Eq1 Application where liftEq comp (Application a1 b1) (Application a2 b2) = comp a1 a2 && comp b1 b2
-instance Ord1 Application where liftCompare comp (Application a1 b1) (Application a2 b2) = comp a1 a2 `mappend` comp b1 b2
+instance Eq1 Application where liftEq = genericLiftEq
+instance Ord1 Application where liftCompare = genericLiftCompare
 
 instance ( Monad m
          , MonadFail m
@@ -199,8 +201,8 @@ instance ( Ord l
 -- Unary operations
 data Unary a = Unary Op1 a deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
 instance Show1 Unary where liftShowsPrec = genericLiftShowsPrec
-instance Eq1 Unary where liftEq comp (Unary op1 expr1) (Unary op2 expr2) = op1 == op2 && comp expr1 expr2
-instance Ord1 Unary where liftCompare comp (Unary op1 expr1) (Unary op2 expr2) = compare op1 op2 `mappend` comp expr1 expr2
+instance Eq1 Unary where liftEq = genericLiftEq
+instance Ord1 Unary where liftCompare = genericLiftCompare
 
 instance (Monad m, MonadPrim v m) => Eval v m s Unary where
   evaluate ev (Unary op e) = do
@@ -212,8 +214,8 @@ instance (Monad m, MonadPrim v m) => EvalCollect l v m s Unary
 -- Binary operations
 data Binary a = Binary Op2 a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
 instance Show1 Binary where liftShowsPrec = genericLiftShowsPrec
-instance Eq1 Binary where liftEq comp (Binary op1 expr1A expr1B) (Binary op2 expr2A expr2B) = op1 == op2 && comp expr1A expr2A && comp expr1B expr2B
-instance Ord1 Binary where liftCompare comp (Binary op1 expr1A expr1B) (Binary op2 expr2A expr2B) = compare op1 op2 `mappend` comp expr1A expr2A `mappend` comp expr1B expr2B
+instance Eq1 Binary where liftEq = genericLiftEq
+instance Ord1 Binary where liftCompare = genericLiftCompare
 
 instance (Monad m, MonadPrim v m) => Eval v m s Binary where
   evaluate ev (Binary op e0 e1) = do
@@ -241,8 +243,8 @@ instance ( Ord l
 -- If statements
 data If a = If a a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
 instance Show1 If where liftShowsPrec = genericLiftShowsPrec
-instance Eq1 If where liftEq comp (If c1 then1 else1) (If c2 then2 else2) = comp c1 c2 && comp then1 then2 && comp else1 else2
-instance Ord1 If where liftCompare comp (If c1 then1 else1) (If c2 then2 else2) = comp c1 c2 `mappend` comp then1 then2 `mappend` comp else1 else2
+instance Eq1 If where liftEq = genericLiftEq
+instance Ord1 If where liftCompare = genericLiftCompare
 
 instance (Monad m, MonadPrim v m) => Eval v m s If where
   evaluate ev (If c t e) = do

@@ -1,11 +1,9 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, GADTs, MultiParamTypeClasses, TypeOperators, UndecidableInstances #-}
 module Abstract.Type where
 
-import Abstract.Util
 import Control.Effect
 import Control.Monad.Effect.Internal
 import Control.Monad.Fail
-import Data.Text.Prettyprint.Doc
 import Prelude hiding (fail)
 
 type TName = Int
@@ -21,7 +19,7 @@ unify (a1 :-> b1) (a2 :-> b2) = (:->) <$> unify a1 a2 <*> unify b1 b2
 unify (a1 :* b1)  (a2 :* b2)  = (:*)  <$> unify a1 a2 <*> unify b1 b2
 unify (TVar _) b = pure b
 unify a (TVar _) = pure a
-unify t1 t2 = fail ("cannot unify " ++ prettyString t1 ++ " with " ++ prettyString t2)
+unify t1 t2 = fail ("cannot unify " ++ show t1 ++ " with " ++ show t2)
 
 
 data Fresh a where
@@ -32,13 +30,9 @@ class Monad m => MonadFresh m where
   fresh :: m TName
   reset :: TName -> m ()
 
-instance Fresh :< fs => MonadFresh (Eff fs) where
+instance (Fresh :< fs) => MonadFresh (Eff fs) where
   fresh = send Fresh
   reset = send . Reset
-
-
-instance Pretty Type where
-  pretty = pretty . show
 
 
 instance RunEffect Fresh a where

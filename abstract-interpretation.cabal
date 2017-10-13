@@ -14,26 +14,32 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Abstract.Configuration
+                     , Abstract.Environment
+                     , Abstract.Eval
                      , Abstract.Interpreter
                      , Abstract.Interpreter.Caching
-                     , Abstract.Interpreter.Dead
                      , Abstract.Interpreter.Collecting
+                     , Abstract.Interpreter.Dead
                      , Abstract.Interpreter.Symbolic
                      , Abstract.Interpreter.Tracing
                      , Abstract.Primitive
                      , Abstract.Set
                      , Abstract.Store
                      , Abstract.Syntax
+                     , Abstract.Term
                      , Abstract.Type
-                     , Abstract.Util
                      , Abstract.Value
                      , Control.Effect
+  other-modules:       Data.Functor.Classes.Eq.Generic
+                     , Data.Functor.Classes.Show.Generic
+                     , Data.Functor.Classes.Ord.Generic
   build-depends:       base >=4.10 && <4.11
                      , containers
                      , effects
                      , pointed
-                     , prettyprinter
                      , recursion-schemes
+                     , pretty-show
+                     , hscolour
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall -fno-warn-name-shadowing

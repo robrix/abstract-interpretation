@@ -1,0 +1,8 @@
+resolver: nightly-2017-09-20
+packages:
+- .
+- location: vendor/effects
+  extra-dep: true
+extra-deps: []
+flags: {}
+extra-package-dbs: []

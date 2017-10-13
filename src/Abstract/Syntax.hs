@@ -1,283 +1,353 @@
-{-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeFamilies #-}
+{-# LANGUAGE TypeApplications, DataKinds, TypeFamilies, ConstraintKinds, AllowAmbiguousTypes, DeriveAnyClass, DeriveFunctor, DeriveFoldable, DeriveGeneric, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TypeOperators, UndecidableInstances #-}
 module Abstract.Syntax where
 
+import Abstract.Environment
+import Abstract.Eval
 import Abstract.Primitive
 import Abstract.Set
-import Data.Bifoldable
-import Data.Bifunctor
-import Data.Bitraversable
-import Data.Foldable (fold)
+import Abstract.Store
+import Abstract.Term
+import Abstract.Type
+import Abstract.Value
+
+import Control.Applicative
+import Control.Monad hiding (fail)
+import Control.Monad.Effect
+import Control.Monad.Fail
 import Data.Functor.Classes
-import Data.Functor.Foldable hiding (fold)
-import Data.List (intersperse)
+import Data.Functor.Classes.Eq.Generic
+import Data.Functor.Classes.Show.Generic
+import Data.Functor.Classes.Ord.Generic
 import Data.Pointed
-import Data.Text.Prettyprint.Doc
+import Data.Semigroup
+import Data.Union
+import GHC.Generics
+import Prelude hiding (fail)
 
-data Syntax a r
-  = Var Name
-  | Prim a
-  | Op1 Op1 r
-  | Op2 Op2 r r
-  | App r r
-  | Lam Name r
-  | Rec Name r
-  | If r r r
-  deriving (Eq, Ord, Show)
-
-type Name = String
-
-newtype Term a = In { out :: Syntax a (Term a) }
-  deriving (Eq, Ord)
+-- The Syntax of our language, defined as an open Union of type constructors.
+type Syntax = Union
+  '[ Variable
+   , Primitive
+   , Lambda
+   , Application
+   , Rec
+   , Unary
+   , Binary
+   , If
+   ]
 
 
-var :: Name -> Term a
-var = In . Var
 
-prim :: a -> Term a
-prim = In . Prim
+-- Variables
+newtype Variable a = Variable String deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
+instance Show1 Variable where liftShowsPrec = genericLiftShowsPrec
+instance Eq1 Variable where liftEq = genericLiftEq
+instance Ord1 Variable where liftCompare = genericLiftCompare
 
-true :: Term Prim
+instance (Monad m, MonadFail m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m) => Eval (Value s l) m s Variable where
+  evaluate _ (Variable x) = do
+    env <- askEnv
+    maybe (fail ("free variable: " ++ x)) deref (envLookup x (env :: Environment l (Value s l)))
+
+instance (Alternative m, MonadFail m, MonadStore Monovariant Type m, MonadEnv Monovariant Type m) => Eval Type m s Variable where
+  evaluate _ (Variable x) = do
+    env <- askEnv
+    maybe (fail ("free type: " ++ x)) deref (envLookup x (env :: Environment Monovariant Type))
+
+instance FreeVariables1 Variable where
+  liftFreeVariables _ (Variable name) = point name
+
+instance (Monad m, Eval v m s Variable) => EvalCollect l v m s Variable
+
+
+-- Primitives
+newtype Primitive a = Primitive Prim deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
+instance Show1 Primitive where liftShowsPrec = genericLiftShowsPrec
+instance Eq1 Primitive where liftEq = genericLiftEq
+instance Ord1 Primitive where liftCompare = genericLiftCompare
+
+instance Monad m => Eval (Value s l) m s Primitive where
+  evaluate _ (Primitive x) = return (I x)
+
+instance Monad m => Eval Type m s Primitive where
+  evaluate _ (Primitive (PInt _)) = return Int
+  evaluate _ (Primitive (PBool _)) = return Bool
+
+instance (Monad m, Eval v m s Primitive) => EvalCollect l v m s Primitive
+
+-- Lambdas
+data Lambda a = Lambda Name a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
+instance Show1 Lambda where liftShowsPrec = genericLiftShowsPrec
+instance Eq1 Lambda where liftEq = genericLiftEq
+instance Ord1 Lambda where liftCompare = genericLiftCompare
+
+instance (Monad m, MonadEnv l (Value s l) m) => Eval (Value s l) m s Lambda where
+  evaluate _ (Lambda name body) = do
+    env <- askEnv
+    return (Closure name body (env :: Environment l (Value s l)))
+
+instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail m, Semigroup (Cell Monovariant Type), MonadFresh m, Alternative m) => Eval Type m s Lambda where
+  evaluate ev (Lambda name body) = do
+    a <- alloc name
+    tvar <- fresh
+    assign a (TVar tvar)
+    outTy <- localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
+    return (TVar tvar :-> outTy)
+
+instance FreeVariables1 Lambda where
+  liftFreeVariables f (Lambda name body) = delete name (f body)
+
+instance (Monad m, Eval v m s Lambda) => EvalCollect l v m s Lambda
+
+-- Recursive binder (e.g. letrec)
+data Rec a = Rec Name a deriving (Eq, Ord, Show, Functor, Foldable, Generic1)
+instance Show1 Rec where liftShowsPrec = genericLiftShowsPrec
+instance Eq1 Rec where liftEq = genericLiftEq
+instance Ord1 Rec where liftCompare = genericLiftCompare
+
+instance (Monad m, MonadAddress l m, MonadStore l (Value s l) m, MonadEnv l (Value s l) m, Semigroup (Cell l (Value s l))) => Eval (Value s l) m s Rec where
+  evaluate ev (Rec name body) = do
+    a <- alloc name
+    v <- localEnv (envInsert name (a :: Address l (Value s l))) (ev body)
+    assign a v
+    return v
+
+instance (MonadStore Monovariant Type m, MonadEnv Monovariant Type m, MonadFail m, Semigroup (Cell Monovariant Type), MonadFresh m, Alternative m) => Eval Type m s Rec where
+  evaluate ev (Rec name body) = do
+    a <- alloc name
+    tvar <- fresh
+    assign a (TVar tvar)
+    localEnv (envInsert name (a :: Address Monovariant Type)) (ev body)
+
+instance FreeVariables1 Rec where
+  liftFreeVariables f (Rec name body) = delete name (f body)
+
+instance (Monad m, Eval v m s Rec) => EvalCollect l v m s Rec
+
+
+-- Application
+data Application a = Application a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
+instance Show1 Application where liftShowsPrec = genericLiftShowsPrec
+instance Eq1 Application where liftEq = genericLiftEq
+instance Ord1 Application where liftCompare = genericLiftCompare
+
+instance ( Monad m
+         , MonadFail m
+         , MonadAddress l m
+         , MonadStore l (Value s l) m
+         , MonadEnv l (Value s l) m
+         , Semigroup (Cell l (Value s l))
+         )
+         => Eval (Value s l) m s Application where
+  evaluate ev (Application e1 e2) = do
+    Closure name body env <- ev e1
+    value <- ev e2
+    a <- alloc name
+    assign a value
+    localEnv (const (envInsert name a env)) (ev body)
+
+instance ( Monad m
+         , MonadFail m
+         , MonadFresh m
+         )
+         => Eval Type m s Application where
+  evaluate ev (Application e1 e2) = do
+    opTy <- ev e1
+    inTy <- ev e2
+    tvar <- fresh
+    _ :-> outTy <- opTy `unify` (inTy :-> TVar tvar)
+    return outTy
+
+instance ( Ord l
+         , Monad m
+         , MonadGC l (Value s l) m
+         , MonadAddress l m
+         , MonadStore l (Value s l) m
+         , MonadEnv l (Value s l) m
+         , Semigroup (Cell l (Value s l))
+         , FreeVariables1 Application
+         , Functor s
+         , FreeVariables1 s
+         )
+         => EvalCollect l (Value s l) m s Application where
+  evalCollect ev (Application e1 e2) = do
+    env <- askEnv @l @(Value s l)
+    v1@(Closure name body env') <- extraRoots (envRoots env (freeVariables e2)) (ev e1)
+    v2 <- extraRoots (valueRoots @l v1) (ev e2)
+    a <- alloc name
+    assign a v2
+    localEnv (const (envInsert name a env')) (ev body)
+
+instance ( Ord l
+         , Monad m
+         , MonadFail m
+         , MonadFresh m
+         , MonadGC l Type m
+         , MonadEnv l Type m
+         , AbstractValue l Type
+         , Functor s
+         , FreeVariables1 s
+         )
+         => EvalCollect l Type m s Application where
+  evalCollect ev (Application e1 e2) = do
+    env <- askEnv @l @Type
+    opTy <- extraRoots (envRoots env (freeVariables e2)) (ev e1)
+    inTy <- extraRoots (valueRoots @l opTy) (ev e2)
+    tvar <- fresh
+    _ :-> outTy <- opTy `unify` (inTy :-> TVar tvar)
+    return outTy
+
+
+-- Unary operations
+data Unary a = Unary Op1 a deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
+instance Show1 Unary where liftShowsPrec = genericLiftShowsPrec
+instance Eq1 Unary where liftEq = genericLiftEq
+instance Ord1 Unary where liftCompare = genericLiftCompare
+
+instance (Monad m, MonadPrim v m) => Eval v m s Unary where
+  evaluate ev (Unary op e) = do
+    v <- ev e
+    delta1 op v
+
+instance (Monad m, MonadPrim v m) => EvalCollect l v m s Unary
+
+-- Binary operations
+data Binary a = Binary Op2 a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
+instance Show1 Binary where liftShowsPrec = genericLiftShowsPrec
+instance Eq1 Binary where liftEq = genericLiftEq
+instance Ord1 Binary where liftCompare = genericLiftCompare
+
+instance (Monad m, MonadPrim v m) => Eval v m s Binary where
+  evaluate ev (Binary op e0 e1) = do
+    v1 <- ev e0
+    v2 <- ev e1
+    delta2 op v1 v2
+
+instance ( Ord l
+         , Monad m
+         , MonadGC l v m
+         , MonadEnv l v m
+         , MonadPrim v m
+         , Functor s
+         , FreeVariables1 s
+         , AbstractValue l v
+         )
+         => EvalCollect l v m s Binary where
+  evalCollect ev (Binary op e0 e1) = do
+    env <- askEnv @l @v
+    v0 <- extraRoots (envRoots env (freeVariables e1)) (ev e0)
+    v1 <- extraRoots (valueRoots @l v0) (ev e1)
+    delta2 op v0 v1
+
+
+-- If statements
+data If a = If a a a deriving (Eq, Ord, Show, Functor, Foldable, Generic1, FreeVariables1)
+instance Show1 If where liftShowsPrec = genericLiftShowsPrec
+instance Eq1 If where liftEq = genericLiftEq
+instance Ord1 If where liftCompare = genericLiftCompare
+
+instance (Monad m, MonadPrim v m) => Eval v m s If where
+  evaluate ev (If c t e) = do
+    v <- ev c
+    c' <- truthy v
+    ev (if c' then t else e)
+
+instance ( Ord l
+         , Monad m
+         , MonadGC l v m
+         , MonadEnv l v m
+         , MonadPrim v m
+         , Functor s
+         , FreeVariables1 s
+         )
+         => EvalCollect l v m s If where
+  evalCollect ev (If c t e) = do
+    env <- askEnv @l @v
+    v <- extraRoots (envRoots env (freeVariables t <> freeVariables e)) (ev c)
+    b <- truthy v
+    ev (if b then t else e)
+
+
+-- Smart constructors for various Terms.
+
+prim :: (Primitive :< fs) => Prim -> Term (Union fs)
+prim = inject . Primitive
+
+int :: (Primitive :< fs) => Int -> Term (Union fs)
+int = prim . PInt
+
+true :: (Primitive :< fs) => Term (Union fs)
 true = prim (PBool True)
 
-false :: Term Prim
+false :: (Primitive :< fs) => Term (Union fs)
 false = prim (PBool False)
 
+var :: (Variable :< fs) => Name -> Term (Union fs)
+var = inject . Variable
 
 infixl 9 #
-(#) :: Term a -> Term a -> Term a
-(#) = (In .) . App
+(#) :: (Application :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs)
+(#) a b = inject (Application a b)
 
+makeLam :: (Lambda :< fs) => Name -> Term (Union fs) -> Term (Union fs)
+makeLam name body = inject (Lambda name body)
 
-eq :: Term a -> Term a -> Term a
-eq = (In .) . Op2 Eq
+let' :: (Lambda :< fs, Application :< fs, Variable :< fs) => Name -> Term (Union fs) -> (Term (Union fs) -> Term (Union fs)) -> Term (Union fs)
+let' name val body = lam name body # val
+  where lam s f = makeLam s (f (var s))
 
-lt :: Term a -> Term a -> Term a
-lt = (In .) . Op2 Lt
+makeRec :: (Rec :< fs) => Name -> Term (Union fs) -> Term (Union fs)
+makeRec name body = inject (Rec name body)
 
-lte :: Term a -> Term a -> Term a
-lte = (In .) . Op2 LtE
-
-gt :: Term a -> Term a -> Term a
-gt = (In .) . Op2 Gt
-
-gte :: Term a -> Term a -> Term a
-gte = (In .) . Op2 GtE
-
-and' :: Term a -> Term a -> Term a
-and' = (In .) . Op2 And
-
-or' :: Term a -> Term a -> Term a
-or' = (In .) . Op2 Or
-
-not' :: Term a -> Term a
-not' = In . Op1 Not
-
-div' :: Term a -> Term a -> Term a
-div' = (In .) . Op2 DividedBy
-
-quot' :: Term a -> Term a -> Term a
-quot' = (In .) . Op2 Quotient
-
-rem' :: Term a -> Term a -> Term a
-rem' = (In .) . Op2 Remainder
-
-mod' :: Term a -> Term a -> Term a
-mod' = (In .) . Op2 Modulus
-
-
-lam :: Name -> (Term a -> Term a) -> Term a
-lam s f = makeLam s (f (var s))
-
-makeLam :: Name -> Term a -> Term a
-makeLam name body = In (Lam name body)
-
-mu :: Name -> (Term a -> Term a) -> Term a
+mu :: (Rec :< fs, Variable :< fs) => Name -> (Term (Union fs) -> Term (Union fs)) -> Term (Union fs)
 mu f b = makeRec f (b (var f))
 
-makeRec :: Name -> Term a -> Term a
-makeRec name body = In (Rec name body)
+if' :: (If :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs) -> Term (Union fs)
+if' c t e = inject (If c t e)
 
-if' :: Term a -> Term a -> Term a -> Term a
-if' c t e = In (If c t e)
+eq :: (Binary :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs)
+eq = (inject .) . Binary Eq
 
-let' :: Name -> Term a -> (Term a -> Term a) -> Term a
-let' var val body = lam var body # val
+lt :: (Binary :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs)
+lt = (inject .) . Binary Lt
 
+lte :: (Binary :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs)
+lte = (inject .) . Binary LtE
 
-freeVariables :: Term a -> Set Name
-freeVariables = cata (\ syntax -> case syntax of
-  Var n -> point n
-  Lam n body -> delete n body
-  Rec n body -> delete n body
-  _ -> fold syntax)
+gt :: (Binary :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs)
+gt = (inject .) . Binary Gt
 
+gte :: (Binary :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs)
+gte = (inject .) . Binary GtE
 
-showsConstructor :: String -> Int -> [Int -> ShowS] -> ShowS
-showsConstructor name d fields = showParen (d > 10) $ showString name . showChar ' ' . foldr (.) id (intersperse (showChar ' ') ([($ 11)] <*> fields))
+and' :: (Binary :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs)
+and' = (inject .) . Binary And
 
+or' :: (Binary :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs)
+or' = (inject .) . Binary Or
 
--- Instances
+div' :: (Binary :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs)
+div' = (inject .) . Binary DividedBy
 
-type instance Base (Term a) = Syntax a
+quot' :: (Binary :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs)
+quot' = (inject .) . Binary Quotient
 
-instance Recursive (Term a) where
-  project = out
+rem' :: (Binary :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs)
+rem' = (inject .) . Binary Remainder
 
-instance Corecursive (Term a) where
-  embed = In
+mod' :: (Binary :< fs) => Term (Union fs) -> Term (Union fs) -> Term (Union fs)
+mod' = (inject .) . Binary Modulus
 
-instance Foldable Term where
-  foldMap f = go where go = bifoldMap f go . out
-
-instance Bifoldable Syntax where
-  bifoldMap f g s = case s of
-    Var _ -> mempty
-    Prim i -> f i
-    Op1 _ a -> g a
-    Op2 _ a b -> g a `mappend` g b
-    App a b -> g a `mappend` g b
-    Lam _ a -> g a
-    Rec _ a -> g a
-    If c t e -> g c `mappend` g t `mappend` g e
-
-instance Foldable (Syntax a) where
-  foldMap = bifoldMap (const mempty)
+not' :: (Unary :< fs) => Term (Union fs) -> Term (Union fs)
+not' = inject . Unary Not
 
 
-instance Functor Term where
-  fmap f = go where go = In . bimap f go . out
+instance (Binary :< fs, Unary :< fs, Primitive :< fs) => Num (Term (Union fs)) where
+  fromInteger = int . fromInteger
 
-instance Bifunctor Syntax where
-  bimap f g s = case s of
-    Var n -> Var n
-    Prim v -> Prim (f v)
-    Op1 o a -> Op1 o (g a)
-    Op2 o a b -> Op2 o (g a) (g b)
-    App a b -> App (g a) (g b)
-    Lam n a -> Lam n (g a)
-    Rec n a -> Rec n (g a)
-    If c t e -> If (g c) (g t) (g e)
-
-instance Functor (Syntax a) where
-  fmap = second
-
-
-instance Traversable Term where
-  traverse f = go where go = fmap In . bitraverse f go . out
-
-instance Bitraversable Syntax where
-  bitraverse f g s = case s of
-    Var n -> pure (Var n)
-    Prim v -> Prim <$> f v
-    Op1 o a -> Op1 o <$> g a
-    Op2 o a b -> Op2 o <$> g a <*> g b
-    App a b -> App <$> g a <*> g b
-    Lam n a -> Lam n <$> g a
-    Rec n a -> Rec n <$> g a
-    If c t e -> If <$> g c <*> g t <*> g e
-
-instance Traversable (Syntax a) where
-  traverse = bitraverse pure
-
-
-instance Eq1 Term where
-  liftEq eqA = go where go t1 t2 = liftEq2 eqA go (out t1) (out t2)
-
-instance Eq2 Syntax where
-  liftEq2 eqV eqA s1 s2 = case (s1, s2) of
-    (Var n1, Var n2) -> n1 == n2
-    (Prim v1, Prim v2) -> eqV v1 v2
-    (Op1 o1 a1, Op1 o2 a2) -> o1 == o2 && eqA a1 a2
-    (Op2 o1 a1 b1, Op2 o2 a2 b2) -> o1 == o2 && eqA a1 a2 && eqA b1 b2
-    (App a1 b1, App a2 b2) -> eqA a1 a2 && eqA b1 b2
-    (Lam n1 a1, Lam n2 a2) -> n1 == n2 && eqA a1 a2
-    (Rec n1 a1, Rec n2 a2) -> n1 == n2 && eqA a1 a2
-    (If c1 t1 e1, If c2 t2 e2) -> eqA c1 c2 && eqA t1 t2 && eqA e1 e2
-    _ -> False
-
-instance Eq a => Eq1 (Syntax a) where
-  liftEq = liftEq2 (==)
-
-instance Ord1 Term where
-  liftCompare compareA = go where go t1 t2 = liftCompare2 compareA go (out t1) (out t2)
-
-instance Ord2 Syntax where
-  liftCompare2 compareV compareA s1 s2 = case (s1, s2) of
-    (Var n1, Var n2) -> compare n1 n2
-    (Var{}, _) -> LT
-    (_, Var{}) -> GT
-    (Prim v1, Prim v2) -> compareV v1 v2
-    (Prim{}, _) -> LT
-    (_, Prim{}) -> GT
-    (Op1 o1 a1, Op1 o2 a2) -> compare o1 o2 <> compareA a1 a2
-    (Op1{}, _) -> LT
-    (_, Op1{}) -> GT
-    (Op2 o1 a1 b1, Op2 o2 a2 b2) -> compare o1 o2 <> compareA a1 a2 <> compareA b1 b2
-    (Op2{}, _) -> LT
-    (_, Op2{}) -> GT
-    (App a1 b1, App a2 b2) -> compareA a1 a2 <> compareA b1 b2
-    (App{}, _) -> LT
-    (_, App{}) -> GT
-    (Lam n1 a1, Lam n2 a2) -> compare n1 n2 <> compareA a1 a2
-    (Lam{}, _) -> LT
-    (_, Lam{}) -> GT
-    (Rec n1 a1, Rec n2 a2) -> compare n1 n2 <> compareA a1 a2
-    (Rec{}, _) -> LT
-    (_, Rec{}) -> GT
-    (If c1 t1 e1, If c2 t2 e2) -> compareA c1 c2 <> compareA t1 t2 <> compareA e1 e2
-
-instance Ord a => Ord1 (Syntax a) where
-  liftCompare = liftCompare2 compare
-
-
-instance Show1 Term where
-  liftShowsPrec spA slA = go where go d t = showsUnaryWith (liftShowsPrec2 spA slA go (liftShowList spA slA)) "In" d (out t)
-
-instance Show a => Show (Term a) where
-  showsPrec = showsPrec1
-
-instance Show2 Syntax where
-  liftShowsPrec2 spV _ spA _ d s = case s of
-    Var n -> showsConstructor "Var" d [ flip showsPrec n ]
-    Prim v -> showsConstructor "Prim" d [ flip spV v ]
-    Op1 o a -> showsConstructor "Op1" d [ flip showsPrec o, flip spA a ]
-    Op2 o a b -> showsConstructor "Op2" d [ flip showsPrec o, flip spA a, flip spA b ]
-    App a b -> showsConstructor "App" d (flip spA <$> [ a, b ])
-    Lam n a -> showsConstructor "Lam" d [ flip showsPrec n, flip spA a ]
-    Rec n a -> showsConstructor "Rec" d [ flip showsPrec n, flip spA a ]
-    If c t e -> showsConstructor "If" d (flip spA <$> [c, t, e])
-
-instance Show a => Show1 (Syntax a) where
-  liftShowsPrec = liftShowsPrec2 showsPrec showList
-
-
-instance Num a => Num (Term a) where
-  fromInteger = prim . fromInteger
-
-  signum = In . Op1 Signum
-  abs    = In . Op1 Abs
-  negate = In . Op1 Negate
-  (+) = (In .) . Op2 Plus
-  (-) = (In .) . Op2 Minus
-  (*) = (In .) . Op2 Times
-
-
-instance Pretty1 Term where
-  liftPretty p pl = go where go = liftPretty2 p pl go (list . map (liftPretty p pl)) . out
-
-instance Pretty a => Pretty (Term a) where
-  pretty = liftPretty pretty prettyList
-
-instance Pretty2 Syntax where
-  liftPretty2 pv _ pr _ s = case s of
-    Var n -> pretty n
-    Prim v -> pv v
-    Op1 o a -> pretty o <+> pr a
-    Op2 o a b -> pr a <+> pretty o <+> pr b
-    App a b -> pr a <+> parens (pr b)
-    Lam n a -> parens (pretty '\\' <+> pretty n <+> pretty "." <> nest 2 (line <> pr a))
-    Rec n a -> pretty "mu" <+> parens (pretty '\\' <+> pretty n <+> pretty "." <> nest 2 (line <> pr a))
-    If c t e -> pretty "if" <+> pr c <+> pretty "then" <> nest 2 (line <> pr t) <> line <> pretty "else" <> nest 2 (line <> pr e)
-
-instance Pretty a => Pretty1 (Syntax a) where
-  liftPretty = liftPretty2 pretty prettyList
+  signum = inject     . Unary Signum
+  abs    = inject     . Unary Abs
+  negate = inject     . Unary Negate
+  (+)    = (inject .) . Binary Plus
+  (-)    = (inject .) . Binary Minus
+  (*)    = (inject .) . Binary Times
